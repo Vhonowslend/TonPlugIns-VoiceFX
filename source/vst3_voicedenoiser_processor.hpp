@@ -23,8 +23,8 @@
 
 #pragma once
 #include <list>
-#include "lib.hpp"
-#include "voice_denoiser_channel.hpp"
+#include "nvafx_voicedenoiser.hpp"
+#include "vst3.hpp"
 
 #include <nvAudioEffects.h>
 #include <public.sdk/source/vst/vstaudioeffect.h>
@@ -38,14 +38,14 @@ using namespace Steinberg::Vst;
 // - We can't tell the application that uses us how many samples per call we can process.
 // - We can't tell the application anything. Who designed this?
 
-namespace xaymar::voice_denoiser {
-	static const FUID processor_uid(FOURCC('X', 'm', 'r', 'V'), FOURCC('o', 'D', 'e', 'n'), FOURCC('o', 'i', 's', 'e'),
-									FOURCC('P', 'r', 'o', 'c'));
+namespace vst3::voicedenoiser {
+	static const FUID processor_uid(FOURCC_CREATOR_PROCESSOR, // Creator, Type
+									FOURCC('N', 'v', 'D', 'e'), FOURCC('n', 'o', 'i', 's'), FOURCC('e', 'V', 'o', 'c'));
 
 	class processor : AudioEffect {
 		bool _bypass;
 
-		std::list<channel> _channels;
+		std::list<nvafx::voicedenoiser> _channels;
 
 		public:
 		processor();
@@ -70,4 +70,4 @@ namespace xaymar::voice_denoiser {
 		public:
 		static FUnknown* create(void* data);
 	};
-} // namespace xaymar::voice_denoiser
+} // namespace vst3::voicedenoiser

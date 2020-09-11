@@ -1,3 +1,6 @@
 [submodule "cmake/clang"]
 	path = cmake/clang
 	url = https://github.com/Xaymar/cmake-clang.git
+[submodule "third-party/vst2sdk"]
+	path = cmake/clang
+	url = https://github.com/Xaymar/vst2sdk.git

@@ -22,84 +22,44 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "lib.hpp"
-#include <public.sdk/source/main/pluginfactory.h>
-#include "version.h"
-#include "voice_denoiser_controller.hpp"
-#include "voice_denoiser_processor.hpp"
-
+#include <cstdarg>
 #include <iostream>
-#include <varargs.h>
+#include <vector>
 
-#ifdef WIN32
-#include <Windows.h>
+#define LOG_PREFIX "[NVIDIA AudioFX VST] "
 
-HMODULE              lib;
-DLL_DIRECTORY_COOKIE ck;
-#endif
+static std::filesystem::path _vst3_path;
+static std::filesystem::path _sdk_path;
 
-bool InitModule()
+std::filesystem::path vst3_path()
 {
-#ifdef WIN32
-	SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-
-	{
-		ck = AddDllDirectory(gPath);
-		if (!ck) {
-			do_log("Failed to add library search directory, aborting.");
-			return false;
-		}
-
-		lib = LoadLibraryW(L"NVAudioEffects.dll");
-		if (lib == NULL) {
-			do_log("Failed to load library, aborting.");
-			return false;
-		}
-	}
-#endif
-
-	return true;
+	return std::filesystem::path(_vst3_path);
 }
 
-bool DeinitModule()
+void set_vst3_path(std::filesystem::path value)
 {
-	FreeLibrary(lib);
-	RemoveDllDirectory(ck);
-	return true;
+	_vst3_path = std::filesystem::path(value);
+}
+
+std::filesystem::path nvafx_path()
+{
+	return std::filesystem::path(_sdk_path);
+}
+
+void set_nvafx_path(std::filesystem::path value)
+{
+	_sdk_path = std::filesystem::path(value);
 }
 
 void do_log(const char* format, ...)
 {
-	static thread_local std::vector<char> buf(65535);
+	std::vector<char> buf(65535);
 
 	va_list args;
 	va_start(args, format);
+	buf.resize(static_cast<size_t>(vsnprintf(nullptr, 0, format, args)) + 1);
 	vsnprintf(buf.data(), buf.size(), format, args);
 	va_end(args);
 
-	std::cerr << "[xmr-nvidia-audiofx] " << buf.data() << std::endl;
+	std::cerr << LOG_PREFIX << buf.data() << std::endl;
 }
-
-BEGIN_FACTORY_DEF("Michael Fabian 'Xaymar' Dirks", "https://xaymar.com/", "mailto:info@xaymar.com")
-
-DEF_CLASS2(INLINE_UID_FROM_FUID(xaymar::voice_denoiser::processor_uid),
-		   PClassInfo::kManyInstances,               // Allow many instances
-		   kVstAudioEffectClass,                     // Type
-		   "NVIDIA Voice Denoiser",                  // Name
-		   Vst::kDistributable,                      // Allow cross-computer usage.
-		   "Fx",                                     // Categories (separate with |)
-		   XMRNVAFX_VERSION_STRING,                  // Version
-		   kVstVersionString,                        // VST SDK Version
-		   xaymar::voice_denoiser::processor::create // Function to create the instance.
-)
-DEF_CLASS2(INLINE_UID_FROM_FUID(xaymar::voice_denoiser::controller_uid),
-		   PClassInfo::kManyInstances,                // Allow many instances
-		   kVstComponentControllerClass,              // Type
-		   "NVIDIA Voice Denoiser Controller",        // Name
-		   0,                                         // Unused
-		   "",                                        // Unused
-		   XMRNVAFX_VERSION_STRING,                   // Version
-		   kVstVersionString,                         // VST SDK Version
-		   xaymar::voice_denoiser::controller::create // Function to create the instance.
-)
-
-END_FACTORY

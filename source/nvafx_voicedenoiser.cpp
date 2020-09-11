@@ -21,14 +21,14 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "voice_denoiser_channel.hpp"
+#include "nvafx_voicedenoiser.hpp"
 #include <filesystem>
 #include <stdexcept>
 #include "lib.hpp"
 
 #define kSample32 float
 
-xaymar::voice_denoiser::channel::channel()
+nvafx::voicedenoiser::voicedenoiser::voicedenoiser()
 	: _samplerate(0), _samples_per_frame(0), _afx(nullptr), _afx_samplerate(48000), _afx_samples(0), _afx_channels(0),
 	  _src_in(nullptr), _src_in_ratio(1), _src_in_buffer(), _in_buffer(), _in_offset(0), _src_out(nullptr),
 	  _src_out_ratio(1), _src_out_buffer(), _out_buffer(), _out_offset(0), _delay(true), _delay_samples(0)
@@ -46,9 +46,7 @@ xaymar::voice_denoiser::channel::channel()
 	}
 
 	{
-		std::filesystem::path module_path(gPath);
-		module_path.append("..");
-		module_path.append("Resources");
+		auto module_path = nvafx_path();
 		module_path.append("models");
 		module_path.append("denoiser_48k.wpkg");
 		std::filesystem::path model_path = std::filesystem::absolute(module_path);
@@ -87,7 +85,7 @@ xaymar::voice_denoiser::channel::channel()
 	}
 }
 
-xaymar::voice_denoiser::channel::~channel()
+nvafx::voicedenoiser::voicedenoiser::~voicedenoiser()
 {
 	if (_src_in)
 		_src_in = src_delete(_src_in);
@@ -95,7 +93,7 @@ xaymar::voice_denoiser::channel::~channel()
 		_src_out = src_delete(_src_out);
 }
 
-void xaymar::voice_denoiser::channel::reset(uint32_t samplerate, uint32_t spf)
+void nvafx::voicedenoiser::voicedenoiser::reset(uint32_t samplerate, uint32_t spf)
 {
 	// Reset values.
 	_samplerate        = samplerate;
@@ -123,7 +121,7 @@ void xaymar::voice_denoiser::channel::reset(uint32_t samplerate, uint32_t spf)
 	_out_buffer.resize(static_cast<size_t>(_samples_per_frame) * 4);
 }
 
-bool xaymar::voice_denoiser::channel::process(uint32_t samples, const float* data_in, float* data_out)
+bool nvafx::voicedenoiser::voicedenoiser::process(uint32_t samples, const float* data_in, float* data_out)
 {
 	SRC_DATA srcdata;
 

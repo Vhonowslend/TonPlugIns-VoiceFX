@@ -28,8 +28,8 @@
 #include <nvAudioEffects.h>
 #include <samplerate.h>
 
-namespace xaymar::voice_denoiser {
-	class channel {
+namespace nvafx {
+	class voicedenoiser {
 		uint32_t _samplerate;
 		uint32_t _samples_per_frame;
 
@@ -58,11 +58,11 @@ namespace xaymar::voice_denoiser {
 		size_t _delay_samples;
 
 		public:
-		channel();
-		~channel();
+		voicedenoiser();
+		~voicedenoiser();
 
 		void reset(uint32_t samplerate, uint32_t spf);
 
 		bool process(uint32_t samples, const float* data_in, float* data_out);
 	};
-} // namespace xaymar::voice_denoiser
+} // namespace nvafx

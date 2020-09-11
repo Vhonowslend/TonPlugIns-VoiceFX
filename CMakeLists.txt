@@ -81,14 +81,14 @@ endif()
 ################################################################################
 # Project
 ################################################################################
-project(xmr-nvidia-audiofx
+project(nvidia-audiofx-vst
 	LANGUAGES CXX;C
-	DESCRIPTION "Xaymars Nvidia Audio Effects VSTs"
+	DESCRIPTION "NVIDIA Audio Effects SDK as a VST3 (& VST2)"
 	VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}
 	HOMEPAGE_URL "https://xaymar.com/"
 )
-set(PROJECT_FULL_NAME "Xaymars Nvidia Audio Effects VSTs")
-set(PROJECT_DESCRIPTION "NVidia Audio Effects as a VST!")
+set(PROJECT_FULL_NAME "NVIDIA Audio Effects VST Plugin")
+set(PROJECT_DESCRIPTION "Implementation of the NVIDIA Audio Effects SDK for VST3 and VST2.")
 set(PROJECT_AUTHORS "Michael Fabian 'Xaymar' Dirks <info@xaymar.com>")
 set(PROJECT_COPYRIGHT_YEARS "2020")
 
@@ -178,23 +178,30 @@ add_subdirectory(third-party/secret-rabbit-code)
 
 # Configure files.
 configure_file(
-	"${PROJECT_SOURCE_DIR}/cmake/templates/version.h"
-	"${PROJECT_BINARY_DIR}/version.h"
+	"${PROJECT_SOURCE_DIR}/cmake/templates/version.h.in"
+	"${PROJECT_BINARY_DIR}/generated/version.h"
 	@ONLY
 )
 
 # Source
 set(PROJECT_SOURCE
-	source/lib.cpp
-	source/lib.hpp
-	source/voice_denoiser_channel.hpp
-	source/voice_denoiser_channel.cpp
-	source/voice_denoiser_controller.hpp
-	source/voice_denoiser_controller.cpp
-	source/voice_denoiser_processor.hpp
-	source/voice_denoiser_processor.cpp
-	source/exports_win.def
-	"${PROJECT_BINARY_DIR}/version.h"
+	"source/lib.cpp"
+	"source/lib.hpp"
+	"source/nvafx_voicedenoiser.hpp"
+	"source/nvafx_voicedenoiser.cpp"
+	"source/vst2.cpp"
+	"source/vst2.hpp"
+	"source/vst3.cpp"
+	"source/vst3.hpp"
+	"source/vst3_voicedenoiser_controller.hpp"
+	"source/vst3_voicedenoiser_controller.cpp"
+	"source/vst3_voicedenoiser_processor.hpp"
+	"source/vst3_voicedenoiser_processor.cpp"
+	"source/exports_win.def"
+	"cmake/templates/version.h.in"
+	"cmake/templates/version.rc.in"
+	"cmake/templates/installer.iss.in"
+	"${PROJECT_BINARY_DIR}/generated/version.h"
 )
 set(PROJECT_DATA
 )
@@ -205,6 +212,7 @@ set(PROJECT_LIBRARIES
 set(PROJECT_DEFINITIONS
 )
 set(PROJECT_INCLUDES
+	"${PROJECT_BINARY_DIR}/generated/"
 )
 
 if(WIN32)
@@ -226,7 +234,7 @@ if(WIN32)
 	get_filename_component(ISS_MSVCHELPER_PATH "${msvc-redist-helper_BUILD_DIR}" ABSOLUTE)
 	file(TO_NATIVE_PATH "${ISS_MSVCHELPER_PATH}" ISS_MSVCHELPER_PATH)
 	configure_file(
-		"cmake/templates/installer.iss"
+		"cmake/templates/installer.iss.in"
 		"${PROJECT_BINARY_DIR}/installer.iss"
 	)
 
@@ -238,13 +246,13 @@ if(WIN32)
 	set(PROJECT_LEGAL_TRADEMARKS_2 "VST is a registered trademark of Steinberg Media Technologies GmbH")
 		
 	configure_file(
-		"cmake/templates/version.rc"
-		"${PROJECT_BINARY_DIR}/version.rc"
+		"cmake/templates/version.rc.in"
+		"${PROJECT_BINARY_DIR}/generated/version.rc"
 		@ONLY
 	)
 
 	list(APPEND PROJECT_SOURCE
-		"${PROJECT_BINARY_DIR}/version.rc"
+		"${PROJECT_BINARY_DIR}/generated/version.rc"
 	)
 endif()
 
@@ -258,6 +266,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 target_include_directories(${PROJECT_NAME}
 	PRIVATE
+		${PROJECT_INCLUDES}
 		${VSTSDK_INCLUDE_DIRS}
 		${PROJECT_BINARY_DIR}
 )
@@ -420,14 +429,11 @@ if(MSVC)
 	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}" OPTIONAL)
 endif()
 install(DIRECTORY "resources/" DESTINATION "${PROJECT_NAME}.vst3/Contents/Resources")
-install(FILES ${NVAFX_MODELS} DESTINATION "${PROJECT_NAME}.vst3/Contents/Resources/models")
-install(FILES ${NVAFX_BINARIES} DESTINATION "${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}")
 if(WIN32)
-	install(FILES ${NVAFX_EXTRA_BINARIES} DESTINATION "${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}")
 	install(FILES "cmake/templates/desktop.ini" DESTINATION "${PROJECT_NAME}.vst3")
-	install(FILES "cmake/templates/PlugIn.ico" DESTINATION "${PROJECT_NAME}.vst3")
-	install(CODE "execute_process(COMMAND attrib +R +H \"${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/desktop.ini\")")
-	install(CODE "execute_process(COMMAND attrib +R \"${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/PlugIn.ico\")")
+	install(FILES "cmake/templates/icon.ico" DESTINATION "${PROJECT_NAME}.vst3")
+	install(CODE "execute_process(COMMAND attrib +H +S \"${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/desktop.ini\")")
+	install(CODE "execute_process(COMMAND attrib +R \"${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/icon.ico\")")
 endif()
 install(FILES "LICENSE.md" DESTINATION "${PROJECT_NAME}.vst3")
 

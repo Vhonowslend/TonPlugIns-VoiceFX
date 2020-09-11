@@ -21,42 +21,48 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pragma once
-#include <pluginterfaces/vst/ivstchannelcontextinfo.h>
-#include <public.sdk/source/vst/vsteditcontroller.h>
-#include "lib.hpp"
+#include "vst3_voicedenoiser_controller.hpp"
+#include <base/source/fstreamer.h>
 
-using namespace Steinberg;
-using namespace Steinberg::Vst;
+vst3::voicedenoiser::controller::controller() {}
 
-namespace xaymar::voice_denoiser {
-	static const FUID controller_uid(FOURCC('X', 'm', 'r', 'V'), FOURCC('o', 'D', 'e', 'n'), FOURCC('o', 'i', 's', 'e'),
-									 FOURCC('C', 't', 'l', 'r'));
-	enum class parameters : ParamID {
-		BYPASS,
-	};
+vst3::voicedenoiser::controller::~controller() {}
 
-	class controller : public EditControllerEx1, public ChannelContext::IInfoListener {
-		public:
-		controller();
-		virtual ~controller();
+tresult PLUGIN_API vst3::voicedenoiser::controller::initialize(FUnknown* context)
+{
+	if (tresult result = EditControllerEx1::initialize(context); result != kResultOk)
+		return result;
 
-		public /* IPluginBase */:
-		tresult PLUGIN_API initialize(FUnknown* context) override;
+	{ // Options
+		parameters.addParameter(STR16("Bypass"), nullptr, 1, 0, ParameterInfo::kCanAutomate | ParameterInfo::kIsBypass,
+								static_cast<ParamID>(parameters::BYPASS));
+	}
 
-		tresult PLUGIN_API setComponentState(IBStream* state) override;
+	return kResultOk;
+}
 
-		tresult PLUGIN_API setChannelContextInfos(IAttributeList* list) override;
+tresult PLUGIN_API vst3::voicedenoiser::controller::setComponentState(IBStream* state)
+{
+	if (!state)
+		return kResultFalse;
 
-		public:
-		OBJ_METHODS(controller, EditControllerEx1)
-		DEFINE_INTERFACES
-		DEF_INTERFACE(ChannelContext::IInfoListener)
-		END_DEFINE_INTERFACES(EditController)
-		DELEGATE_REFCOUNT(EditControllerEx1)
+	IBStreamer streamer(state, kBigEndian);
 
-		public:
-		static FUnknown* create(void* data);
-	};
+	bool bypassState = false;
+	if (!streamer.readBool(bypassState))
+		return kResultFalse;
 
-} // namespace xaymar::voice_denoiser
+	setParamNormalized(static_cast<ParamID>(parameters::BYPASS), bypassState ? 1 : 0);
+
+	return kResultOk;
+}
+
+tresult PLUGIN_API vst3::voicedenoiser::controller::setChannelContextInfos(IAttributeList* list)
+{
+	return kResultOk;
+}
+
+FUnknown* vst3::voicedenoiser::controller::create(void* data)
+{
+	return static_cast<IEditController*>(new controller());
+}
