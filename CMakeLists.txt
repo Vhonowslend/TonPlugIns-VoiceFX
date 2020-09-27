@@ -409,7 +409,7 @@ endif()
 # Yeah. It is extremely dumb. Congrats Steinberg, you made something dumb.
 # Not only is it super stupid to make up your own file ending, it's also bad behavior!
 
-set(INSTALL_PREFIX "${PROJECT_NAME}.vst3/")
+set(INSTALL_PREFIX "${PROJECT_NAME}.vst3")
 if(WIN32)
 	set_target_properties(${PROJECT_NAME} PROPERTIES
 		SUFFIX ".vst3"
@@ -430,30 +430,30 @@ else()
 endif()
 
 install(TARGETS ${PROJECT_NAME}
-	LIBRARY DESTINATION "${INSTALL_PREFIX}Contents/${INSTALL_PATH}"
-	RUNTIME DESTINATION "${INSTALL_PREFIX}Contents/${INSTALL_PATH}"
+	LIBRARY DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}"
+	RUNTIME DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}"
 )
 if(MSVC)
-	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${INSTALL_PREFIX}Contents/${INSTALL_PATH}" OPTIONAL)
+	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}" OPTIONAL)
 endif()
-install(DIRECTORY "resources/" DESTINATION "${INSTALL_PREFIX}Contents/Resources")
+install(DIRECTORY "resources/" DESTINATION "${INSTALL_PREFIX}/Contents/Resources")
 if(WIN32)
-	install(FILES "cmake/templates/desktop.ini" DESTINATION "${INSTALL_PREFIX}")
-	install(FILES "cmake/templates/icon.ico" DESTINATION "${INSTALL_PREFIX}")
-	install(CODE "execute_process(COMMAND attrib +A +S +H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}desktop.ini\")")
-	install(CODE "execute_process(COMMAND attrib +A +S -H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}icon.ico\")")
+	install(FILES "cmake/templates/desktop.ini" DESTINATION "${INSTALL_PREFIX}/")
+	install(FILES "cmake/templates/icon.ico" DESTINATION "${INSTALL_PREFIX}/")
+	install(CODE "execute_process(COMMAND attrib +A +S +H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/desktop.ini\")")
+	install(CODE "execute_process(COMMAND attrib +A +S -H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/icon.ico\")")
 endif()
-install(FILES "LICENSE.md" DESTINATION "${PROJECT_NAME}.vst3")
+install(FILES "LICENSE.md" DESTINATION "${INSTALL_PREFIX}")
 
 add_custom_target(
 	PACKAGE_7Z
 	${CMAKE_COMMAND} -E tar cfv "${_PACKAGE_FULL_NAME}.7z" --format=7zip --
 		"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
-	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
+	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
 )
 add_custom_target(
 	PACKAGE_ZIP
 	${CMAKE_COMMAND} -E tar cfv "${_PACKAGE_FULL_NAME}.zip" --format=zip --
 		"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
-	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
+	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
 )
