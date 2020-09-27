@@ -28,6 +28,8 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 LZMAAlgorithm=1
 ; Other Information
+ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64
 DefaultDirName={code:GetDirName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
@@ -37,7 +39,7 @@ OutputBaseFilename=@CMAKE_PACKAGE_NAME@-@_PACKAGE_SUFFIX_OVERRIDE@
 ; Wizard Information
 WizardStyle=modern
 WizardResizable=yes
-SetupIconFile="@PROJECT_SOURCE_DIR@/cmake/templates/PlugIn.ico"
+SetupIconFile="@PROJECT_SOURCE_DIR@/cmake/templates/icon.ico"
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -53,7 +55,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 [Code]
 function GetDirName(Value: string): string;
 begin
-  Result := ExpandConstant('{commoncf}\VST3');
+  Result := ExpandConstant('{commoncf}\VST3\@PROJECT_NAME@.vst3');
 end;
 
 /////////////////////////////////////////////////////////////////////
