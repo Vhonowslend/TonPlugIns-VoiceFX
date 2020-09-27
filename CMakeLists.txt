@@ -44,8 +44,8 @@ endif()
 
 # Automatic Versioning
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 1)
-set(VERSION_PATCH 0)
+set(VERSION_MINOR 2)
+set(VERSION_PATCH 1)
 set(VERSION_TWEAK 0)
 set(VERSION_SUFFIX "")
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
@@ -386,14 +386,21 @@ endif()
 # ${PROJECT_NAME}.vst3/
 #   Contents/
 #     Resources/
-#       ...
-#     armv71-linux/${PROJECT_NAME}.so
-#     i686-linux/${PROJECT_NAME}.so
-#     i386-linux/${PROJECT_NAME}.so
-#     x86_64-linux/${PROJECT_NAME}.so
-#     MacOS/${PROJECT_NAME}
-#     x86-win/${PROJECT_NAME}.vst3
-#     x86_64-win/${PROJECT_NAME}.vst3
+#       <your custom content>
+#     armv71-linux/
+#       ${PROJECT_NAME}.so
+#     i686-linux/
+#       ${PROJECT_NAME}.so
+#     i386-linux/
+#       ${PROJECT_NAME}.so
+#     x86_64-linux/
+#       ${PROJECT_NAME}.so
+#     MacOS/
+#       ${PROJECT_NAME}
+#     x86-win/
+#       ${PROJECT_NAME}.vst3
+#     x86_64-win/
+#       ${PROJECT_NAME}.vst3
 #     Info.plist (MacOS)
 #     PkgInfo (MacOS)
 #   desktop.ini (Windows)
@@ -402,6 +409,7 @@ endif()
 # Yeah. It is extremely dumb. Congrats Steinberg, you made something dumb.
 # Not only is it super stupid to make up your own file ending, it's also bad behavior!
 
+set(INSTALL_PREFIX "${PROJECT_NAME}.vst3/")
 if(WIN32)
 	set_target_properties(${PROJECT_NAME} PROPERTIES
 		SUFFIX ".vst3"
@@ -422,30 +430,30 @@ else()
 endif()
 
 install(TARGETS ${PROJECT_NAME}
-	LIBRARY DESTINATION "${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}"
-	RUNTIME DESTINATION "${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}"
+	LIBRARY DESTINATION "${INSTALL_PREFIX}Contents/${INSTALL_PATH}"
+	RUNTIME DESTINATION "${INSTALL_PREFIX}Contents/${INSTALL_PATH}"
 )
 if(MSVC)
-	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}" OPTIONAL)
+	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${INSTALL_PREFIX}Contents/${INSTALL_PATH}" OPTIONAL)
 endif()
-install(DIRECTORY "resources/" DESTINATION "${PROJECT_NAME}.vst3/Contents/Resources")
+install(DIRECTORY "resources/" DESTINATION "${INSTALL_PREFIX}Contents/Resources")
 if(WIN32)
-	install(FILES "cmake/templates/desktop.ini" DESTINATION "${PROJECT_NAME}.vst3")
-	install(FILES "cmake/templates/icon.ico" DESTINATION "${PROJECT_NAME}.vst3")
-	install(CODE "execute_process(COMMAND attrib +H +S \"${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/desktop.ini\")")
-	install(CODE "execute_process(COMMAND attrib +R \"${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/icon.ico\")")
+	install(FILES "cmake/templates/desktop.ini" DESTINATION "${INSTALL_PREFIX}")
+	install(FILES "cmake/templates/icon.ico" DESTINATION "${INSTALL_PREFIX}")
+	install(CODE "execute_process(COMMAND attrib +A +S +H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}desktop.ini\")")
+	install(CODE "execute_process(COMMAND attrib +A +S -H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}icon.ico\")")
 endif()
 install(FILES "LICENSE.md" DESTINATION "${PROJECT_NAME}.vst3")
 
 add_custom_target(
 	PACKAGE_7Z
 	${CMAKE_COMMAND} -E tar cfv "${_PACKAGE_FULL_NAME}.7z" --format=7zip --
-		"${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3"
-	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
+		"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
+	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
 )
 add_custom_target(
 	PACKAGE_ZIP
 	${CMAKE_COMMAND} -E tar cfv "${_PACKAGE_FULL_NAME}.zip" --format=zip --
-		"${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3"
-	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
+		"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
+	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
 )

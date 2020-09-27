@@ -45,7 +45,7 @@ SetupIconFile="@PROJECT_SOURCE_DIR@/cmake/templates/icon.ico"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "@ISS_FILES_DIR@/*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "@ISS_FILES_DIR@/@PROJECT_NAME@.vst3/*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
