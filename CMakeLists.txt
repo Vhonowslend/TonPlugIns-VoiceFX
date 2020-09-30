@@ -81,14 +81,14 @@ endif()
 ################################################################################
 # Project
 ################################################################################
-project(nvidia-audiofx-vst
+project(xaymar-voicefx
 	LANGUAGES CXX;C
-	DESCRIPTION "NVIDIA Audio Effects SDK as a VST3 (& VST2)"
+	DESCRIPTION "Xaymars VoiceFX (for VST)"
 	VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}
 	HOMEPAGE_URL "https://xaymar.com/"
 )
-set(PROJECT_FULL_NAME "NVIDIA Audio Effects VST Plugin")
-set(PROJECT_DESCRIPTION "Implementation of the NVIDIA Audio Effects SDK for VST3 and VST2.")
+set(PROJECT_FULL_NAME "Xaymars VoiceFX (for VST)")
+set(PROJECT_DESCRIPTION "")
 set(PROJECT_AUTHORS "Michael Fabian 'Xaymar' Dirks <info@xaymar.com>")
 set(PROJECT_COPYRIGHT_YEARS "2020")
 
