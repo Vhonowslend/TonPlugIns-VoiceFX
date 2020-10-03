@@ -11,7 +11,7 @@
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 
-; app Information
+; Application Information
 AppId={{0B94A94D-0C53-4682-9230-587B568F25BF}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
@@ -20,26 +20,31 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 AppMutex={#MyAppName}
+
+; Versioning
 VersionInfoVersion={#MyAppVersion}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription={#MyAppName} Setup
-; Compression
-Compression=lzma2/ultra64
-SolidCompression=yes
-LZMAAlgorithm=1
-; Other Information
-ArchitecturesInstallIn64BitMode=x64
-ArchitecturesAllowed=x64
-DefaultDirName={code:GetDirName}
-DefaultGroupName={#MyAppName}
-AllowNoIcons=yes
-LicenseFile="@ISS_SOURCE_DIR@/LICENSE.md"
-OutputDir="@ISS_PACKAGE_DIR@"
-OutputBaseFilename=@CMAKE_PACKAGE_NAME@-@_PACKAGE_SUFFIX_OVERRIDE@
+
+; Architecture (Platform is always Windows)
+ArchitecturesInstallIn64BitMode=@ARCH@
+ArchitecturesAllowed=@ARCH@
+
 ; Wizard Information
 WizardStyle=modern
 WizardResizable=yes
-SetupIconFile="@PROJECT_SOURCE_DIR@/cmake/templates/icon.ico"
+;SetupIconFile="@PROJECT_SOURCE_DIR@/cmake/templates/installer.ico"
+
+; Other Information
+DefaultDirName={code:GetDirName}
+DefaultGroupName={#MyAppName}
+AllowNoIcons=yes
+LicenseFile="@ISS_SOURCE_DIR@/cmake/templates/installer-license.rtf"
+OutputDir="@ISS_PACKAGE_DIR@"
+OutputBaseFilename=@CMAKE_PACKAGE_NAME@-@_PACKAGE_SUFFIX_OVERRIDE@
+Compression=lzma2/ultra64
+SolidCompression=yes
+LZMAAlgorithm=1
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
