@@ -88,14 +88,14 @@ bool DeinitModule()
 	return true;
 }
 
-BEGIN_FACTORY_DEF("Michael Fabian 'Xaymar' Dirks", "https://xaymar.com/", "mailto:info@xaymar.com")
+BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:info@xaymar.com")
 
 DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::voicedenoiser::processor_uid),
 		   PClassInfo::kManyInstances,            // Allow many instances
 		   kVstAudioEffectClass,                  // Type
 		   "NVIDIA Voice Noise Removal",          // Name
 		   Vst::kDistributable,                   // Allow cross-computer usage.
-		   "Fx",                                  // Categories (separate with |)
+		   Vst::PlugType::kFxRestoration,         // Categories (separate with |)
 		   VERSION_STRING,                        // Version
 		   kVstVersionString,                     // VST SDK Version
 		   vst3::voicedenoiser::processor::create // Function to create the instance.
