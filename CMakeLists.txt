@@ -213,6 +213,7 @@ set(PROJECT_DEFINITIONS
 )
 set(PROJECT_INCLUDES
 	"${PROJECT_BINARY_DIR}/generated/"
+	"${PROJECT_SOURCE_DIR}/third-party/vst2sdk"
 )
 
 if(WIN32)
