@@ -185,8 +185,8 @@ configure_file(
 
 # Source
 set(PROJECT_SOURCE
-	"source/lib.cpp"
 	"source/lib.hpp"
+	"source/lib.cpp"
 	"source/platform.hpp"
 	"source/platform.cpp"
 	"source/audiobuffer.hpp"

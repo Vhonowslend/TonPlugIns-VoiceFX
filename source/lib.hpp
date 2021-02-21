@@ -22,6 +22,7 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
+#include <cinttypes>
 #include <filesystem>
 #include "version.h"
 
@@ -33,4 +34,14 @@ void                  set_vst3_path(std::filesystem::path value);
 std::filesystem::path nvafx_path();
 void                  set_nvafx_path(std::filesystem::path value);
 
-void do_log(const char* format, ...);
+namespace voicefx {
+	static std::string_view name   = "VoiceFX";
+	static std::string_view vendor = "Xaymar";
+
+	void initialize();
+
+	std::filesystem::path user_data();
+	std::filesystem::path local_data();
+
+	void log(const char* format, ...);
+} // namespace voicefx

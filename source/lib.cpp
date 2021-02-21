@@ -22,9 +22,21 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "lib.hpp"
+#include <chrono>
 #include <cstdarg>
+#include <fstream>
 #include <iostream>
+#include <mutex>
 #include <vector>
+#include "platform.hpp"
+
+#if defined(_WIN32)
+#include "Windows.h"
+
+#include "Shlobj.h"
+
+#include "Knownfolders.h"
+#endif
 
 #define LOG_PREFIX "[NVIDIA AudioFX VST] "
 
@@ -51,15 +63,195 @@ void set_nvafx_path(std::filesystem::path value)
 	_sdk_path = std::filesystem::path(value);
 }
 
-void do_log(const char* format, ...)
+static bool _initialized = false;
+
+static std::filesystem::path _user_data;
+static std::filesystem::path _local_data;
+
+static std::ofstream _log_stream;
+static std::mutex    _log_stream_mutex;
+
+std::string formatted_time(bool file_safe = false)
 {
-	std::vector<char> buf(65535);
+	// Get the current time.
+	auto now = std::chrono::system_clock::now();
 
-	va_list args;
-	va_start(args, format);
-	buf.resize(static_cast<size_t>(vsnprintf(nullptr, 0, format, args)) + 1);
-	vsnprintf(buf.data(), buf.size(), format, args);
-	va_end(args);
+	// Preallocate a 32-byte buffer.
+	std::vector<char> time_buffer(32, '\0');
 
-	std::cerr << LOG_PREFIX << buf.data() << std::endl;
+	// Figure out if we want a file safe or log safe format.
+	std::string_view local_format = "%04d-%02d-%02dT%02d:%02d:%02d.%06d";
+	if (file_safe) {
+		local_format = "%04d-%02d-%02dT%02d-%02d-%02d-%06d";
+	}
+
+	// Convert the current time into UTC.
+	auto      nowt    = std::chrono::system_clock::to_time_t(now);
+	struct tm tstruct = *gmtime(&nowt);
+	auto      mis     = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
+
+	// Store the time according to the requested format.
+	snprintf(time_buffer.data(), time_buffer.size(), local_format.data(), tstruct.tm_year + 1900, tstruct.tm_mon + 1,
+			 tstruct.tm_mday, tstruct.tm_hour, tstruct.tm_min, tstruct.tm_sec, mis.count() % 1000000);
+
+	return std::string(time_buffer.data());
+}
+
+void voicefx::initialize()
+{
+	if (_initialized)
+		return;
+
+#ifdef _WIN32
+	PWSTR             widebuffer;
+	std::vector<char> buffer;
+
+	// Local User Data
+	if (SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &widebuffer) == S_OK) {
+		size_t wsz = static_cast<size_t>(wcslen(widebuffer));
+		size_t sz =
+			static_cast<size_t>(WideCharToMultiByte(CP_UTF8, 0, widebuffer, static_cast<int>(wsz), 0, 0, 0, nullptr));
+		buffer.resize(sz + 1);
+		WideCharToMultiByte(CP_UTF8, 0, widebuffer, static_cast<int>(wsz), buffer.data(),
+							static_cast<int>(buffer.size()), 0, nullptr);
+		CoTaskMemFree(widebuffer);
+
+		_local_data = std::filesystem::u8path(std::string_view(buffer.data(), buffer.size() - 1));
+	} else {
+		_local_data = std::filesystem::temp_directory_path();
+	}
+
+	// Roaming User Data
+	if (SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &widebuffer) == S_OK) {
+		size_t wsz = static_cast<size_t>(wcslen(widebuffer));
+		size_t sz =
+			static_cast<size_t>(WideCharToMultiByte(CP_UTF8, 0, widebuffer, static_cast<int>(wsz), 0, 0, 0, nullptr));
+		buffer.resize(sz + 1);
+		WideCharToMultiByte(CP_UTF8, 0, widebuffer, static_cast<int>(wsz), buffer.data(),
+							static_cast<int>(buffer.size()), 0, nullptr);
+		CoTaskMemFree(widebuffer);
+
+		_user_data = std::filesystem::u8path(std::string_view(buffer.data(), buffer.size() - 1));
+	} else {
+		_user_data = std::filesystem::temp_directory_path();
+	}
+
+	// Adjust both paths to have our app name.
+	_local_data /= voicefx::name;
+	_user_data /= voicefx::name;
+
+	// Create missing directories.
+	std::filesystem::create_directories(_local_data);
+	std::filesystem::create_directories(_user_data);
+#else
+		// TODO: Weird situation because nobody could agree on a thing.
+#endif
+
+	// Try and open a log file
+	{
+		std::filesystem::path log_path = std::filesystem::path(_local_data) / "logs";
+		std::filesystem::create_directories(log_path);
+		log_path.append(formatted_time(true) + ".log");
+		_log_stream = std::ofstream(log_path, std::ios::trunc | std::ios::out);
+	}
+
+	voicefx::log("Initialized.");
+
+#ifdef WIN32
+	// Log information about the Host process.
+	{
+		std::vector<wchar_t> file_name_w(256, 0);
+		size_t               file_name_len;
+		do {
+			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+				file_name_w.resize(file_name_w.size() * 2);
+			}
+			file_name_len = static_cast<DWORD>(
+				GetModuleFileNameW(NULL, file_name_w.data(), static_cast<DWORD>(file_name_w.size())));
+		} while (GetLastError() == ERROR_INSUFFICIENT_BUFFER);
+
+		std::string file_name =
+			platform::native_to_utf8(std::wstring(file_name_w.data(), file_name_w.data() + file_name_len));
+		voicefx::log("Host Process: %s (0x%08" PRIx32 ")", file_name.c_str(), GetCurrentProcessId());
+	}
+#endif
+
+	_initialized = true;
+}
+
+std::filesystem::path voicefx::user_data()
+{
+	return _user_data;
+}
+
+std::filesystem::path voicefx::local_data()
+{
+	return _local_data;
+}
+
+void voicefx::log(const char* format, ...)
+{
+	// Build a UTF-8 string.
+	std::string converted;
+
+	{
+		std::vector<char> format_buffer;
+		std::vector<char> string_buffer;
+		std::string       time = formatted_time();
+
+		// Generate proper format string.
+		{
+			const char* local_format = "%s %s\n";
+
+			size_t len = static_cast<size_t>(snprintf(nullptr, 0, local_format, time.data(), format)) + 1;
+			format_buffer.resize(len);
+			snprintf(format_buffer.data(), format_buffer.size(), local_format, time.data(), format);
+		};
+
+		{
+			va_list args;
+			va_start(args, format);
+			size_t len = static_cast<size_t>(vsnprintf(nullptr, 0, format_buffer.data(), args)) + 1;
+			string_buffer.resize(len);
+			vsnprintf(string_buffer.data(), string_buffer.size(), format_buffer.data(), args);
+			va_end(args);
+		}
+
+		converted = std::string{string_buffer.data(), string_buffer.size() - 1};
+	}
+
+	// Write to file and stdout.
+	std::cout << LOG_PREFIX << converted;
+	if (std::lock_guard<std::mutex> lock(_log_stream_mutex); true) {
+		// This needs to be synchronous or bad things happen.
+		if (_log_stream.good() && !_log_stream.bad()) {
+			_log_stream << converted;
+			_log_stream.flush();
+		}
+	}
+
+#if defined(_WIN32) && defined(_MSC_VER)
+	{ // Write to Debug console
+		std::vector<char> string_buffer;
+
+		{ // Need to prefix it as the debug console is noisy.
+			const char* local_format = LOG_PREFIX " %s";
+
+			size_t rfsz = static_cast<size_t>(snprintf(nullptr, 0, local_format, converted.data())) + 1;
+			string_buffer.resize(rfsz);
+			snprintf(string_buffer.data(), string_buffer.size(), local_format, converted.data());
+		}
+
+		// MSVC: Print to debug console
+		std::vector<wchar_t> wstring_buffer(converted.size(), 0);
+		size_t               len =
+			static_cast<size_t>(MultiByteToWideChar(CP_UTF8, 0, string_buffer.data(),
+													static_cast<int>(string_buffer.size()), wstring_buffer.data(), 0))
+			+ 1;
+		wstring_buffer.resize(len);
+		MultiByteToWideChar(CP_UTF8, 0, string_buffer.data(), static_cast<int>(string_buffer.size()),
+							wstring_buffer.data(), static_cast<int>(wstring_buffer.size()));
+		OutputDebugStringW(wstring_buffer.data());
+#endif
+	}
 }
