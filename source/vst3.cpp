@@ -27,66 +27,7 @@
 #include "vst3_voicedenoiser_controller.hpp"
 #include "vst3_voicedenoiser_processor.hpp"
 
-#ifdef WIN32
-#include <Windows.h>
-
-HMODULE              lib;
-DLL_DIRECTORY_COOKIE ck;
-#endif
-
-bool InitModule()
-{
-	set_vst3_path(gPath);
-
-#ifdef WIN32
-
-	// Figure out possible NVAFX directories.
-	{
-		std::vector<wchar_t> buffer(0xFFFFull);
-		buffer.resize(static_cast<size_t>(GetEnvironmentVariableW(L"NVAFX_SDK_DIR", buffer.data(), 0)) + 1);
-		if (buffer.size() > 0) {
-			GetEnvironmentVariableW(L"NVAFX_SDK_DIR", buffer.data(), buffer.size());
-			set_nvafx_path(std::filesystem::path(std::wstring(buffer.data())));
-		} else {
-			set_nvafx_path(vst3_path());
-		}
-	}
-
-	// Add DLL search directories.
-	SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-	{
-		// Add VST3 directory to the known search paths.
-		ck = AddDllDirectory(vst3_path().wstring().c_str());
-		if (!ck) {
-			do_log("Failed to add library search directory, aborting.");
-			return false;
-		}
-
-		// Add SDK directory.
-		ck = AddDllDirectory(nvafx_path().wstring().c_str());
-		if (!ck) {
-			do_log("Failed to add library search directory, aborting.");
-			return false;
-		}
-
-		// Attempt to load the library.
-		lib = LoadLibraryW(L"NVAudioEffects.dll");
-		if (lib == NULL) {
-			do_log("Failed to load library, aborting.");
-			return false;
-		}
-	}
-#endif
-
-	return true;
-}
-
-bool DeinitModule()
-{
-	FreeLibrary(lib);
-	RemoveDllDirectory(ck);
-	return true;
-}
+#define D_LOG(MESSAGE, ...) voicefx::log("<VST2> " MESSAGE, __VA_ARGS__)
 
 BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:info@xaymar.com")
 
@@ -112,3 +53,29 @@ DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::voicedenoiser::controller_uid),
 )
 
 END_FACTORY
+
+bool InitModule()
+{
+	try {
+		// Initialize VoiceFX library.
+		voicefx::initialize();
+		D_LOG("Initializing...");
+
+		// Adjust the path to the VST 3 plugin.
+		set_vst3_path(gPath);
+
+		// Log that we are now ready to perform work.
+		D_LOG("Ready to work.");
+
+		// Return true to signal the VST 3 hosts that everything is fine.
+		return true;
+	} catch (std::exception const& ex) {
+		voicefx::log("Exception: %s", ex.what());
+		return false;
+	}
+}
+
+bool DeinitModule()
+{
+	return true;
+}
