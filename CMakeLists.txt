@@ -187,6 +187,8 @@ configure_file(
 set(PROJECT_SOURCE
 	"source/lib.cpp"
 	"source/lib.hpp"
+	"source/platform.hpp"
+	"source/platform.cpp"
 	"source/nvafx.hpp"
 	"source/nvafx.cpp"
 	"source/nvafx_denoiser.hpp"
