@@ -20,9 +20,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 # Steinberg VST
 ![VST Compatible](https://raw.githubusercontent.com/steinbergmedia/vst3_doc/master/artwork/VST_Compatible_Logo_Steinberg.svg)
-VST is a registered tradmark of Steinberg MEdia Technologies GmbH.
+VST is a registered tradmark of Steinberg Media Technologies GmbH.
 
-# Third Party Licenses
-* Secret Rabbit Code is licensed under the 2-clause BSD License.
-* Steinberg VST3 SDK is dual licensed under GPLv2 and the Steinberg proprietary license.
-* NVIDIA Audio Effects SDK is licensed under <?>.
+# NVIDIA Audio Effects SDK
+Unknown License
