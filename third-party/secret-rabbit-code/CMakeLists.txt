@@ -18,13 +18,14 @@ include(CheckFunctionExists)
 project(secret-rabbit-code
 	LANGUAGES C
 	DESCRIPTION "Secret Rabbit Code"
-	VERSION 0.1.9
+	VERSION 0.2.2
 )
 
 check_include_file("alsa/asoundlib.h" HAVE_ALAS_ASOUNDLIB_H)
 check_include_file("dlfcn.h" HAVE_DLFCN_H)
 check_include_file("inttypes.h" HAVE_INTTYPES_H)
 check_include_file("memory.h" HAVE_MEMORY_H)
+check_include_file("stdbool.h" HAVE_STDBOOL_H)
 check_include_file("stdint.h" HAVE_STDINT_H)
 check_include_file("stdlib.h" HAVE_STDLIB_H)
 check_include_file("strings.h" HAVE_STRINGS_H)
@@ -40,6 +41,9 @@ if(SRC_HAVE_INTTYPES_H)
 endif()
 if(SRC_HAVE_MEMORY_H)
 	list(APPEND CMAKE_REQUIRED_INCLUDES "memory.h")
+endif()
+if(SRC_HAVE_STDBOOL_H)
+	list(APPEND CMAKE_REQUIRED_INCLUDES "stdbool.h")
 endif()
 if(SRC_HAVE_STDINT_H)
 	list(APPEND CMAKE_REQUIRED_INCLUDES "stdint.h")
@@ -84,6 +88,10 @@ check_function_exists("calloc" HAVE_CALLOC)
 check_function_exists("signal" HAVE_SIGNAL)
 check_function_exists("alarm" HAVE_ALARM)
 
+set(ENABLE_SINC_FAST_CONVERTER ON)
+set(ENABLE_SINC_MEDIUM_CONVERTER ON)
+set(ENABLE_SINC_BEST_CONVERTER ON)
+
 if(WIN32)
 	set(OS_IS_WIN32 1)
 else()
@@ -98,27 +106,31 @@ endif()
 configure_file(
 	templates/config.h.in
 	${PROJECT_BINARY_DIR}/config.h
-	@ONLY
 )
 
 add_library(${PROJECT_NAME} STATIC
+	include/samplerate.h
 	src/common.h
 	src/fastest_coeffs.h
-	src/float_cast.h
 	src/high_qual_coeffs.h
 	src/mid_qual_coeffs.h
 	src/samplerate.c
-	src/samplerate.h
 	src/src_linear.c
 	src/src_sinc.c
 	src/src_zoh.c
 	${PROJECT_BINARY_DIR}/config.h
 )
+target_compile_definitions(${PROJECT_NAME}
+	PRIVATE
+	HAVE_CONFIG_H
+)
 target_include_directories(${PROJECT_NAME}
 	PRIVATE
 		src
+		include
 		${PROJECT_BINARY_DIR}
 	INTERFACE
 		${PROJECT_SOURCE_DIR}/src
+		${PROJECT_SOURCE_DIR}/include
 		${PROJECT_BINARY_DIR}
 )
