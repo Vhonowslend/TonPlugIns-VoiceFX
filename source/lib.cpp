@@ -29,6 +29,7 @@
 #include <mutex>
 #include <vector>
 #include "platform.hpp"
+#include "version.h"
 
 #if defined(_WIN32)
 #include "Windows.h"
@@ -155,7 +156,7 @@ void voicefx::initialize()
 		_log_stream = std::ofstream(log_path, std::ios::trunc | std::ios::out);
 	}
 
-	voicefx::log("Initialized.");
+	voicefx::log("Loaded v" VERSION_STRING ".");
 
 #ifdef WIN32
 	// Log information about the Host process.
