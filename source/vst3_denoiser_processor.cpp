@@ -21,28 +21,28 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "vst3_voicedenoiser_processor.hpp"
+#include "vst3_denoiser_processor.hpp"
 #include <base/source/fstreamer.h>
 #include <filesystem>
 #include <pluginterfaces/vst/ivstparameterchanges.h>
-#include "vst3_voicedenoiser_controller.hpp"
+#include "vst3_denoiser_controller.hpp"
 
-FUnknown* vst3::voicedenoiser::processor::create(void* data)
+FUnknown* vst3::denoiser::processor::create(void* data)
 {
 	return static_cast<IAudioProcessor*>(new processor());
 }
 
-vst3::voicedenoiser::processor::processor() : _bypass(false)
+vst3::denoiser::processor::processor() : _bypass(false)
 {
 	processContextRequirements.needContinousTimeSamples();
 	processContextRequirements.needSamplesToNextClock();
 
-	setControllerClass(vst3::voicedenoiser::controller_uid);
+	setControllerClass(vst3::denoiser::controller_uid);
 }
 
-vst3::voicedenoiser::processor::~processor() {}
+vst3::denoiser::processor::~processor() {}
 
-tresult PLUGIN_API vst3::voicedenoiser::processor::initialize(FUnknown* context)
+tresult PLUGIN_API vst3::denoiser::processor::initialize(FUnknown* context)
 {
 	if (auto res = AudioEffect::initialize(context); res != kResultOk) {
 		return res;
@@ -53,13 +53,13 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::initialize(FUnknown* context)
 	return kResultOk;
 }
 
-tresult PLUGIN_API vst3::voicedenoiser::processor::canProcessSampleSize(int32 symbolicSampleSize)
+tresult PLUGIN_API vst3::denoiser::processor::canProcessSampleSize(int32 symbolicSampleSize)
 {
 	return (symbolicSampleSize == kSample32) ? kResultTrue : kResultFalse;
 }
 
-tresult PLUGIN_API vst3::voicedenoiser::processor::setBusArrangements(SpeakerArrangement* inputs, int32 numIns,
-																	  SpeakerArrangement* outputs, int32 numOuts)
+tresult PLUGIN_API vst3::denoiser::processor::setBusArrangements(SpeakerArrangement* inputs, int32 numIns,
+																 SpeakerArrangement* outputs, int32 numOuts)
 {
 	if (numIns < 0 || numOuts < 0) {
 		return kInvalidArgument;
@@ -96,18 +96,18 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::setBusArrangements(SpeakerArr
 	return kResultTrue;
 }
 
-uint32 PLUGIN_API vst3::voicedenoiser::processor::getLatencySamples()
+uint32 PLUGIN_API vst3::denoiser::processor::getLatencySamples()
 {
 	// In order to not glitch out, we need to delay things until we have 3x the required samples
 	return processSetup.maxSamplesPerBlock << 1;
 }
 
-uint32 PLUGIN_API vst3::voicedenoiser::processor::getTailSamples()
+uint32 PLUGIN_API vst3::denoiser::processor::getTailSamples()
 {
 	return getLatencySamples();
 }
 
-tresult PLUGIN_API vst3::voicedenoiser::processor::process(ProcessData& data)
+tresult PLUGIN_API vst3::denoiser::processor::process(ProcessData& data)
 {
 	// Check for updates to parameters.
 	if (data.inputParameterChanges != nullptr) {
@@ -183,9 +183,9 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::process(ProcessData& data)
 	return kResultOk;
 }
 
-tresult PLUGIN_API vst3::voicedenoiser::processor::setState(IBStream* state)
+tresult PLUGIN_API vst3::denoiser::processor::setState(IBStream* state)
 {
-	if (state != nullptr) {
+	if (state == nullptr) {
 		return kResultFalse;
 	}
 
@@ -197,9 +197,9 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::setState(IBStream* state)
 	return kResultOk;
 }
 
-tresult PLUGIN_API vst3::voicedenoiser::processor::getState(IBStream* state)
+tresult PLUGIN_API vst3::denoiser::processor::getState(IBStream* state)
 {
-	if (state != nullptr) {
+	if (state == nullptr) {
 		return kResultFalse;
 	}
 
@@ -211,7 +211,7 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::getState(IBStream* state)
 	return kResultOk;
 }
 
-void vst3::voicedenoiser::processor::update_channel_count(size_t channels)
+void vst3::denoiser::processor::update_channel_count(size_t channels)
 {
 	// Channel magic
 	_channels.clear();

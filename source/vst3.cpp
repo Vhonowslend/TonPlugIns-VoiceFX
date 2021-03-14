@@ -24,24 +24,24 @@
 #include "vst3.hpp"
 #include <public.sdk/source/main/pluginfactory.h>
 #include "version.h"
-#include "vst3_voicedenoiser_controller.hpp"
-#include "vst3_voicedenoiser_processor.hpp"
+#include "vst3_denoiser_controller.hpp"
+#include "vst3_denoiser_processor.hpp"
 
 #define D_LOG(MESSAGE, ...) voicefx::log("<VST2> " MESSAGE, __VA_ARGS__)
 
 BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:info@xaymar.com")
 
-DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::voicedenoiser::processor_uid),
-		   PClassInfo::kManyInstances,            // Allow many instances
-		   kVstAudioEffectClass,                  // Type
-		   "NVIDIA Voice Noise Removal",          // Name
-		   Vst::kDistributable,                   // Allow cross-computer usage.
-		   Vst::PlugType::kFxRestoration,         // Categories (separate with |)
-		   VERSION_STRING,                        // Version
-		   kVstVersionString,                     // VST SDK Version
-		   vst3::voicedenoiser::processor::create // Function to create the instance.
+DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::denoiser::processor_uid),
+		   PClassInfo::kManyInstances,       // Allow many instances
+		   kVstAudioEffectClass,             // Type
+		   "NVIDIA Voice Noise Removal",     // Name
+		   Vst::kDistributable,              // Allow cross-computer usage.
+		   Vst::PlugType::kFxRestoration,    // Categories (separate with |)
+		   VERSION_STRING,                   // Version
+		   kVstVersionString,                // VST SDK Version
+		   vst3::denoiser::processor::create // Function to create the instance.
 )
-DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::voicedenoiser::controller_uid),
+DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::denoiser::controller_uid),
 		   PClassInfo::kManyInstances,              // Allow many instances
 		   kVstComponentControllerClass,            // Type
 		   "NVIDIA Voice Noise Removal Controller", // Name
@@ -49,7 +49,7 @@ DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::voicedenoiser::controller_uid),
 		   "",                                      // Unused
 		   VERSION_STRING,                          // Version
 		   kVstVersionString,                       // VST SDK Version
-		   vst3::voicedenoiser::controller::create  // Function to create the instance.
+		   vst3::denoiser::controller::create       // Function to create the instance.
 )
 
 END_FACTORY
