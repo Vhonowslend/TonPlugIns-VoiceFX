@@ -189,6 +189,8 @@ set(PROJECT_SOURCE
 	"source/lib.hpp"
 	"source/platform.hpp"
 	"source/platform.cpp"
+	"source/audiobuffer.hpp"
+	"source/audiobuffer.cpp"
 	"source/nvafx.hpp"
 	"source/nvafx.cpp"
 	"source/nvafx_denoiser.hpp"
