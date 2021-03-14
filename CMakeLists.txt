@@ -195,6 +195,8 @@ set(PROJECT_SOURCE
 	"source/nvafx_denoiser.cpp"
 	"source/nvafx_voicedenoiser.hpp"
 	"source/nvafx_voicedenoiser.cpp"
+	"source/resampler.hpp"
+	"source/resampler.cpp"
 	"source/vst2.cpp"
 	"source/vst2.hpp"
 	"source/vst3.cpp"
