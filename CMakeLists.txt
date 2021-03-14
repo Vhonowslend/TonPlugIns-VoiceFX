@@ -163,7 +163,7 @@ endif()
 ################################################################################
 # Project
 ################################################################################
-project(xaymar-voicefx
+project(VoiceFX
 	LANGUAGES CXX;C
 	DESCRIPTION "Xaymars VoiceFX (for VST)"
 	VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}
