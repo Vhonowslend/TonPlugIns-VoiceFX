@@ -146,7 +146,6 @@ message(STATUS "${LOGPREFIX} Version ${VERSION_STRING}")
 # Setup / Bootstrap
 ################################################################################
 
-
 # Search Paths
 set(CMAKE_MODULE_PATH
 	"${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang"
@@ -243,6 +242,8 @@ set(_CXX_EXTENSIONS OFF)
 set(CMAKE_PACKAGE_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "Path for generated archives.")
 set(CMAKE_PACKAGE_NAME "${PROJECT_NAME}" CACHE STRING "Name for the generated archives.")
 set(CMAKE_PACKAGE_SUFFIX_OVERRIDE "" CACHE STRING "Override for the suffix.")
+
+set(INSTALL_VST2 OFF CACHE BOOL "Package for VST2.x")
 
 ################################################################################
 # Project Setup
@@ -505,41 +506,52 @@ endif()
 # Yeah. It is extremely dumb. Congrats Steinberg, you made something dumb.
 # Not only is it super stupid to make up your own file ending, it's also bad behavior!
 
-set(INSTALL_PREFIX "${PROJECT_NAME}.vst3")
-if(WIN32)
-	set_target_properties(${PROJECT_NAME} PROPERTIES
-		SUFFIX ".vst3"
+if(INSTALL_VST2)
+	install(TARGETS ${PROJECT_NAME}
+		LIBRARY DESTINATION "VoiceFX"
+		RUNTIME DESTINATION "VoiceFX"
 	)
-	if(${BITS} STREQUAL "32")
-		set(INSTALL_PATH "x86-win")
-	else()
-		set(INSTALL_PATH "x86_64-win")
+	if(MSVC)
+		install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "VoiceFX" OPTIONAL)
 	endif()
-elseif(APPLE)
-	set(INSTALL_PATH "MacOS")	
+	install(FILES "LICENSE.md" DESTINATION "VoiceFX")
 else()
-	if(${BITS} STREQUAL "32")
-		set(INSTALL_PATH "i386-linux")
+	set(INSTALL_PREFIX "${PROJECT_NAME}.vst3")
+	if(WIN32)
+		set_target_properties(${PROJECT_NAME} PROPERTIES
+			SUFFIX ".vst3"
+		)
+		if(${BITS} STREQUAL "32")
+			set(INSTALL_PATH "x86-win")
+		else()
+			set(INSTALL_PATH "x86_64-win")
+		endif()
+	elseif(APPLE)
+		set(INSTALL_PATH "MacOS")	
 	else()
-		set(INSTALL_PATH "x86_64-linux")
-	endif()	
-endif()
+		if(${BITS} STREQUAL "32")
+			set(INSTALL_PATH "i386-linux")
+		else()
+			set(INSTALL_PATH "x86_64-linux")
+		endif()	
+	endif()
 
-install(TARGETS ${PROJECT_NAME}
-	LIBRARY DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}"
-	RUNTIME DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}"
-)
-if(MSVC)
-	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}" OPTIONAL)
+	install(TARGETS ${PROJECT_NAME}
+		LIBRARY DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}"
+		RUNTIME DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}"
+	)
+	if(MSVC)
+		install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}" OPTIONAL)
+	endif()
+	install(DIRECTORY "resources/" DESTINATION "${INSTALL_PREFIX}/Contents/Resources")
+	if(WIN32)
+		install(FILES "cmake/templates/desktop.ini" DESTINATION "${INSTALL_PREFIX}/")
+		install(FILES "cmake/templates/icon.ico" DESTINATION "${INSTALL_PREFIX}/")
+		install(CODE "execute_process(COMMAND attrib +A +S +H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/desktop.ini\")")
+		install(CODE "execute_process(COMMAND attrib +A +S -H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/icon.ico\")")
+	endif()
+	install(FILES "LICENSE.md" DESTINATION "${INSTALL_PREFIX}")
 endif()
-install(DIRECTORY "resources/" DESTINATION "${INSTALL_PREFIX}/Contents/Resources")
-if(WIN32)
-	install(FILES "cmake/templates/desktop.ini" DESTINATION "${INSTALL_PREFIX}/")
-	install(FILES "cmake/templates/icon.ico" DESTINATION "${INSTALL_PREFIX}/")
-	install(CODE "execute_process(COMMAND attrib +A +S +H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/desktop.ini\")")
-	install(CODE "execute_process(COMMAND attrib +A +S -H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/icon.ico\")")
-endif()
-install(FILES "LICENSE.md" DESTINATION "${INSTALL_PREFIX}")
 
 add_custom_target(
 	PACKAGE_7Z
