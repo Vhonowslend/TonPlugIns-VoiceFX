@@ -21,12 +21,131 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# CMake Setup
+cmake_minimum_required(VERSION 3.17.0)
+
+################################################################################
+# Configure Type
+################################################################################
+
+# Detect if we are building by ourselves or as part of something else.
+if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_LIST_DIR}")
+	set(GROUPED OFF)
+	set(PREFIX "")
+else()
+	set(GROUPED ON)
+	set(PREFIX "VoiceFX_")
+endif()
+set(LOGPREFIX "VoiceFX:")
+
+################################################################################
+# Versioning
+################################################################################
+
+set(VERSION_MAJOR 0)
+set(VERSION_MINOR 0)
+set(VERSION_PATCH 0)
+set(VERSION_TWEAK 0)
+set(VERSION_SUFFIX "")
+set(VERSION_COMMIT "00000000")
+
+# Check if we are in a git repository.
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
+	# Try and figure out where git is.
+	find_program(GIT git
+		PATHS
+			/bin
+			/sbin
+			/usr/bin
+			/usr/local/bin
+	)
+
+	if(GIT)
+		set(GIT_RESULT)
+		set(GIT_OUTPUT)
+		set(GIT_ERROR)
+
+		execute_process(
+			COMMAND "${GIT}" describe --tags --long --match "[0-9]*.[0-9]*.[0-9]*" --abbrev=8 HEAD
+			WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+			RESULT_VARIABLE GIT_RESULT
+			OUTPUT_VARIABLE GIT_OUTPUT
+			ERROR_VARIABLE GIT_ERROR
+			OUTPUT_STRIP_TRAILING_WHITESPACE
+			ERROR_STRIP_TRAILING_WHITESPACE
+			ERROR_QUIET
+		)
+
+		if(GIT_RESULT EQUAL 0)
+			string(REPLACE "-" "." GIT_OUTPUT "${GIT_OUTPUT}")
+			string(REPLACE "." ";" GIT_OUTPUT "${GIT_OUTPUT}")
+
+			# Parse Version
+			list(GET GIT_OUTPUT 0 VERSION_MAJOR)
+			list(GET GIT_OUTPUT 1 VERSION_MINOR)
+			list(GET GIT_OUTPUT 2 VERSION_PATCH)
+			list(GET GIT_OUTPUT 3 VERSION_BUILD)
+			list(GET GIT_OUTPUT 4 VERSION_COMMIT)
+
+			# Patch needs additional parsing.
+			# This may be a [0-9]*[a-z]*[0-9]+ string.
+			string(REGEX MATCHALL "^([0-9]+)([a-z]+[0-9]+)?" T_MATCHES "${VERSION_PATCH}")
+			set(VERSION_PATCH "${CMAKE_MATCH_1}")
+			if(CMAKE_MATCH_2)
+				set(VERSION_SUFFIX "${CMAKE_MATCH_2}")
+			endif()
+		else()
+			message(WARNING "${LOGPREFIX} Failed to detect version, using default instead.")
+		endif()
+	endif()
+endif()
+
+# Allow manual overrides of the detected version.
+set(${PREFIX}VERSION "" CACHE STRING "Override StreamFX version with this string. Format: Major.Minor.Patch[Suffix][-Tweak[-Commit8c]]")
+if(${PREFIX}VERSION)
+	string(REPLACE "-" "." T_VERSION "${${PREFIX}VERSION}")
+	string(REPLACE "." ";" T_VERSION "${${PREFIX}VERSION}")
+
+	list(LENGTH T_VERSION T_VERSIONLEN)
+	list(GET T_VERSION 0 VERSION_MAJOR)
+	list(GET T_VERSION 1 VERSION_MINOR)
+	list(GET T_VERSION 2 VERSION_PATCH)
+	if (T_VERSIONLEN GREATER_EQUAL 3)
+		list(GET T_VERSION 3 VERSION_BUILD)
+	else()
+		set(VERSION_BUILD 0)
+	endif()
+	if (T_VERSIONLEN GREATER_EQUAL 4)
+		list(GET T_VERSION 4 VERSION_COMMIT)
+	else()
+#		set(VERSION_COMMIT "00000000")
+	endif()
+
+	# Patch needs additional parsing.
+	# This may be a [0-9]*[a-z]*[0-9]+ string.
+	string(REGEX MATCHALL "([0-9]+)([a-z0-9]+)" T_MATCHES "${VERSION_PATCH}")
+	set(VERSION_PATCH "${CMAKE_MATCH_1}")
+	if(CMAKE_MATCH_2)
+		set(VERSION_SUFFIX "${CMAKE_MATCH_2}")
+	else()
+		set(VERSION_SUFFIX "")
+	endif()
+endif()
+
+# Generate Version String
+if(VERSION_COMMIT)
+	set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}${VERSION_SUFFIX}-${VERSION_COMMIT}")
+else()
+	set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}${VERSION_SUFFIX}")
+endif()
+
+# Log the detected version.
+message(STATUS "${LOGPREFIX} Version ${VERSION_STRING}")
+
 ################################################################################
 # Setup / Bootstrap
 ################################################################################
 
-# CMake Setup
-cmake_minimum_required(VERSION 3.17.0)
 
 # Search Paths
 set(CMAKE_MODULE_PATH
@@ -40,42 +159,6 @@ include("util")
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Clang/Clang.cmake")
 	include("Clang")
 	set(HAVE_CLANG ON)
-endif()
-
-# Automatic Versioning
-set(VERSION_MAJOR 0)
-set(VERSION_MINOR 2)
-set(VERSION_PATCH 2)
-set(VERSION_TWEAK 0)
-set(VERSION_SUFFIX "")
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
-	set(GIT_RESULT "")
-	set(GIT_OUTPUT "")
-	execute_process(
-		COMMAND git rev-list --count --topo-order ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}${VERSION_SUFFIX}..HEAD
-		WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-		RESULT_VARIABLE GIT_RESULT
-		OUTPUT_VARIABLE GIT_OUTPUT
-		OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_STRIP_TRAILING_WHITESPACE ERROR_QUIET
-	)
-	if(GIT_RESULT EQUAL 0)
-		set(VERSION_TWEAK ${GIT_OUTPUT})
-	endif()
-	execute_process(
-		COMMAND git rev-parse --short=8 HEAD
-		WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-		RESULT_VARIABLE GIT_RESULT
-		OUTPUT_VARIABLE GIT_OUTPUT
-		OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_STRIP_TRAILING_WHITESPACE ERROR_QUIET
-	)
-	if(GIT_RESULT EQUAL 0)
-		set(PROJECT_COMMIT ${GIT_OUTPUT})
-	endif()
-endif()
-if(PROJECT_COMMIT)
-	set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}${VERSION_SUFFIX}-${PROJECT_COMMIT}")
-else()
-	set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}${VERSION_SUFFIX}")
 endif()
 
 ################################################################################
