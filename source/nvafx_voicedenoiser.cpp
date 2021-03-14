@@ -30,8 +30,8 @@
 
 nvafx::voicedenoiser::voicedenoiser::voicedenoiser()
 	: _samplerate(0), _samples_per_frame(0), _afx(nullptr), _afx_samplerate(48000), _afx_samples(0), _afx_channels(0),
-	  _src_in(nullptr), _src_in_ratio(1), _src_in_buffer(), _in_buffer(), _in_offset(0), _src_out(nullptr),
-	  _src_out_ratio(1), _src_out_buffer(), _out_buffer(), _out_offset(0), _delay(true), _delay_samples(0)
+	  _src_in(nullptr), _src_in_ratio(1), _in_offset(0), _src_out(nullptr), _src_out_ratio(1), _out_offset(0),
+	  _delay(true), _delay_samples(0)
 {
 	{
 		NvAFX_Handle afx;
@@ -87,10 +87,12 @@ nvafx::voicedenoiser::voicedenoiser::voicedenoiser()
 
 nvafx::voicedenoiser::voicedenoiser::~voicedenoiser()
 {
-	if (_src_in)
+	if (_src_in != nullptr) {
 		_src_in = src_delete(_src_in);
-	if (_src_out)
+	}
+	if (_src_out != nullptr) {
 		_src_out = src_delete(_src_out);
+	}
 }
 
 void nvafx::voicedenoiser::voicedenoiser::reset(uint32_t samplerate, uint32_t spf)
@@ -125,8 +127,9 @@ bool nvafx::voicedenoiser::voicedenoiser::process(uint32_t samples, const float*
 {
 	SRC_DATA srcdata;
 
-	if (!_samplerate)
+	if (_samplerate == 0) {
 		return false;
+	}
 
 	// Resample from Hosts sample rate to NvAFX Sample Rate
 	srcdata.data_in           = data_in;
@@ -178,8 +181,9 @@ bool nvafx::voicedenoiser::voicedenoiser::process(uint32_t samples, const float*
 	}
 
 	// Disable forced delay once we have enough in the buffer.
-	if (_out_offset >= _delay_samples)
+	if (_out_offset >= _delay_samples) {
 		_delay = false;
+	}
 
 	// Are we still delayed?
 	if (_delay) {

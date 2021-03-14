@@ -77,7 +77,7 @@ nvafx::nvafx::nvafx() : _redist_path(find_nvafx_redistributable())
 			_dll_cookie = nullptr;
 			DLL_DIRECTORY_COOKIE res =
 				AddDllDirectory(voicefx::platform::utf8_to_native(_redist_path).wstring().data());
-			if (!res) {
+			if (res == NULL) {
 				D_LOG("Unable to add redistributable path to library search paths, load may fail.");
 			} else {
 				_dll_cookie = reinterpret_cast<void*>(res);
@@ -86,7 +86,7 @@ nvafx::nvafx::nvafx() : _redist_path(find_nvafx_redistributable())
 
 		_library =
 			reinterpret_cast<void*>(LoadLibraryExW(L"NVAudioEffects.dll", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS));
-		if (!_library) {
+		if (_library == nullptr) {
 			D_LOG("Failed to load the NVIDIA Audio Effects library, nothing will be available.");
 			throw std::runtime_error("Failed to load NVIDIA Audio Effects library.");
 		}

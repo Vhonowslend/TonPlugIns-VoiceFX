@@ -71,19 +71,19 @@ namespace voicefx {
 		 * 
 		 * @return The currently available space in the buffer.
 		 */
-		size_t avail();
+		size_t avail() const;
 
 		/** Calculate the used space in the buffer.
 		 * 
 		 * @return The currently used space in the buffer.
 		 */
-		size_t size();
+		size_t size() const;
 
 		/** Get the total capacity of the buffer.
 		 * 
 		 * @return The total capacity.
 		 */
-		size_t capacity();
+		size_t capacity() const;
 	};
 
 } // namespace voicefx

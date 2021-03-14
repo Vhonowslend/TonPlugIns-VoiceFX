@@ -29,14 +29,14 @@
 #define FOURCC(a, b, c, d) ((a << 24) | (b << 16) | (c << 8) | d)
 
 std::filesystem::path vst3_path();
-void                  set_vst3_path(std::filesystem::path value);
+void                  set_vst3_path(std::filesystem::path const& value);
 
 std::filesystem::path nvafx_path();
-void                  set_nvafx_path(std::filesystem::path value);
+void                  set_nvafx_path(std::filesystem::path const& value);
 
 namespace voicefx {
-	static std::string_view name   = "VoiceFX";
-	static std::string_view vendor = "Xaymar";
+	static constexpr std::string_view name   = "VoiceFX";
+	static constexpr std::string_view vendor = "Xaymar";
 
 	void initialize();
 

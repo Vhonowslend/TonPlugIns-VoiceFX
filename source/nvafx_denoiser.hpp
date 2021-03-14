@@ -38,13 +38,9 @@ namespace nvafx {
 		denoiser();
 		~denoiser();
 
-		uint32_t get_sample_rate();
+		static uint32_t get_sample_rate();
 
-		uint32_t get_block_size();
-
-		void process(const std::vector<std::vector<float>> inputs, std::vector<std::vector<float>> outputs);
-
-		void process(const float* input[], float* output[], size_t channels);
+		uint32_t get_block_size() const;
 
 		void process(const float input[], float output[]);
 	};

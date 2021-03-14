@@ -30,8 +30,9 @@ vst3::voicedenoiser::controller::~controller() {}
 
 tresult PLUGIN_API vst3::voicedenoiser::controller::initialize(FUnknown* context)
 {
-	if (tresult result = EditControllerEx1::initialize(context); result != kResultOk)
+	if (tresult result = EditControllerEx1::initialize(context); result != kResultOk) {
 		return result;
+	}
 
 	{ // Options
 		parameters.addParameter(STR16("Bypass"), nullptr, 1, 0, ParameterInfo::kCanAutomate | ParameterInfo::kIsBypass,
@@ -43,14 +44,16 @@ tresult PLUGIN_API vst3::voicedenoiser::controller::initialize(FUnknown* context
 
 tresult PLUGIN_API vst3::voicedenoiser::controller::setComponentState(IBStream* state)
 {
-	if (!state)
+	if (state != nullptr) {
 		return kResultFalse;
+	}
 
 	IBStreamer streamer(state, kBigEndian);
 
 	bool bypassState = false;
-	if (!streamer.readBool(bypassState))
+	if (!streamer.readBool(bypassState)) {
 		return kResultFalse;
+	}
 
 	setParamNormalized(static_cast<ParamID>(parameters::BYPASS), bypassState ? 1 : 0);
 

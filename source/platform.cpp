@@ -29,7 +29,7 @@
 #ifdef WIN32
 #include <Windows.h>
 
-std::string voicefx::platform::native_to_utf8(std::wstring v)
+std::string voicefx::platform::native_to_utf8(std::wstring const& v)
 {
 	std::vector<char> buffer((v.length() + 1) * 4, 0);
 
@@ -43,14 +43,14 @@ std::string voicefx::platform::native_to_utf8(std::wstring v)
 	return {buffer.data()};
 }
 
-std::filesystem::path voicefx::platform::native_to_utf8(std::filesystem::path v)
+std::filesystem::path voicefx::platform::native_to_utf8(std::filesystem::path const& v)
 {
 	auto wide   = v.wstring();
 	auto narrow = native_to_utf8(wide);
 	return std::filesystem::u8path(narrow);
 }
 
-std::wstring voicefx::platform::utf8_to_native(std::string v)
+std::wstring voicefx::platform::utf8_to_native(std::string const& v)
 {
 	std::vector<wchar_t> buffer(v.length() + 1, 0);
 
@@ -64,7 +64,7 @@ std::wstring voicefx::platform::utf8_to_native(std::string v)
 	return {buffer.data()};
 }
 
-std::filesystem::path voicefx::platform::utf8_to_native(std::filesystem::path v)
+std::filesystem::path voicefx::platform::utf8_to_native(std::filesystem::path const& v)
 {
 	auto narrow = v.string();
 	auto wide   = utf8_to_native(narrow);

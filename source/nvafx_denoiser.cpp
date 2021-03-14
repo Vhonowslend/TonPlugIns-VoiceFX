@@ -32,10 +32,10 @@
 
 #define D_LOG(MESSAGE, ...) voicefx::log("<NVAFX::Denoiser> " MESSAGE, __VA_ARGS__)
 
-nvafx::denoiser::denoiser() : _nvafx(nvafx::nvafx::instance()), _model_path(), _nvfx()
+nvafx::denoiser::denoiser() : _nvafx(nvafx::nvafx::instance())
 {
 	// 1. Create the NvAFX effect.
-	NvAFX_Handle effect;
+	NvAFX_Handle effect = nullptr;
 	if (auto res = NvAFX_CreateEffect(NVAFX_EFFECT_DENOISER, &effect); res != NVAFX_STATUS_SUCCESS) {
 		D_LOG("Failed to create '" NVAFX_EFFECT_DENOISER "' effect, error code %" PRIu32 ".", res);
 		throw std::runtime_error("Failed to create effect.");
@@ -84,41 +84,9 @@ uint32_t nvafx::denoiser::get_sample_rate()
 	return SAMPLERATE;
 }
 
-uint32_t nvafx::denoiser::get_block_size()
+uint32_t nvafx::denoiser::get_block_size() const
 {
 	return _block_size;
-}
-
-void nvafx::denoiser::process(const std::vector<std::vector<float>> inputs, std::vector<std::vector<float>> outputs)
-{
-	// Check if the number of input and output channels match.
-	if (inputs.size() != outputs.size()) {
-		throw std::runtime_error("Number of input channels must match number of output channels.");
-	}
-
-	// Check if the input buffers have the correct number of samples in total (block size).
-	for (size_t idx = 0; idx < inputs.size(); idx++) {
-		if (inputs[idx].size() != _block_size) {
-			throw std::runtime_error("Input channels must be the required block size.");
-		}
-
-		// Also forcefully resize all outputs to be of the expected size.
-		// TODO: Perhaps consider this as a failure condition as well?
-		outputs[idx].resize(_block_size);
-	}
-
-	// Process all channels at once.
-	for (size_t idx = 0; idx < inputs.size(); idx++) {
-		this->process(inputs[idx].data(), outputs[idx].data());
-	}
-}
-
-void nvafx::denoiser::process(const float* input[], float* output[], size_t channels)
-{
-	if (auto res = NvAFX_Run(_nvfx.get(), input, output, _block_size, channels); res != NVAFX_STATUS_SUCCESS) {
-		D_LOG("Running effect returned error code %" PRIu32 ".", res);
-		throw std::runtime_error("Failed to process buffers.");
-	}
 }
 
 void nvafx::denoiser::process(const float input[], float output[])

@@ -62,7 +62,7 @@ bool InitModule()
 		D_LOG("Initializing...");
 
 		// Adjust the path to the VST 3 plugin.
-		set_vst3_path(gPath);
+		set_vst3_path(std::filesystem::path(gPath));
 
 		// Log that we are now ready to perform work.
 		D_LOG("Ready to work.");

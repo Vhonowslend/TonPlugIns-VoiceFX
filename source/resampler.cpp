@@ -83,7 +83,7 @@ void voicefx::resampler::reset(uint32_t input_samplerate, uint32_t output_sample
 	}
 }
 
-float voicefx::resampler::ratio()
+float voicefx::resampler::ratio() const
 {
 	return _ratio;
 }

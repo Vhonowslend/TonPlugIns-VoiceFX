@@ -59,6 +59,6 @@ namespace voicefx {
 		 */
 		void reset(uint32_t input_samplerate = 0, uint32_t output_samplerate = 0);
 
-		float ratio();
+		float ratio() const;
 	};
 } // namespace voicefx

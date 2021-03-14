@@ -32,7 +32,7 @@ FUnknown* vst3::voicedenoiser::processor::create(void* data)
 	return static_cast<IAudioProcessor*>(new processor());
 }
 
-vst3::voicedenoiser::processor::processor() : _bypass(false), _channels()
+vst3::voicedenoiser::processor::processor() : _bypass(false)
 {
 	processContextRequirements.needContinousTimeSamples();
 	processContextRequirements.needSamplesToNextClock();
@@ -61,18 +61,22 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::canProcessSampleSize(int32 sy
 tresult PLUGIN_API vst3::voicedenoiser::processor::setBusArrangements(SpeakerArrangement* inputs, int32 numIns,
 																	  SpeakerArrangement* outputs, int32 numOuts)
 {
-	if (numIns < 0 || numOuts < 0)
+	if (numIns < 0 || numOuts < 0) {
 		return kInvalidArgument;
+	}
 
-	if (numIns > static_cast<int32>(audioInputs.size()) || numOuts > static_cast<int32>(audioOutputs.size()))
+	if (numIns > static_cast<int32>(audioInputs.size()) || numOuts > static_cast<int32>(audioOutputs.size())) {
 		return kResultFalse;
+	}
 
 	for (int32 index = 0; index < static_cast<int32>(audioInputs.size()); ++index) {
-		if (index >= numIns)
+		if (index >= numIns) {
 			break;
+		}
 		FCast<Vst::AudioBus>(audioInputs[index].get())->setArrangement(inputs[index]);
-		if (index < static_cast<int32>(audioOutputs.size()))
+		if (index < static_cast<int32>(audioOutputs.size())) {
 			FCast<Vst::AudioBus>(audioOutputs[index].get())->setArrangement(inputs[index]);
+		}
 	}
 
 	{ // Update our own channel information.
@@ -80,8 +84,9 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::setBusArrangements(SpeakerArr
 		SpeakerArrangement arr      = inputs[0];
 		size_t             channels = 0;
 		while (arr > 0) {
-			if (arr & 0x1)
+			if ((arr & 0x1) != 0) {
 				channels++;
+			}
 			arr >>= 1;
 		}
 
@@ -105,9 +110,9 @@ uint32 PLUGIN_API vst3::voicedenoiser::processor::getTailSamples()
 tresult PLUGIN_API vst3::voicedenoiser::processor::process(ProcessData& data)
 {
 	// Check for updates to parameters.
-	if (data.inputParameterChanges) {
+	if (data.inputParameterChanges != nullptr) {
 		for (auto idx = 0; idx < data.inputParameterChanges->getParameterCount(); idx++) {
-			if (auto pq = data.inputParameterChanges->getParameterData(idx); pq) {
+			if (auto* pq = data.inputParameterChanges->getParameterData(idx); pq) {
 				int32      offset;
 				ParamValue value;
 
@@ -128,11 +133,12 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::process(ProcessData& data)
 	}
 
 	// Check if the output is silent, if so do some additional work and quit early.
-	if (data.outputs[0].silenceFlags = data.inputs[0].silenceFlags; data.outputs[0].silenceFlags) {
+	if (data.outputs[0].silenceFlags = data.inputs[0].silenceFlags; data.outputs[0].silenceFlags != 0) {
 		for (size_t cdx = 0; cdx < data.outputs[0].numChannels; cdx++) {
 			// Only need to clear output if it is not the same buffer.
-			if (data.outputs[0].channelBuffers32[cdx] != data.inputs[0].channelBuffers32[cdx])
+			if (data.outputs[0].channelBuffers32[cdx] != data.inputs[0].channelBuffers32[cdx]) {
 				memset(data.outputs[0].channelBuffers32[cdx], 0, sizeof(kSample32) * data.numSamples);
+			}
 		}
 
 		return kResultOk;
@@ -145,9 +151,10 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::process(ProcessData& data)
 		for (size_t idx = 0; idx < numPorts; idx++) {
 			size_t numChannels = std::min(data.inputs[idx].numChannels, data.outputs[idx].numChannels);
 			for (size_t cdx = 0; cdx < numChannels; cdx++) {
-				if (data.outputs[idx].channelBuffers32[cdx] != data.inputs[idx].channelBuffers32[cdx])
+				if (data.outputs[idx].channelBuffers32[cdx] != data.inputs[idx].channelBuffers32[cdx]) {
 					memcpy(data.outputs[idx].channelBuffers32[cdx], data.inputs[idx].channelBuffers32[cdx],
 						   sizeof(kSample32) * data.numSamples);
+				}
 			}
 
 			// Clear unused channels
@@ -178,24 +185,28 @@ tresult PLUGIN_API vst3::voicedenoiser::processor::process(ProcessData& data)
 
 tresult PLUGIN_API vst3::voicedenoiser::processor::setState(IBStream* state)
 {
-	if (!state)
+	if (state != nullptr) {
 		return kResultFalse;
+	}
 
 	IBStreamer streamer(state, kBigEndian);
-	if (!streamer.readBool(_bypass))
+	if (!streamer.readBool(_bypass)) {
 		return kResultFalse;
+	}
 
 	return kResultOk;
 }
 
 tresult PLUGIN_API vst3::voicedenoiser::processor::getState(IBStream* state)
 {
-	if (!state)
+	if (state != nullptr) {
 		return kResultFalse;
+	}
 
 	IBStreamer streamer(state, kBigEndian);
-	if (!streamer.writeBool(_bypass))
+	if (!streamer.writeBool(_bypass)) {
 		return kResultFalse;
+	}
 
 	return kResultOk;
 }
@@ -204,8 +215,10 @@ void vst3::voicedenoiser::processor::update_channel_count(size_t channels)
 {
 	// Channel magic
 	_channels.clear();
-	while (_channels.size() < channels)
+	while (_channels.size() < channels) {
 		_channels.emplace_back();
-	for (auto itr = _channels.begin(); itr != _channels.end(); itr++)
+	}
+	for (auto itr = _channels.begin(); itr != _channels.end(); itr++) {
 		itr->reset(processSetup.sampleRate, processSetup.maxSamplesPerBlock);
+	}
 }

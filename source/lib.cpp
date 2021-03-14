@@ -49,7 +49,7 @@ std::filesystem::path vst3_path()
 	return std::filesystem::path(_vst3_path);
 }
 
-void set_vst3_path(std::filesystem::path value)
+void set_vst3_path(std::filesystem::path const& value)
 {
 	_vst3_path = std::filesystem::path(value);
 }
@@ -59,7 +59,7 @@ std::filesystem::path nvafx_path()
 	return std::filesystem::path(_sdk_path);
 }
 
-void set_nvafx_path(std::filesystem::path value)
+void set_nvafx_path(std::filesystem::path const& value)
 {
 	_sdk_path = std::filesystem::path(value);
 }
@@ -100,8 +100,9 @@ std::string formatted_time(bool file_safe = false)
 
 void voicefx::initialize()
 {
-	if (_initialized)
+	if (_initialized) {
 		return;
+	}
 
 #ifdef _WIN32
 	PWSTR             widebuffer;
@@ -145,7 +146,7 @@ void voicefx::initialize()
 	std::filesystem::create_directories(_local_data);
 	std::filesystem::create_directories(_user_data);
 #else
-		// TODO: Weird situation because nobody could agree on a thing.
+	// TODO: Weird situation because nobody could agree on a thing.
 #endif
 
 	// Try and open a log file
@@ -162,7 +163,7 @@ void voicefx::initialize()
 	// Log information about the Host process.
 	{
 		std::vector<wchar_t> file_name_w(256, 0);
-		size_t               file_name_len;
+		size_t               file_name_len = 0;
 		do {
 			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
 				file_name_w.resize(file_name_w.size() * 2);
@@ -223,7 +224,9 @@ void voicefx::log(const char* format, ...)
 
 	// Write to file and stdout.
 	std::cout << LOG_PREFIX << converted;
-	if (std::lock_guard<std::mutex> lock(_log_stream_mutex); true) {
+	{
+		std::lock_guard<std::mutex> lock(_log_stream_mutex);
+
 		// This needs to be synchronous or bad things happen.
 		if (_log_stream.good() && !_log_stream.bad()) {
 			_log_stream << converted;

@@ -80,22 +80,23 @@ namespace voicefx {
 			private /* VST2 Functionality */:
 			intptr_t vst2_control(VST_EFFECT_OPCODE opcode, int32_t p1, intptr_t p2, void* p3, float p4);
 
-			intptr_t vst2_get_vendor_name(char* buffer, size_t buffer_len);
-			intptr_t vst2_get_vendor_version();
-			intptr_t vst2_get_product_name(char* buffer, size_t buffer_len);
-			intptr_t vst2_get_effect_name(char* buffer, size_t buffer_len);
-			intptr_t vst2_get_effect_category();
+			intptr_t vst2_get_vendor_name(char* buffer, size_t buffer_len) const;
+			intptr_t vst2_get_vendor_version() const;
+			intptr_t vst2_get_product_name(char* buffer, size_t buffer_len) const;
+			intptr_t vst2_get_effect_name(char* buffer, size_t buffer_len) const;
+			intptr_t vst2_get_effect_category() const;
 
 			intptr_t vst2_create();
 			intptr_t vst2_destroy();
 
 			intptr_t vst2_set_sample_rate(float_t sample_rate);
 			intptr_t vst2_set_block_size(intptr_t block_size);
-			intptr_t vst2_get_speaker_arrangement(vst_speaker_arrangement** input, vst_speaker_arrangement** output);
+			intptr_t vst2_get_speaker_arrangement(vst_speaker_arrangement const** input,
+												  vst_speaker_arrangement const** output) const;
 			intptr_t vst2_set_speaker_arrangement(vst_speaker_arrangement* input, vst_speaker_arrangement* output);
 
 			void  vst2_set_parameter(uint32_t index, float value);
-			float vst2_get_parameter(uint32_t index);
+			float vst2_get_parameter(uint32_t index) const;
 
 			void vst2_process_float(const float* const* inputs, float** outputs, int32_t samples);
 		};

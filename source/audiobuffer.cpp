@@ -21,7 +21,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pragma once
 #include "audiobuffer.hpp"
 #include <algorithm>
 #include <cstring>
@@ -119,17 +118,17 @@ void voicefx::audiobuffer::resize(size_t size)
 	this->clear();
 }
 
-size_t voicefx::audiobuffer::avail()
+size_t voicefx::audiobuffer::avail() const
 {
 	return _avail;
 }
 
-size_t voicefx::audiobuffer::size()
+size_t voicefx::audiobuffer::size() const
 {
 	return _used;
 }
 
-size_t voicefx::audiobuffer::capacity()
+size_t voicefx::audiobuffer::capacity() const
 {
 	return _buffer.size();
 }

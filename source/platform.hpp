@@ -28,26 +28,26 @@
 namespace voicefx {
 	namespace platform {
 #ifdef WIN32
-		std::string           native_to_utf8(std::wstring v);
-		std::filesystem::path native_to_utf8(std::filesystem::path v);
+		std::string           native_to_utf8(std::wstring const& v);
+		std::filesystem::path native_to_utf8(std::filesystem::path const& v);
 
-		std::wstring          utf8_to_native(std::string v);
-		std::filesystem::path utf8_to_native(std::filesystem::path v);
+		std::wstring          utf8_to_native(std::string const& v);
+		std::filesystem::path utf8_to_native(std::filesystem::path const& v);
 #else
-		std::string native_to_utf8(std::string v)
+		std::string native_to_utf8(std::string const& v)
 		{
 			return v;
 		};
-		std::filesystem::path native_to_utf8(std::filesystem::path v)
+		std::filesystem::path native_to_utf8(std::filesystem::path const& v)
 		{
 			return v;
 		};
 
-		std::string utf8_to_native(std::wstring v)
+		std::string utf8_to_native(std::wstring const& v)
 		{
 			return v;
 		};
-		std::filesystem::path utf8_to_native(std::filesystem::path v)
+		std::filesystem::path utf8_to_native(std::filesystem::path const& v)
 		{
 			return v;
 		};
