@@ -397,6 +397,12 @@ void voicefx::vst2::denoiser::vst2_process_float(const float* const* inputs, flo
 	for (size_t idx = 0; idx < _channels.size(); idx++) {
 		auto& channel = _channels[idx];
 
+		if (samples < channel.delay) {
+			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR
+				  "] Host application is broken and ignores delay, behavior is now undefined.",
+				  &this->_vsteffect, idx);
+		}
+
 #ifdef DEBUG_PROCESSING
 		D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] In Smp. | In Buf | FX Buf | OutBuf | Step   ", &this->_vsteffect, idx);
 		D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] --------+--------+--------+--------+--------", &this->_vsteffect, idx);
