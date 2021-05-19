@@ -32,7 +32,49 @@
 
 #define D_LOG(MESSAGE, ...) voicefx::log("<NVAFX::Denoiser> " MESSAGE, __VA_ARGS__)
 
-nvafx::denoiser::denoiser() : _nvafx(nvafx::nvafx::instance())
+nvafx::denoiser::denoiser() : _nvafx(nvafx::nvafx::instance()), _dirty(true)
+{
+	create_effect();
+}
+
+nvafx::denoiser::~denoiser() {}
+
+uint32_t nvafx::denoiser::get_sample_rate()
+{
+	return SAMPLERATE;
+}
+
+uint32_t nvafx::denoiser::get_minimum_delay()
+{
+	constexpr uint32_t min_delay_ms  = 74; // Documented is 74ms, but measured is ~82ms.
+	constexpr uint32_t ms_to_samples = 1000;
+	return (SAMPLERATE * min_delay_ms) / ms_to_samples;
+}
+
+uint32_t nvafx::denoiser::get_block_size() const
+{
+	return _block_size;
+}
+
+void nvafx::denoiser::process(const float input[], float output[])
+{
+	_dirty = true;
+	if (auto res = NvAFX_Run(_nvfx.get(), &input, &output, _block_size, 1); res != NVAFX_STATUS_SUCCESS) {
+		D_LOG("Running effect returned error code %" PRIu32 ".", res);
+		throw std::runtime_error("Failed to process buffers.");
+	}
+}
+
+void nvafx::denoiser::reset()
+{
+	if (_dirty) {
+		// Re-create the effect, waiting on NVIDIA to add a way to just reset things.
+		_nvfx.reset();
+		create_effect();
+	}
+}
+
+void nvafx::denoiser::create_effect()
 {
 	// 1. Create the NvAFX effect.
 	NvAFX_Handle effect = nullptr;
@@ -75,31 +117,6 @@ nvafx::denoiser::denoiser() : _nvafx(nvafx::nvafx::instance())
 		D_LOG("Failed to retrieve expected block size, error code %" PRIu32 ".", res);
 		_block_size = BLOCKSIZE; // Assume 10ms.
 	}
-}
 
-nvafx::denoiser::~denoiser() {}
-
-uint32_t nvafx::denoiser::get_sample_rate()
-{
-	return SAMPLERATE;
-}
-
-uint32_t nvafx::denoiser::get_minimum_delay()
-{
-	constexpr uint32_t min_delay_ms  = 74; // Documented is 74ms, but measured is ~82ms.
-	constexpr uint32_t ms_to_samples = 1000;
-	return (SAMPLERATE * min_delay_ms) / ms_to_samples;
-}
-
-uint32_t nvafx::denoiser::get_block_size() const
-{
-	return _block_size;
-}
-
-void nvafx::denoiser::process(const float input[], float output[])
-{
-	if (auto res = NvAFX_Run(_nvfx.get(), &input, &output, _block_size, 1); res != NVAFX_STATUS_SUCCESS) {
-		D_LOG("Running effect returned error code %" PRIu32 ".", res);
-		throw std::runtime_error("Failed to process buffers.");
-	}
+	_dirty = false;
 }

@@ -33,6 +33,7 @@ namespace nvafx {
 		std::shared_ptr<void>           _nvfx;
 
 		uint32_t _block_size;
+		bool     _dirty;
 
 		public:
 		denoiser();
@@ -45,5 +46,13 @@ namespace nvafx {
 		uint32_t get_block_size() const;
 
 		void process(const float input[], float output[]);
+
+		/** Reset the effect so that new processing can take place.
+		 * 
+		 */
+		void reset();
+
+		private:
+		void create_effect();
 	};
 } // namespace nvafx
