@@ -1,21 +1,21 @@
 # Copyright 2020 Michael Fabian 'Xaymar' Dirks <info@xaymar.com>
-# 
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
-# 
+#
 # 1. Redistributions of source code must retain the above copyright notice, this
 #    list of conditions and the following disclaimer.
-# 
-# 2. Redistributions in binary form must reproduce the above copyright notice, 
-#    this list of conditions and the following disclaimer in the documentation 
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
 # IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
 # DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
@@ -193,7 +193,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR (WIN32 AND CMAKE_CXX_COMPILER_ID STR
 	# - Enable multi-processor compiling.
 
 	# Enable most useful warnings.
-	set(DISABLED_WARNINGS 
+	set(DISABLED_WARNINGS
 		"/wd4061" "/wd4100" "/wd4180" "/wd4201" "/wd4464" "/wd4505" "/wd4514"
 		"/wd4571" "/wd4623" "/wd4625" "/wd4626" "/wd4668" "/wd4710" "/wd4774"
 		"/wd4820" "/wd5026" "/wd5027" "/wd5039" "/wd5045" "/wd26812"
@@ -220,11 +220,11 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR (WIN32 AND CMAKE_CXX_COMPILER_ID STR
 
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message(STATUS "Applying custom flags for GNU style build.")
-	
+
 	# Clang/AppleClang/GNU
 	# - Don't export by default.
 	# - Enable all and extra warnings.
-	
+
 	add_compile_options("-Wall")
 	add_compile_options("-Wextra")
 	add_compile_options("-fvisibility=hidden")
@@ -279,8 +279,6 @@ set(PROJECT_SOURCE
 	"source/nvafx.cpp"
 	"source/nvafx_denoiser.hpp"
 	"source/nvafx_denoiser.cpp"
-	"source/nvafx_voicedenoiser.hpp"
-	"source/nvafx_voicedenoiser.cpp"
 	"source/resampler.hpp"
 	"source/resampler.cpp"
 	"source/vst2.hpp"
@@ -341,7 +339,7 @@ if(WIN32)
 	set(PROJECT_COPYRIGHT "${PROJECT_AUTHORS} © ${PROJECT_COPYRIGHT_YEARS}")
 	set(PROJECT_LEGAL_TRADEMARKS_1 "")
 	set(PROJECT_LEGAL_TRADEMARKS_2 "VST is a registered trademark of Steinberg Media Technologies GmbH")
-		
+
 	configure_file(
 		"cmake/templates/version.rc.in"
 		"${PROJECT_BINARY_DIR}/generated/version.rc"
@@ -465,7 +463,7 @@ if(HAVE_CLANG)
 		TARGETS ${PROJECT_NAME}
 	)
 	clang_tidy(
-		TARGETS ${PROJECT_NAME}		
+		TARGETS ${PROJECT_NAME}
 		VERSION 9.0.0
 	)
 	clang_format(
@@ -527,13 +525,13 @@ else()
 			set(INSTALL_PATH "x86_64-win")
 		endif()
 	elseif(APPLE)
-		set(INSTALL_PATH "MacOS")	
+		set(INSTALL_PATH "MacOS")
 	else()
 		if(${BITS} STREQUAL "32")
 			set(INSTALL_PATH "i386-linux")
 		else()
 			set(INSTALL_PATH "x86_64-linux")
-		endif()	
+		endif()
 	endif()
 
 	install(TARGETS ${PROJECT_NAME}
