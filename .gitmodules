@@ -4,3 +4,6 @@
 [submodule "third-party/vst2sdk"]
 	path = third-party/vst2sdk
 	url = https://github.com/Xaymar/vst2sdk.git
+[submodule "third-party/nvidia-maxine-afx-sdk"]
+	path = third-party/nvidia-maxine-afx-sdk
+	url = https://github.com/NVIDIA/MAXINE-AFX-SDK.git

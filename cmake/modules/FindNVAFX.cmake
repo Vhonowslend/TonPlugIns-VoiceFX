@@ -43,7 +43,7 @@ This module defines the following variables:
 include(FindPackageHandleStandardArgs)
 
 # Variables
-set(NVAFX_DIR "" CACHE PATH "Path to NVIDIA Audio Effects SDK")
+set(NVAFX_DIR "${NVAFX_DIR}" CACHE PATH "Path to NVIDIA Audio Effects SDK")
 
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
@@ -124,7 +124,7 @@ if(NVAFX_FOUND)
 		add_library(NVIDIA::AudioEffects SHARED IMPORTED)
 		set_target_properties(NVIDIA::AudioEffects
 			PROPERTIES
-				PUBLIC_HEADER "${NVAFX_INCLUDE_DIRS}/nvAudioEffects.h"	
+				PUBLIC_HEADER "${NVAFX_INCLUDE_DIRS}/nvAudioEffects.h"
 				INTERFACE_INCLUDE_DIRECTORIES ${NVAFX_INCLUDE_DIRS}
 				IMPORTED_LINK_INTERFACE_LANGUAGES "C"
 				IMPORTED_LOCATION ${NVAFX_BINARIES}

@@ -255,6 +255,7 @@ find_package(CURL)
 find_package(VSTSDK REQUIRED)
 
 # Dependency: NVIDIA Audio Effects SDK
+set(NVAFX_DIR "${PROJECT_SOURCE_DIR}/third-party/nvidia-maxine-afx-sdk")
 find_package(NVAFX REQUIRED)
 
 # Dependency: Secret Rabbit Code
