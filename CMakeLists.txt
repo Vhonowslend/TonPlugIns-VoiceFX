@@ -252,6 +252,7 @@ set(INSTALL_VST2 OFF CACHE BOOL "Package for VST2.x")
 find_package(CURL)
 
 # Dependency: VST SDK
+set(VSTSDK_DIR "${PROJECT_SOURCE_DIR}/third-party/vst3sdk")
 find_package(VSTSDK REQUIRED)
 
 # Dependency: NVIDIA Audio Effects SDK

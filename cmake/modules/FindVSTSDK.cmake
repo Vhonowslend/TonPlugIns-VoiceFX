@@ -21,22 +21,15 @@ Result Variables
 include(FindPackageHandleStandardArgs)
 
 # Variables
-set(VSTSDK_DIR "" CACHE PATH "Path to Steinberg VST SDK")
+set(VSTSDK_DIR "${VSTSDK_DIR}" CACHE PATH "Path to Steinberg VST3SDK")
 
 # Find VST SDK Directory
 find_path(VSTSDK_VST3_DIR
 	NAMES
 		"public.sdk"
 	HINTS
-		$ENV{VSTSDK_DIR}/VST3_SDK
-		${VSTSDK_DIR}/VST3_SDK
-)
-find_path(VSTSDK_VST2_DIR
-	NAMES
-		"public.sdk"
-	HINTS
-		$ENV{VSTSDK_DIR}/VST2_SDK
-		${VSTSDK_DIR}/VST2_SDK
+		$ENV{VSTSDK_DIR}
+		${VSTSDK_DIR}
 )
 set(VSTSDK_INCLUDE_DIRS ${VSTSDK_VST3_DIR} ${VSTSDK_VST2_DIR})
 if(WIN32)
@@ -163,7 +156,7 @@ if(VSTSDK_FOUND AND NOT TARGET VSTSDK_VST3)
 	# Main
 		${VSTSDK_VST3_DIR}/public.sdk/source/main/pluginfactory.cpp
 		${VSTSDK_VST3_DIR}/public.sdk/source/main/pluginfactory.h
-	# VSTSDK	
+	# VSTSDK
 		${VSTSDK_VST3_DIR}/public.sdk/source/common/memorystream.cpp
 		${VSTSDK_VST3_DIR}/public.sdk/source/common/memorystream.h
 		${VSTSDK_VST3_DIR}/public.sdk/source/vst/utility/mpeprocessor.cpp
@@ -222,21 +215,6 @@ endif()
 if(VSTSDK_VSTGUI_FOUND AND NOT TARGET VSTSDK_VSTGUI)
 	message(FATAL_ERROR "VSTGUI support is currently not implemented")
 #	include(${VSTSDK_VST3_DIR}/vstgui4/vstgui/CMakeLists.txt)
-endif()
-if(VSTSDK_VST2WRAPPER_FOUND AND VSTSDK_VST2_DIR AND TARGET VSTSDK_VST3)
-	message(WARNING "Use of the VST2Wrapper requires a signed VST2.x agreement, or a compatible open source header.")
-	target_sources(VSTSDK_VST3 PRIVATE
-		${VSTSDK_VST3_DIR}/public.sdk/source/vst/basewrapper.sdk.cpp
-		${VSTSDK_VST3_DIR}/public.sdk/source/vst/vst2wrapper/vst2wrapper.cpp
-		${VSTSDK_VST3_DIR}/public.sdk/source/vst/vst2wrapper/vst2wrapper.h
-		${VSTSDK_VST3_DIR}/public.sdk/source/vst/vst2wrapper/docvst2.h
-	)
-	target_include_directories(VSTSDK_VST3
-		PRIVATE
-			${VSTSDK_VST2_DIR}
-		INTERFACE
-			${VSTSDK_VST2_DIR}
-	)
 endif()
 
 if(TARGET VSTSDK_VST3)

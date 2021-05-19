@@ -7,3 +7,6 @@
 [submodule "third-party/nvidia-maxine-afx-sdk"]
 	path = third-party/nvidia-maxine-afx-sdk
 	url = https://github.com/NVIDIA/MAXINE-AFX-SDK.git
+[submodule "third-party/vst3sdk"]
+	path = third-party/vst3sdk
+	url = https://github.com/steinbergmedia/vst3sdk.git
