@@ -40,6 +40,8 @@ namespace nvafx {
 
 		static uint32_t get_sample_rate();
 
+		static uint32_t get_minimum_delay();
+
 		uint32_t get_block_size() const;
 
 		void process(const float input[], float output[]);

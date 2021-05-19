@@ -84,6 +84,13 @@ uint32_t nvafx::denoiser::get_sample_rate()
 	return SAMPLERATE;
 }
 
+uint32_t nvafx::denoiser::get_minimum_delay()
+{
+	constexpr uint32_t min_delay_ms  = 74; // Documented is 74ms, but measured is ~82ms.
+	constexpr uint32_t ms_to_samples = 1000;
+	return (SAMPLERATE * min_delay_ms) / ms_to_samples;
+}
+
 uint32_t nvafx::denoiser::get_block_size() const
 {
 	return _block_size;
