@@ -150,9 +150,13 @@ void voicefx::vst2::denoiser::reset()
 		return;
 	}
 
-	// (Re-)Calculate delay.
-	float ioscale    = (static_cast<float>(_samplerate) / static_cast<float>(_nvfx->get_sample_rate()));
-	_vsteffect.delay = static_cast<int32_t>(_nvfx->get_block_size() * ioscale);
+	float ioscale = (static_cast<float>(_samplerate) / static_cast<float>(nvafx::denoiser::get_sample_rate()));
+
+	// (Re-)Calculate initial delay.
+	_delaysamples = static_cast<int32_t>(_nvfx->get_block_size() * ioscale);
+
+	// (Re-)Calculate absolute delay.
+	_vsteffect.delay = _delaysamples + (nvafx::denoiser::get_minimum_delay() * ioscale);
 
 	// Re-size scratch memory.
 	_scratch.resize(_samplerate);
@@ -167,12 +171,12 @@ void voicefx::vst2::denoiser::setup_channels()
 	_channels.resize(_vsteffect.num_inputs);
 	for (auto& channel : _channels) {
 		// (Re-)Create the re-samplers.
-		channel.input_resampler.reset(_samplerate, channel.fx->get_sample_rate());
-		channel.output_resampler.reset(channel.fx->get_sample_rate(), _samplerate);
+		channel.input_resampler.reset(_samplerate, nvafx::denoiser::get_sample_rate());
+		channel.output_resampler.reset(nvafx::denoiser::get_sample_rate(), _samplerate);
 
 		// (Re-)Create the buffers and reset offsets.
-		channel.input_buffer.resize(channel.fx->get_sample_rate());
-		channel.fx_buffer.resize(channel.fx->get_sample_rate());
+		channel.input_buffer.resize(nvafx::denoiser::get_sample_rate());
+		channel.fx_buffer.resize(nvafx::denoiser::get_sample_rate());
 		channel.output_buffer.resize(_samplerate);
 		// TODO: Consider reducing memory impact of the above.
 	}
@@ -197,7 +201,7 @@ void voicefx::vst2::denoiser::reset_channels()
 		channel.output_buffer.clear();
 
 		// Reset delay
-		channel.delay = _vsteffect.delay;
+		channel.delay = _delaysamples;
 	}
 }
 
@@ -235,7 +239,7 @@ intptr_t voicefx::vst2::denoiser::vst2_control(VST_EFFECT_OPCODE opcode, int32_t
 	case VST_EFFECT_OPCODE_SETBLOCKSIZE:
 		return vst2_set_block_size(p2);
 	case VST_EFFECT_OPCODE_TAIL_SAMPLES:
-		return _vsteffect.delay * 10;
+		return _vsteffect.delay;
 
 		// -------------------------------------------------------------------------- //
 		// Channels

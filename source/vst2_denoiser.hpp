@@ -46,6 +46,7 @@ namespace voicefx {
 			bool     _dirty;
 			uint32_t _samplerate;
 			uint32_t _blocksize;
+			uint32_t _delaysamples;
 
 			struct channel_data {
 				std::shared_ptr<::nvafx::denoiser> fx;
