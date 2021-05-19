@@ -41,29 +41,6 @@
 
 #define LOG_PREFIX "[NVIDIA AudioFX VST] "
 
-static std::filesystem::path _vst3_path;
-static std::filesystem::path _sdk_path;
-
-std::filesystem::path vst3_path()
-{
-	return std::filesystem::path(_vst3_path);
-}
-
-void set_vst3_path(std::filesystem::path const& value)
-{
-	_vst3_path = std::filesystem::path(value);
-}
-
-std::filesystem::path nvafx_path()
-{
-	return std::filesystem::path(_sdk_path);
-}
-
-void set_nvafx_path(std::filesystem::path const& value)
-{
-	_sdk_path = std::filesystem::path(value);
-}
-
 static bool _initialized = false;
 
 static std::filesystem::path _user_data;
