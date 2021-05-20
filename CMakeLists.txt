@@ -165,14 +165,14 @@ endif()
 ################################################################################
 project(VoiceFX
 	LANGUAGES CXX;C
-	DESCRIPTION "Xaymars VoiceFX (for VST)"
+	DESCRIPTION "VoiceFX is a VST 3.x/2.x plug-in to clean up noise from any recording in post."
 	VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}
 	HOMEPAGE_URL "https://xaymar.com/"
 )
-set(PROJECT_FULL_NAME "Xaymars VoiceFX (for VST)")
+set(PROJECT_FULL_NAME "VoiceFX")
 set(PROJECT_DESCRIPTION "")
 set(PROJECT_AUTHORS "Michael Fabian 'Xaymar' Dirks <info@xaymar.com>")
-set(PROJECT_COPYRIGHT_YEARS "2020")
+set(PROJECT_COPYRIGHT_YEARS "2020 - 2021")
 
 # Detect Architecture
 set(BITS "64")
@@ -243,6 +243,9 @@ set(CMAKE_PACKAGE_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "Path for generated ar
 set(CMAKE_PACKAGE_NAME "${PROJECT_NAME}" CACHE STRING "Name for the generated archives.")
 set(CMAKE_PACKAGE_SUFFIX_OVERRIDE "" CACHE STRING "Override for the suffix.")
 
+set(ENABLE_STEINBERG_VST3 ON CACHE BOOL "Enable Steinberg VST3.x support.")
+set(ENABLE_STEINBERG_VST2 OFF CACHE BOOL "Enable Steinberg VST2.x support.")
+
 set(INSTALL_VST2 OFF CACHE BOOL "Package for VST2.x")
 
 ################################################################################
@@ -250,10 +253,6 @@ set(INSTALL_VST2 OFF CACHE BOOL "Package for VST2.x")
 ################################################################################
 # Dependency: libCURL
 find_package(CURL)
-
-# Dependency: VST SDK
-set(VSTSDK_DIR "${PROJECT_SOURCE_DIR}/third-party/vst3sdk")
-find_package(VSTSDK REQUIRED)
 
 # Dependency: NVIDIA Audio Effects SDK
 set(NVAFX_DIR "${PROJECT_SOURCE_DIR}/third-party/nvidia-maxine-afx-sdk")
@@ -283,17 +282,6 @@ set(PROJECT_SOURCE
 	"source/nvafx_denoiser.cpp"
 	"source/resampler.hpp"
 	"source/resampler.cpp"
-	"source/vst2.hpp"
-	"source/vst2.cpp"
-	"source/vst2_denoiser.hpp"
-	"source/vst2_denoiser.cpp"
-	"source/vst3.hpp"
-	"source/vst3.cpp"
-	"source/vst3_denoiser_controller.hpp"
-	"source/vst3_denoiser_controller.cpp"
-	"source/vst3_denoiser_processor.hpp"
-	"source/vst3_denoiser_processor.cpp"
-	"source/exports_win.def"
 	"cmake/templates/version.h.in"
 	"cmake/templates/version.rc.in"
 	"cmake/templates/installer.iss.in"
@@ -311,6 +299,41 @@ set(PROJECT_INCLUDES
 	"${PROJECT_BINARY_DIR}/generated/"
 	"${PROJECT_SOURCE_DIR}/third-party/vst2sdk"
 )
+
+# VST 3.x
+if(ENABLE_STEINBERG_VST3)
+	set(VSTSDK_DIR "${PROJECT_SOURCE_DIR}/third-party/vst3sdk")
+	find_package(VSTSDK REQUIRED)
+
+	list(APPEND PROJECT_SOURCE
+		"source/vst3.hpp"
+		"source/vst3.cpp"
+		"source/vst3_denoiser_controller.hpp"
+		"source/vst3_denoiser_controller.cpp"
+		"source/vst3_denoiser_processor.hpp"
+		"source/vst3_denoiser_processor.cpp"
+		$<TARGET_OBJECTS:VSTSDK_VST3>
+	)
+	list(APPEND PROJECT_DEFINITIONS
+		ENABLE_VST3
+	)
+endif()
+
+# VST 2.x
+if(ENABLE_STEINBERG_VST2)
+	list(APPEND PROJECT_SOURCE
+		"source/vst2.hpp"
+		"source/vst2.cpp"
+		"source/vst2_denoiser.hpp"
+		"source/vst2_denoiser.cpp"
+	)
+	list(APPEND PROJECT_DEFINITIONS
+		ENABLE_VST2
+	)
+	list(APPEND PROJECT_INCLUDES
+		"${PROJECT_SOURCE_DIR}/third-party/vst2sdk"
+	)
+endif()
 
 if(WIN32)
 	#Packaging
@@ -356,7 +379,6 @@ endif()
 # Create Library
 add_library(${PROJECT_NAME} MODULE
 	${PROJECT_SOURCE}
-	$<TARGET_OBJECTS:VSTSDK_VST3>
 )
 target_link_libraries(${PROJECT_NAME}
 	${PROJECT_LIBRARIES}
@@ -518,9 +540,6 @@ if(INSTALL_VST2)
 else()
 	set(INSTALL_PREFIX "${PROJECT_NAME}.vst3")
 	if(WIN32)
-		set_target_properties(${PROJECT_NAME} PROPERTIES
-			SUFFIX ".vst3"
-		)
 		if(${BITS} STREQUAL "32")
 			set(INSTALL_PATH "x86-win")
 		else()
