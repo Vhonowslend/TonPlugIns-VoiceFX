@@ -39,7 +39,7 @@
 #include "Knownfolders.h"
 #endif
 
-#define LOG_PREFIX "[NVIDIA AudioFX VST] "
+#define LOG_PREFIX "[VoiceFX] "
 
 static bool _initialized = false;
 
