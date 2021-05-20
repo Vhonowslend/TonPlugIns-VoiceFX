@@ -284,7 +284,8 @@ set(PROJECT_SOURCE
 	"source/resampler.cpp"
 	"cmake/templates/version.h.in"
 	"cmake/templates/version.rc.in"
-	"cmake/templates/installer.iss.in"
+	"cmake/templates/installer-vst2.iss.in"
+	"cmake/templates/installer-vst3.iss.in"
 	"${PROJECT_BINARY_DIR}/generated/version.h"
 )
 set(PROJECT_DATA
@@ -343,20 +344,6 @@ if(WIN32)
 		set(_PACKAGE_SUFFIX_OVERRIDE "${CMAKE_PACKAGE_SUFFIX_OVERRIDE}")
 	endif()
 	set(_PACKAGE_FULL_NAME "${CMAKE_PACKAGE_PREFIX}/${CMAKE_PACKAGE_NAME}-${_PACKAGE_SUFFIX_OVERRIDE}")
-
-	## Installer (InnoSetup)
-	get_filename_component(ISS_FILES_DIR "${CMAKE_INSTALL_PREFIX}" ABSOLUTE)
-	file(TO_NATIVE_PATH "${ISS_FILES_DIR}" ISS_FILES_DIR)
-	get_filename_component(ISS_PACKAGE_DIR "${CMAKE_PACKAGE_PREFIX}" ABSOLUTE)
-	file(TO_NATIVE_PATH "${ISS_PACKAGE_DIR}" ISS_PACKAGE_DIR)
-	get_filename_component(ISS_SOURCE_DIR "${PROJECT_SOURCE_DIR}" ABSOLUTE)
-	file(TO_NATIVE_PATH "${ISS_SOURCE_DIR}" ISS_SOURCE_DIR)
-	get_filename_component(ISS_MSVCHELPER_PATH "${msvc-redist-helper_BUILD_DIR}" ABSOLUTE)
-	file(TO_NATIVE_PATH "${ISS_MSVCHELPER_PATH}" ISS_MSVCHELPER_PATH)
-	configure_file(
-		"cmake/templates/installer.iss.in"
-		"${PROJECT_BINARY_DIR}/installer.iss"
-	)
 
 	# Windows Specific Resource Definition
 	set(PROJECT_PRODUCT_NAME "${PROJECT_FULL_NAME}")
@@ -498,10 +485,50 @@ if(HAVE_CLANG)
 endif()
 
 ################################################################################
-# Installation
+# Packaging / Installation
 ################################################################################
 
-# VST3 format is this:
+if (ENABLE_STEINBERG_VST2)
+	# Configure VST2 installer
+	get_filename_component(ISS_FILES_DIR "${CMAKE_INSTALL_PREFIX}" ABSOLUTE)
+	file(TO_NATIVE_PATH "${ISS_FILES_DIR}" ISS_FILES_DIR)
+	get_filename_component(ISS_PACKAGE_DIR "${CMAKE_PACKAGE_PREFIX}" ABSOLUTE)
+	file(TO_NATIVE_PATH "${ISS_PACKAGE_DIR}" ISS_PACKAGE_DIR)
+	get_filename_component(ISS_SOURCE_DIR "${PROJECT_SOURCE_DIR}" ABSOLUTE)
+	file(TO_NATIVE_PATH "${ISS_SOURCE_DIR}" ISS_SOURCE_DIR)
+	get_filename_component(ISS_MSVCHELPER_PATH "${msvc-redist-helper_BUILD_DIR}" ABSOLUTE)
+	file(TO_NATIVE_PATH "${ISS_MSVCHELPER_PATH}" ISS_MSVCHELPER_PATH)
+	configure_file(
+		"cmake/templates/installer-vst2.iss.in"
+		"${PROJECT_BINARY_DIR}/installer-vst2.iss"
+	)
+
+	# Install files
+	# - Binary files
+	install(TARGETS ${PROJECT_NAME}
+		LIBRARY DESTINATION "${PROJECT_NAME}"
+		RUNTIME DESTINATION "${PROJECT_NAME}"
+	)
+	# - Debug files
+	if(MSVC)
+		install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${PROJECT_NAME}" OPTIONAL)
+	endif()
+	# - License
+	install(FILES "LICENSE.md" DESTINATION "${PROJECT_NAME}")
+	# - Windows Explorer modifications.
+	if(WIN32)
+		install(FILES "cmake/templates/desktop.ini" DESTINATION "${PROJECT_NAME}")
+		install(FILES "cmake/templates/icon.ico" DESTINATION "${PROJECT_NAME}")
+
+		# Ensure that desktop.ini is System+Hidden
+		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/desktop.ini" ABSOLUTE)
+		file(TO_NATIVE_PATH "${_TMP}" _TMP)
+		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
+		install(CODE "execute_process(COMMAND attrib +S +H \"${_TMP}\")")
+	endif()
+endif()
+
+if(ENABLE_STEINBERG_VST3)
 # ${PROJECT_NAME}.vst3/
 #   Contents/
 #     Resources/
@@ -524,20 +551,22 @@ endif()
 #     PkgInfo (MacOS)
 #   desktop.ini (Windows)
 #   Plugin.ico (Windows)
-#
-# Yeah. It is extremely dumb. Congrats Steinberg, you made something dumb.
-# Not only is it super stupid to make up your own file ending, it's also bad behavior!
 
-if(INSTALL_VST2)
-	install(TARGETS ${PROJECT_NAME}
-		LIBRARY DESTINATION "VoiceFX"
-		RUNTIME DESTINATION "VoiceFX"
+	# Configure VST3 installer
+	get_filename_component(ISS_FILES_DIR "${CMAKE_INSTALL_PREFIX}" ABSOLUTE)
+	file(TO_NATIVE_PATH "${ISS_FILES_DIR}" ISS_FILES_DIR)
+	get_filename_component(ISS_PACKAGE_DIR "${CMAKE_PACKAGE_PREFIX}" ABSOLUTE)
+	file(TO_NATIVE_PATH "${ISS_PACKAGE_DIR}" ISS_PACKAGE_DIR)
+	get_filename_component(ISS_SOURCE_DIR "${PROJECT_SOURCE_DIR}" ABSOLUTE)
+	file(TO_NATIVE_PATH "${ISS_SOURCE_DIR}" ISS_SOURCE_DIR)
+	get_filename_component(ISS_MSVCHELPER_PATH "${msvc-redist-helper_BUILD_DIR}" ABSOLUTE)
+	file(TO_NATIVE_PATH "${ISS_MSVCHELPER_PATH}" ISS_MSVCHELPER_PATH)
+	configure_file(
+		"cmake/templates/installer-vst3.iss.in"
+		"${PROJECT_BINARY_DIR}/installer-vst3.iss"
 	)
-	if(MSVC)
-		install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "VoiceFX" OPTIONAL)
-	endif()
-	install(FILES "LICENSE.md" DESTINATION "VoiceFX")
-else()
+
+	# Install files
 	set(INSTALL_PREFIX "${PROJECT_NAME}.vst3")
 	if(WIN32)
 		if(${BITS} STREQUAL "32")
@@ -554,7 +583,6 @@ else()
 			set(INSTALL_PATH "x86_64-linux")
 		endif()
 	endif()
-
 	install(TARGETS ${PROJECT_NAME}
 		LIBRARY DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}"
 		RUNTIME DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}"
@@ -566,8 +594,12 @@ else()
 	if(WIN32)
 		install(FILES "cmake/templates/desktop.ini" DESTINATION "${INSTALL_PREFIX}/")
 		install(FILES "cmake/templates/icon.ico" DESTINATION "${INSTALL_PREFIX}/")
-		install(CODE "execute_process(COMMAND attrib +A +S +H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/desktop.ini\")")
-		install(CODE "execute_process(COMMAND attrib +A +S -H -R -O -I -X -V -P -U -B \"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/icon.ico\")")
+
+		# Ensure that desktop.ini is System+Hidden
+		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/desktop.ini" ABSOLUTE)
+		file(TO_NATIVE_PATH "${_TMP}" _TMP)
+		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
+		install(CODE "execute_process(COMMAND attrib +S +H \"${_TMP}\")")
 	endif()
 	install(FILES "LICENSE.md" DESTINATION "${INSTALL_PREFIX}")
 endif()
@@ -575,12 +607,12 @@ endif()
 add_custom_target(
 	PACKAGE_7Z
 	${CMAKE_COMMAND} -E tar cfv "${_PACKAGE_FULL_NAME}.7z" --format=7zip --
-		"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
+		"${CMAKE_INSTALL_PREFIX}"
 	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
 )
 add_custom_target(
 	PACKAGE_ZIP
 	${CMAKE_COMMAND} -E tar cfv "${_PACKAGE_FULL_NAME}.zip" --format=zip --
-		"${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}"
+		"${CMAKE_INSTALL_PREFIX}"
 	WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
 )
