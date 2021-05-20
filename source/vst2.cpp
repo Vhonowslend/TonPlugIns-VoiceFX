@@ -30,7 +30,7 @@
 #define D_LOG(MESSAGE, ...) voicefx::log("<VST2> " MESSAGE, __VA_ARGS__)
 
 // Entry Points for different platforms.
-VST_ENTRYPOINT
+__declspec(dllexport) VST_ENTRYPOINT
 {
 	try {
 		// Initialize VoiceFX library.
@@ -46,5 +46,4 @@ VST_ENTRYPOINT
 		return nullptr;
 	}
 }
-VST_ENTRYPOINT_WINDOWS
-VST_ENTRYPOINT_MACOS
+__declspec(dllexport) VST_ENTRYPOINT_WINDOWS __declspec(dllexport) VST_ENTRYPOINT_MACOS
