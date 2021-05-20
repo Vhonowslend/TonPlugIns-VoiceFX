@@ -87,12 +87,18 @@ begin
 		RegQueryStringValue(HKA64, FindRegistryKey(), 'InstallLocation', sInstallPath);
 
 	// 3. If empty, try and find the "Current User" location for VST 2.x plugins.
-	if (sInstallPath = '') then
+	if (sInstallPath = '') then begin
 		RegQueryStringValue(HKCU64, 'SOFTWARE\VST', 'VSTPluginsPath', sInstallPath);
+		if (sInstallPath <> '') then
+			sInstallPath := sInstallPath + '\@PROJECT_NAME@\';
+	end;
 
 	// 4. If empty, try and find the "Local Machine" location for VST 2.x plugins.
-	if (sInstallPath = '') then
+	if (sInstallPath = '') then begin
 		RegQueryStringValue(HKLM64, 'SOFTWARE\VST', 'VSTPluginsPath', sInstallPath);
+		if (sInstallPath <> '') then
+			sInstallPath := sInstallPath + '\@PROJECT_NAME@\';
+	end;
 
 	// 5. If empty, just use the default path.
 	if (sInstallPath = '') then
