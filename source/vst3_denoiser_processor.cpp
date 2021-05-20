@@ -48,8 +48,6 @@ vst3::denoiser::processor::processor()
 
 	// Load and initialize NVIDIA Audio Effects.
 	_nvafx = nvafx::nvafx::instance();
-
-	D_LOG("(0x%08" PRIxPTR ") Initialized.", this);
 }
 
 vst3::denoiser::processor::~processor() {}
@@ -57,6 +55,8 @@ vst3::denoiser::processor::~processor() {}
 tresult PLUGIN_API vst3::denoiser::processor::initialize(FUnknown* context)
 {
 	if (auto res = AudioEffect::initialize(context); res != kResultOk) {
+		D_LOG("(0x%08" PRIxPTR ") Initialization failed with error code 0x%" PRIx32 ".", this,
+			  static_cast<int32_t>(res));
 		return res;
 	}
 
@@ -67,6 +67,7 @@ tresult PLUGIN_API vst3::denoiser::processor::initialize(FUnknown* context)
 	// Reset the channel layout to the defined one.
 	set_channel_count(1);
 
+	D_LOG("(0x%08" PRIxPTR ") Initialized.", this);
 	return kResultOk;
 }
 
@@ -79,10 +80,13 @@ tresult PLUGIN_API vst3::denoiser::processor::setBusArrangements(SpeakerArrangem
 																 SpeakerArrangement* outputs, int32 numOuts)
 {
 	if (numIns < 0 || numOuts < 0) {
+		D_LOG("(0x%08" PRIxPTR ") Host called setBusArrangement with no inputs or outputs!", this);
 		return kInvalidArgument;
 	}
 
 	if (numIns > static_cast<int32>(audioInputs.size()) || numOuts > static_cast<int32>(audioOutputs.size())) {
+		D_LOG("(0x%08" PRIxPTR ") Host called setBusArrangement with more than the maximum allowed inputs or outputs!",
+			  this);
 		return kResultFalse;
 	}
 
@@ -276,6 +280,8 @@ tresult PLUGIN_API vst3::denoiser::processor::getState(IBStream* state)
 
 void vst3::denoiser::processor::reset()
 {
+	D_LOG("(0x%08" PRIxPTR ") Resetting channel states...", this);
+
 	for (auto channel : _channels) {
 		channel.fx->reset();
 
@@ -300,6 +306,8 @@ void vst3::denoiser::processor::reset()
 
 void vst3::denoiser::processor::set_channel_count(size_t num)
 {
+	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %" PRIuPTR "...", this, num);
+
 	_channels.resize(num);
 	_channels.shrink_to_fit();
 

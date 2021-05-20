@@ -24,16 +24,24 @@
 #include "vst3_denoiser_controller.hpp"
 #include <base/source/fstreamer.h>
 
-vst3::denoiser::controller::controller() {}
+#define D_LOG(MESSAGE, ...) voicefx::log("<VST3::Denoiser::Controller> " MESSAGE, __VA_ARGS__)
+
+vst3::denoiser::controller::controller()
+{
+	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
+}
 
 vst3::denoiser::controller::~controller() {}
 
 tresult PLUGIN_API vst3::denoiser::controller::initialize(FUnknown* context)
 {
 	if (tresult result = EditControllerEx1::initialize(context); result != kResultOk) {
+		D_LOG("(0x%08" PRIxPTR ") Initialization failed with error code 0x%" PRIx32 ".", this,
+			  static_cast<int32_t>(result));
 		return result;
 	}
 
+	D_LOG("(0x%08" PRIxPTR ") Initialized.", this);
 	return kResultOk;
 }
 

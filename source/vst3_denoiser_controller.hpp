@@ -31,8 +31,8 @@ using namespace Steinberg::Vst;
 
 namespace vst3::denoiser {
 	static const FUID controller_uid(FOURCC_CREATOR_CONTROLLER, // Creator, Type
-									 FOURCC('N', 'v', 'D', 'e'), FOURCC('n', 'o', 'i', 's'),
-									 FOURCC('e', 'V', 'o', 'c'));
+									 FOURCC('V', 'o', 'i', 'c'), FOURCC('e', 'F', 'X', 'N'),
+									 FOURCC('o', 'i', 's', 'e'));
 
 	enum class parameters : ParamID {
 		BYPASS,
