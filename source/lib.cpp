@@ -22,14 +22,16 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "lib.hpp"
+#include "platform.hpp"
+#include "version.h"
+
 #include <chrono>
 #include <cstdarg>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <vector>
-#include "platform.hpp"
-#include "version.h"
 
 #if defined(_WIN32)
 #include "Windows.h"
@@ -132,6 +134,18 @@ void voicefx::initialize()
 		std::filesystem::create_directories(log_path);
 		log_path.append(formatted_time(true) + ".log");
 		_log_stream = std::ofstream(log_path, std::ios::trunc | std::ios::out);
+
+		{ // Delete all log files older than 1 month.
+			std::vector<std::filesystem::directory_entry> _logs;
+			for (auto& entry : std::filesystem::directory_iterator(log_path)) {
+				auto wt = entry.last_write_time();
+				if ((decltype(wt)::clock::now() - wt) > std::chrono::hours(30 * 60)) {
+					std::filesystem::remove(entry);
+				} else {
+					_logs.push_back(entry);
+				}
+			}
+		}
 	}
 
 	voicefx::log("Loaded v" VERSION_STRING ".");
