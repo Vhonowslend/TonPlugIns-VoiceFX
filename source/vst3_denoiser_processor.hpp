@@ -22,13 +22,15 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
-#include <list>
-#include "nvafx_voicedenoiser.hpp"
 #include "vst3.hpp"
 
-#include <nvAudioEffects.h>
+#include <list>
 #include <public.sdk/source/vst/vstaudioeffect.h>
-#include <samplerate.h>
+
+#include "audiobuffer.hpp"
+#include "nvafx.hpp"
+#include "nvafx_denoiser.hpp"
+#include "resampler.hpp"
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -40,12 +42,30 @@ using namespace Steinberg::Vst;
 
 namespace vst3::denoiser {
 	static const FUID processor_uid(FOURCC_CREATOR_PROCESSOR, // Creator, Type
-									FOURCC('N', 'v', 'D', 'e'), FOURCC('n', 'o', 'i', 's'), FOURCC('e', 'V', 'o', 'c'));
+									FOURCC('V', 'o', 'i', 'c'), FOURCC('e', 'F', 'X', 'N'), FOURCC('o', 'i', 's', 'e'));
 
 	class processor : AudioEffect {
-		bool _bypass;
+		std::shared_ptr<::nvafx::nvafx> _nvafx;
 
-		std::list<nvafx::voicedenoiser> _channels;
+		bool     _dirty;
+		uint32_t _samplerate;
+		uint32_t _blocksize;
+		uint32_t _delaysamples;
+
+		struct channel_data {
+			std::shared_ptr<::nvafx::denoiser> fx;
+
+			voicefx::resampler input_resampler;
+			voicefx::resampler output_resampler;
+
+			voicefx::audiobuffer input_buffer;
+			voicefx::audiobuffer fx_buffer;
+			voicefx::audiobuffer output_buffer;
+
+			int64_t delay;
+		};
+		std::vector<channel_data> _channels;
+		std::vector<float>        _scratch;
 
 		public:
 		processor();
@@ -65,7 +85,9 @@ namespace vst3::denoiser {
 		tresult PLUGIN_API setState(IBStream* state) override;
 		tresult PLUGIN_API getState(IBStream* state) override;
 
-		void update_channel_count(size_t ch);
+		private:
+		void reset();
+		void set_channel_count(size_t num);
 
 		public:
 		static FUnknown* create(void* data);

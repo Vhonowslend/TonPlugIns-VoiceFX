@@ -34,11 +34,6 @@ tresult PLUGIN_API vst3::denoiser::controller::initialize(FUnknown* context)
 		return result;
 	}
 
-	{ // Options
-		parameters.addParameter(STR16("Bypass"), nullptr, 1, 0, ParameterInfo::kCanAutomate | ParameterInfo::kIsBypass,
-								static_cast<ParamID>(parameters::BYPASS));
-	}
-
 	return kResultOk;
 }
 
@@ -49,13 +44,6 @@ tresult PLUGIN_API vst3::denoiser::controller::setComponentState(IBStream* state
 	}
 
 	IBStreamer streamer(state, kBigEndian);
-
-	bool bypassState = false;
-	if (!streamer.readBool(bypassState)) {
-		return kResultFalse;
-	}
-
-	setParamNormalized(static_cast<ParamID>(parameters::BYPASS), bypassState ? 1 : 0);
 
 	return kResultOk;
 }

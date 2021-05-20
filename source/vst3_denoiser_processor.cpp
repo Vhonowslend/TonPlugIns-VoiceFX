@@ -27,17 +27,29 @@
 #include <pluginterfaces/vst/ivstparameterchanges.h>
 #include "vst3_denoiser_controller.hpp"
 
+#define D_LOG(MESSAGE, ...) voicefx::log("<VST3::Denoiser::Processor> " MESSAGE, __VA_ARGS__)
+
 FUnknown* vst3::denoiser::processor::create(void* data)
 {
 	return static_cast<IAudioProcessor*>(new processor());
 }
 
-vst3::denoiser::processor::processor() : _bypass(false)
+vst3::denoiser::processor::processor()
 {
+	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
+
+	// Assign the proper controller
+	setControllerClass(vst3::denoiser::controller_uid);
+
+	// Require some things from the host.
 	processContextRequirements.needContinousTimeSamples();
 	processContextRequirements.needSamplesToNextClock();
+	processContextRequirements.needFrameRate();
 
-	setControllerClass(vst3::denoiser::controller_uid);
+	// Load and initialize NVIDIA Audio Effects.
+	_nvafx = nvafx::nvafx::instance();
+
+	D_LOG("(0x%08" PRIxPTR ") Initialized.", this);
 }
 
 vst3::denoiser::processor::~processor() {}
@@ -48,8 +60,13 @@ tresult PLUGIN_API vst3::denoiser::processor::initialize(FUnknown* context)
 		return res;
 	}
 
+	// Add audio input and output which default to mono.
 	addAudioInput(STR16("In"), SpeakerArr::kMono);
 	addAudioOutput(STR16("Out"), SpeakerArr::kMono);
+
+	// Reset the channel layout to the defined one.
+	set_channel_count(1);
+
 	return kResultOk;
 }
 
@@ -90,7 +107,7 @@ tresult PLUGIN_API vst3::denoiser::processor::setBusArrangements(SpeakerArrangem
 			arr >>= 1;
 		}
 
-		update_channel_count(channels);
+		set_channel_count(channels);
 	}
 
 	return kResultTrue;
@@ -98,8 +115,7 @@ tresult PLUGIN_API vst3::denoiser::processor::setBusArrangements(SpeakerArrangem
 
 uint32 PLUGIN_API vst3::denoiser::processor::getLatencySamples()
 {
-	// In order to not glitch out, we need to delay things until we have 3x the required samples
-	return processSetup.maxSamplesPerBlock << 1;
+	return _channels[0].fx->get_minimum_delay();
 }
 
 uint32 PLUGIN_API vst3::denoiser::processor::getTailSamples()
@@ -109,75 +125,132 @@ uint32 PLUGIN_API vst3::denoiser::processor::getTailSamples()
 
 tresult PLUGIN_API vst3::denoiser::processor::process(ProcessData& data)
 {
-	// Check for updates to parameters.
-	if (data.inputParameterChanges != nullptr) {
-		for (auto idx = 0; idx < data.inputParameterChanges->getParameterCount(); idx++) {
-			if (auto* pq = data.inputParameterChanges->getParameterData(idx); pq) {
-				int32      offset;
-				ParamValue value;
-
-				switch (static_cast<parameters>(pq->getParameterId())) {
-				case parameters::BYPASS:
-					if (pq->getPoint(pq->getPointCount() - 1, offset, value) == kResultOk) {
-						_bypass = (value > 0.5);
-					}
-					break;
-				}
-			}
-		}
-	}
-
-	// Check if there is any work to do.
+	// Are there any inputs and outputs to process?
 	if ((data.numInputs == 0) || (data.numOutputs == 0)) {
 		return kResultOk;
 	}
 
-	// Check if the output is silent, if so do some additional work and quit early.
-	if (data.outputs[0].silenceFlags = data.inputs[0].silenceFlags; data.outputs[0].silenceFlags != 0) {
-		for (size_t cdx = 0; cdx < data.outputs[0].numChannels; cdx++) {
-			// Only need to clear output if it is not the same buffer.
-			if (data.outputs[0].channelBuffers32[cdx] != data.inputs[0].channelBuffers32[cdx]) {
-				memset(data.outputs[0].channelBuffers32[cdx], 0, sizeof(kSample32) * data.numSamples);
-			}
+	for (size_t idx = 0; idx < _channels.size(); idx++) {
+		auto& channel = _channels[idx];
+
+		if (data.numSamples < channel.delay) {
+			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR
+				  "] Host application is broken and ignores delay, behavior is now undefined.",
+				  this, idx);
 		}
 
-		return kResultOk;
-	}
+#ifdef DEBUG_PROCESSING
+		D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] In Smp. | In Buf | FX Buf | OutBuf | Step   ", this, idx);
+		D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] --------+--------+--------+--------+--------", this, idx);
+		D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR,
+			  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
+			  channel.output_buffer.size(), 0);
+#endif
 
-	// User wants to bypass the effect entirely.
-	if (_bypass) {
-		// Copy used data.
-		size_t numPorts = std::min(data.numInputs, data.numOutputs);
-		for (size_t idx = 0; idx < numPorts; idx++) {
-			size_t numChannels = std::min(data.inputs[idx].numChannels, data.outputs[idx].numChannels);
-			for (size_t cdx = 0; cdx < numChannels; cdx++) {
-				if (data.outputs[idx].channelBuffers32[cdx] != data.inputs[idx].channelBuffers32[cdx]) {
-					memcpy(data.outputs[idx].channelBuffers32[cdx], data.inputs[idx].channelBuffers32[cdx],
-						   sizeof(kSample32) * data.numSamples);
-				}
+		// Resample input data for current channel to effect sample rate.
+		size_t out_samples = _scratch.size();
+		if (_samplerate != channel.fx->get_sample_rate()) {
+			size_t in_samples = data.numSamples;
+			channel.input_resampler.process(data.inputs[0].channelBuffers32[idx], in_samples, _scratch.data(),
+											out_samples);
+#ifdef DEBUG_PROCESSING
+			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] Host -> FX Resample!", this, idx);
+#endif
+			if (in_samples != data.numSamples) {
+				D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] Host -> FX Resample required less input samples, broken!", this,
+					  idx);
 			}
+		} else {
+			// Copy the input if sample rate matches.
+			out_samples = data.numSamples;
+			memcpy(_scratch.data(), data.inputs[0].channelBuffers32[idx], out_samples * sizeof(float));
+		}
+		channel.input_buffer.push(_scratch.data(), out_samples);
+#ifdef DEBUG_PROCESSING
+		D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR,
+			  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
+			  channel.output_buffer.size(), out_samples);
+#endif
 
-			// Clear unused channels
-			for (size_t cdx = numChannels; cdx < data.outputs[idx].numChannels; cdx++) {
-				memset(data.outputs[idx].channelBuffers32[cdx], 0, sizeof(kSample32) * data.numSamples);
+		// Denoise the content in segments of _nvfx->get_block_size()
+		out_samples = channel.fx->get_block_size();
+		while (channel.input_buffer.size() >= out_samples) {
+			// 1. Push _nvfx->get_block_size() samples to the processor.
+			channel.fx->process(channel.input_buffer.peek(out_samples), _scratch.data());
+
+			// 2. Store the result in a buffer.
+			channel.fx_buffer.push(_scratch.data(), out_samples);
+
+			// 3. And remove the original sample data from the input buffer.
+			channel.input_buffer.pop(out_samples);
+#ifdef DEBUG_PROCESSING
+			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR
+				  " |%7" PRIuPTR,
+				  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
+				  channel.output_buffer.size(), out_samples);
+#endif
+		}
+#ifdef DEBUG_PROCESSING
+		D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR,
+			  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
+			  channel.output_buffer.size(), 0);
+#endif
+
+		if (channel.fx_buffer.size() > 0) {
+			// Resample the entirety of the processed data.
+			out_samples = _scratch.size();
+			if (_samplerate != channel.fx->get_sample_rate()) {
+				size_t in_samples = channel.fx_buffer.size();
+				channel.output_resampler.process(channel.fx_buffer.peek(in_samples), in_samples, _scratch.data(),
+												 out_samples);
+				channel.fx_buffer.pop(channel.fx_buffer.size());
+#ifdef DEBUG_PROCESSING
+				D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] FX -> Host Resample!", this, idx);
+#endif
+			} else {
+				// Copy the input if sample rate matches.
+				out_samples = channel.fx_buffer.size();
+				memcpy(_scratch.data(), channel.fx_buffer.peek(out_samples), out_samples * sizeof(float));
+				channel.fx_buffer.pop(out_samples);
 			}
+			channel.output_buffer.push(_scratch.data(), out_samples);
+#ifdef DEBUG_PROCESSING
+			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR
+				  " |%7" PRIuPTR,
+				  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
+				  channel.output_buffer.size(), out_samples);
+#endif
+		} else {
+#ifdef DEBUG_PROCESSING
+			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR
+				  " |%7" PRIuPTR,
+				  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
+				  channel.output_buffer.size(), 0);
+#endif
 		}
 
-		// Clear unused outputs.
-		for (size_t idx = numPorts; idx < data.numOutputs; idx++) {
-			for (size_t cdx = 0; cdx < data.outputs[idx].numChannels; cdx++) {
-				memset(data.outputs[idx].channelBuffers32[cdx], 0, sizeof(kSample32) * data.numSamples);
-			}
+		// Copy the output data back to the host.
+		if (channel.delay <= 0) {
+			// Update the output buffer with the new content.
+			memcpy(data.outputs[0].channelBuffers32[idx], channel.output_buffer.peek(data.numSamples),
+				   data.numSamples * sizeof(float));
+			channel.output_buffer.pop(data.numSamples);
+#ifdef DEBUG_PROCESSING
+			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR
+				  " |%7" PRIuPTR,
+				  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
+				  channel.output_buffer.size(), data.numSamples);
+#endif
+		} else {
+			memset(data.outputs[0].channelBuffers32[idx], 0, data.numSamples * sizeof(float));
+			channel.delay -= data.numSamples;
+#ifdef DEBUG_PROCESSING
+			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR
+				  " |%7" PRIuPTR,
+				  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
+				  channel.output_buffer.size(), 0);
+#endif
 		}
-
-		return kResultOk;
-	}
-
-	auto itr = _channels.begin();
-	for (size_t cdx = 0; cdx < data.inputs[0].numChannels; cdx++) {
-		itr->process(data.numSamples, data.inputs[0].channelBuffers32[cdx], data.outputs[0].channelBuffers32[cdx]);
-
-		itr++;
 	}
 
 	return kResultOk;
@@ -186,11 +259,6 @@ tresult PLUGIN_API vst3::denoiser::processor::process(ProcessData& data)
 tresult PLUGIN_API vst3::denoiser::processor::setState(IBStream* state)
 {
 	if (state == nullptr) {
-		return kResultFalse;
-	}
-
-	IBStreamer streamer(state, kBigEndian);
-	if (!streamer.readBool(_bypass)) {
 		return kResultFalse;
 	}
 
@@ -203,22 +271,44 @@ tresult PLUGIN_API vst3::denoiser::processor::getState(IBStream* state)
 		return kResultFalse;
 	}
 
-	IBStreamer streamer(state, kBigEndian);
-	if (!streamer.writeBool(_bypass)) {
-		return kResultFalse;
-	}
-
 	return kResultOk;
 }
 
-void vst3::denoiser::processor::update_channel_count(size_t channels)
+void vst3::denoiser::processor::reset()
 {
-	// Channel magic
-	_channels.clear();
-	while (_channels.size() < channels) {
-		_channels.emplace_back();
+	for (auto channel : _channels) {
+		channel.fx->reset();
+
+		// (Re-)Create the re-samplers.
+		channel.input_resampler.reset(_samplerate, nvafx::denoiser::get_sample_rate());
+		channel.output_resampler.reset(nvafx::denoiser::get_sample_rate(), _samplerate);
+
+		// (Re-)Create the buffers and reset offsets.
+		channel.input_buffer.resize(nvafx::denoiser::get_sample_rate());
+		channel.fx_buffer.resize(nvafx::denoiser::get_sample_rate());
+		channel.output_buffer.resize(_samplerate);
+
+		// Clear Buffers
+		channel.input_buffer.clear();
+		channel.fx_buffer.clear();
+		channel.output_buffer.clear();
+
+		// Reset delay
+		channel.delay = _delaysamples;
 	}
-	for (auto itr = _channels.begin(); itr != _channels.end(); itr++) {
-		itr->reset(processSetup.sampleRate, processSetup.maxSamplesPerBlock);
+}
+
+void vst3::denoiser::processor::set_channel_count(size_t num)
+{
+	_channels.resize(num);
+	_channels.shrink_to_fit();
+
+	// Create any new effect instances.
+	for (auto& channel : _channels) {
+		if (!channel.fx) {
+			channel.fx = std::make_shared<::nvafx::denoiser>();
+		}
 	}
+
+	reset();
 }
