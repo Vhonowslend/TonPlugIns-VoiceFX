@@ -137,13 +137,17 @@ void voicefx::initialize()
 
 		{ // Delete all log files older than 1 month.
 			std::vector<std::filesystem::directory_entry> _logs;
-			for (auto& entry : std::filesystem::directory_iterator(log_path)) {
-				auto wt = entry.last_write_time();
-				if ((decltype(wt)::clock::now() - wt) > std::chrono::hours(30 * 60)) {
-					std::filesystem::remove(entry);
-				} else {
-					_logs.push_back(entry);
+			try {
+				for (auto& entry : std::filesystem::directory_iterator(log_path)) {
+					auto wt = entry.last_write_time();
+					if ((decltype(wt)::clock::now() - wt) > std::chrono::hours(30 * 60)) {
+						std::filesystem::remove(entry);
+					} else {
+						_logs.push_back(entry);
+					}
 				}
+			} catch (std::exception const& ex) {
+				voicefx::log("Failed to remove old log files.");
 			}
 		}
 	}
