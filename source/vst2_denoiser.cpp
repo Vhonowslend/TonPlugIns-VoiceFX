@@ -56,7 +56,6 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 
 	// Load and initialize NVIDIA Audio Effects.
 	_nvafx = nvafx::nvafx::instance();
-	_nvfx  = std::make_shared<::nvafx::denoiser>();
 
 	// Initialize the VST structure.
 	_vsteffect.magic_number      = 'VstP';
@@ -67,7 +66,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 	_vsteffect._unknown_float_00 = 1.0;
 	_vsteffect.effect_internal   = this;
 	_vsteffect.unique_id         = 'XVFX';
-	_vsteffect.version           = (0 << 24) | (3 << 16) | (0 << 8) | (0);
+	_vsteffect.version = (VERSION_MAJOR << 24) | (VERSION_MINOR << 16) | (VERSION_PATCH << 8) | (VERSION_BUILD);
 
 	_vsteffect.control = [](vst_effect* pthis, VST_EFFECT_OPCODE opcode, int32_t p_int1, intptr_t p_int2, void* p_ptr,
 							float p_float) {
@@ -123,17 +122,18 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 	{ // Set up default speaker arrangement.
 		_input_arrangement      = {};
 		_output_arrangement     = {};
-		_input_arrangement.type = _output_arrangement.type = VST_ARRANGEMENT_TYPE_STEREO;
-		_input_arrangement.channels = _output_arrangement.channels = 2;
-		_input_arrangement.speakers[0].type = _output_arrangement.speakers[0].type = VST_SPEAKER_TYPE_LEFT;
-		_input_arrangement.speakers[1].type = _output_arrangement.speakers[1].type = VST_SPEAKER_TYPE_RIGHT;
+		_input_arrangement.type = _output_arrangement.type = VST_ARRANGEMENT_TYPE_MONO;
+		_input_arrangement.channels = _output_arrangement.channels = 1;
+		for (size_t idx = 0; idx < VST_MAX_CHANNELS; idx++) {
+			_input_arrangement.speakers[idx].type = _output_arrangement.speakers[idx].type = VST_SPEAKER_TYPE_MONO;
+		}
 
-		// Update our VST to have 2 inputs and outputs.
+		// Update our VST.
 		_vsteffect.num_inputs = _vsteffect.num_outputs = _input_arrangement.channels;
 	}
 
 	// Finally reset everything to the initial state.
-	reset();
+	set_channel_count(1);
 
 	D_LOG("(0x%08" PRIxPTR ") Initialized.", &this->_vsteffect);
 }
@@ -150,26 +150,18 @@ void voicefx::vst2::denoiser::reset()
 		return;
 	}
 
-	float ioscale = (static_cast<float>(_samplerate) / static_cast<float>(nvafx::denoiser::get_sample_rate()));
-
-	// (Re-)Calculate initial delay.
-	_delaysamples = static_cast<int32_t>(_nvfx->get_block_size() * ioscale);
-
-	// (Re-)Calculate absolute delay.
+	// Re-calculate delays
+	float ioscale    = (static_cast<float>(_samplerate) / static_cast<float>(nvafx::denoiser::get_sample_rate()));
+	_delaysamples    = static_cast<int32_t>(_channels[0].fx->get_block_size() * ioscale);
 	_vsteffect.delay = _delaysamples + (nvafx::denoiser::get_minimum_delay() * ioscale);
 
-	// Re-size scratch memory.
+	D_LOG("(0x%08" PRIxPTR ") Allocating scratch memory...", &this->_vsteffect);
 	_scratch.resize(_samplerate);
 
-	// Re-initialize channels.
-	setup_channels();
-}
-
-void voicefx::vst2::denoiser::setup_channels()
-{
-	// (Re-)Create all channels.
-	_channels.resize(_vsteffect.num_inputs);
+	D_LOG("(0x%08" PRIxPTR ") Resetting channel states...", &this->_vsteffect);
 	for (auto& channel : _channels) {
+		channel.fx->reset();
+
 		// (Re-)Create the re-samplers.
 		channel.input_resampler.reset(_samplerate, nvafx::denoiser::get_sample_rate());
 		channel.output_resampler.reset(nvafx::denoiser::get_sample_rate(), _samplerate);
@@ -178,22 +170,6 @@ void voicefx::vst2::denoiser::setup_channels()
 		channel.input_buffer.resize(nvafx::denoiser::get_sample_rate());
 		channel.fx_buffer.resize(nvafx::denoiser::get_sample_rate());
 		channel.output_buffer.resize(_samplerate);
-		// TODO: Consider reducing memory impact of the above.
-	}
-
-	// Reset any remaining information.
-	reset_channels();
-}
-
-void voicefx::vst2::denoiser::reset_channels()
-{
-	for (auto& channel : _channels) {
-		// Recreate effect.
-		channel.fx = std::make_shared<::nvafx::denoiser>();
-
-		// Reset re-samplers
-		channel.input_resampler.reset();
-		channel.output_resampler.reset();
 
 		// Clear Buffers
 		channel.input_buffer.clear();
@@ -202,6 +178,29 @@ void voicefx::vst2::denoiser::reset_channels()
 
 		// Reset delay
 		channel.delay = _delaysamples;
+	}
+}
+
+void voicefx::vst2::denoiser::set_channel_count(size_t num)
+{
+	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %" PRIuPTR "...", &this->_vsteffect, num);
+
+	if (num != _channels.size()) {
+		// Resize the channel list.
+		_channels.reserve(num);
+		_channels.resize(num);
+
+		// Clear any excessive effects.
+		_channels.shrink_to_fit();
+
+		// Create any new effect instances.
+		for (auto& channel : _channels) {
+			if (!channel.fx) {
+				channel.fx = std::make_shared<::nvafx::denoiser>();
+			}
+		}
+
+		_dirty = true;
 	}
 }
 
@@ -255,7 +254,7 @@ intptr_t voicefx::vst2::denoiser::vst2_control(VST_EFFECT_OPCODE opcode, int32_t
 	case VST_EFFECT_OPCODE_SUSPEND:
 		return 0;
 	case VST_EFFECT_OPCODE_PROCESS_BEGIN:
-		reset_channels();
+		reset();
 		return 0;
 	case VST_EFFECT_OPCODE_PROCESS_END:
 		return 0;
@@ -374,11 +373,18 @@ intptr_t voicefx::vst2::denoiser::vst2_set_speaker_arrangement(vst_speaker_arran
 	_vsteffect.num_inputs  = _input_arrangement.channels;
 	_vsteffect.num_outputs = _output_arrangement.channels;
 
+	// Update the output to match what we actually output.
+	output->type     = input->type;
+	output->channels = input->channels;
+	for (size_t idx = 0; idx < output->channels; idx++) {
+		output->speakers[idx] = input->speakers[idx];
+	}
+
 	D_LOG("(0x%08" PRIxPTR ") Speaker Arrangement adjusted to %" PRId32 " channels.", &this->_vsteffect,
 		  _input_arrangement.channels);
 
 	// Update Channels
-	setup_channels();
+	set_channel_count(_input_arrangement.channels);
 
 	return 0;
 }

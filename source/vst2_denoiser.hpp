@@ -40,13 +40,12 @@ namespace voicefx {
 			vst_speaker_arrangement _input_arrangement;
 			vst_speaker_arrangement _output_arrangement;
 
-			std::shared_ptr<::nvafx::nvafx>    _nvafx;
-			std::shared_ptr<::nvafx::denoiser> _nvfx;
+			std::shared_ptr<::nvafx::nvafx> _nvafx;
 
 			bool     _dirty;
+			uint32_t _delaysamples;
 			uint32_t _samplerate;
 			uint32_t _blocksize;
-			uint32_t _delaysamples;
 
 			struct channel_data {
 				std::shared_ptr<::nvafx::denoiser> fx;
@@ -74,9 +73,7 @@ namespace voicefx {
 
 			protected:
 			void reset();
-
-			void setup_channels();
-			void reset_channels();
+			void set_channel_count(size_t num);
 
 			private /* VST2 Functionality */:
 			intptr_t vst2_control(VST_EFFECT_OPCODE opcode, int32_t p1, intptr_t p2, void* p3, float p4);
