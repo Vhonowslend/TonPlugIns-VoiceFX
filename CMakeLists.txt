@@ -84,7 +84,7 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
 			list(GET GIT_OUTPUT 0 VERSION_MAJOR)
 			list(GET GIT_OUTPUT 1 VERSION_MINOR)
 			list(GET GIT_OUTPUT 2 VERSION_PATCH)
-			list(GET GIT_OUTPUT 3 VERSION_BUILD)
+			list(GET GIT_OUTPUT 3 VERSION_TWEAK)
 			list(GET GIT_OUTPUT 4 VERSION_COMMIT)
 
 			# Patch needs additional parsing.
@@ -93,16 +93,20 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
 			set(VERSION_PATCH "${CMAKE_MATCH_1}")
 			if(CMAKE_MATCH_2)
 				set(VERSION_SUFFIX "${CMAKE_MATCH_2}")
+			else()
+				set(VERSION_SUFFIX "")
 			endif()
 		else()
 			message(WARNING "${LOGPREFIX} Failed to detect version, using default instead.")
 		endif()
 	endif()
+else()
+	message(STATUS "${LOGPREFIX} Not a git repository, automatic version detection disabled.")
 endif()
 
 # Allow manual overrides of the detected version.
 set(${PREFIX}VERSION "" CACHE STRING "Override StreamFX version with this string. Format: Major.Minor.Patch[Suffix][-Tweak[-Commit8c]]")
-if(${PREFIX}VERSION)
+if(NOT (${PREFIX}VERSION STREQUAL ""))
 	string(REPLACE "-" "." T_VERSION "${${PREFIX}VERSION}")
 	string(REPLACE "." ";" T_VERSION "${${PREFIX}VERSION}")
 
@@ -111,19 +115,19 @@ if(${PREFIX}VERSION)
 	list(GET T_VERSION 1 VERSION_MINOR)
 	list(GET T_VERSION 2 VERSION_PATCH)
 	if (T_VERSIONLEN GREATER_EQUAL 3)
-		list(GET T_VERSION 3 VERSION_BUILD)
+		list(GET T_VERSION 3 VERSION_TWEAK)
 	else()
 		set(VERSION_BUILD 0)
 	endif()
 	if (T_VERSIONLEN GREATER_EQUAL 4)
 		list(GET T_VERSION 4 VERSION_COMMIT)
 	else()
-#		set(VERSION_COMMIT "00000000")
+		set(VERSION_COMMIT "")
 	endif()
 
 	# Patch needs additional parsing.
 	# This may be a [0-9]*[a-z]*[0-9]+ string.
-	string(REGEX MATCHALL "([0-9]+)([a-z0-9]+)" T_MATCHES "${VERSION_PATCH}")
+	string(REGEX MATCHALL "^([0-9]+)([a-z]+[0-9]+)?" T_MATCHES "${VERSION_PATCH}")
 	set(VERSION_PATCH "${CMAKE_MATCH_1}")
 	if(CMAKE_MATCH_2)
 		set(VERSION_SUFFIX "${CMAKE_MATCH_2}")
@@ -133,7 +137,7 @@ if(${PREFIX}VERSION)
 endif()
 
 # Generate Version String
-if(VERSION_COMMIT)
+if(NOT (VERSION_COMMIT STREQUAL ""))
 	set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}${VERSION_SUFFIX}-${VERSION_COMMIT}")
 else()
 	set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_TWEAK}${VERSION_SUFFIX}")
@@ -542,7 +546,7 @@ if(ENABLE_STEINBERG_VST3)
 #     i686-linux/${PROJECT_NAME}.so
 #     i386-linux/${PROJECT_NAME}.so
 #     x86_64-linux/${PROJECT_NAME}.so
-# 
+#
 #- MacOS
 # ${PROJECT_NAME}.vst3/
 #   Contents/
@@ -559,7 +563,7 @@ if(ENABLE_STEINBERG_VST3)
 #     x86_64-win/${PROJECT_NAME}.dll
 #   desktop.ini
 #   Plugin.ico
-# 
+#
 #- Shared
 # ${PROJECT_NAME}.vst3/
 #   Contents/
