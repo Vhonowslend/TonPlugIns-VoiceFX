@@ -41,7 +41,7 @@ try {
 }
 
 vst3::denoiser::processor::processor()
-	: _dirty(true), _samplerate(), _blocksize(), _delaysamples(), _channels(), _scratch(0, nvafx::denoiser::get_sample_rate())
+	: _dirty(true), _delaysamples(), _channels(0), _scratch(0, nvafx::denoiser::get_sample_rate())
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
@@ -164,6 +164,48 @@ try {
 	return kInternalError;
 }
 
+tresult PLUGIN_API vst3::denoiser::processor::setupProcessing(ProcessSetup& newSetup)
+try {
+	// Copy non-important stuff.
+	processSetup.maxSamplesPerBlock = newSetup.maxSamplesPerBlock;
+	processSetup.processMode        = newSetup.processMode;
+
+	// Check that this is the appropriate sample size.
+	if (canProcessSampleSize(newSetup.symbolicSampleSize) != kResultTrue)
+		return kResultFalse;
+	processSetup.symbolicSampleSize = newSetup.symbolicSampleSize;
+
+	// Check if we need to reset things due to configuration changes.
+	if (processSetup.sampleRate != newSetup.sampleRate) {
+		processSetup.sampleRate = newSetup.sampleRate;
+		_dirty                  = true;
+	}
+
+	// TODO: Are we able to modify the host here?
+	return kResultOk;
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in setupProcessing: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setupProcessing.", this);
+	return kInternalError;
+}
+
+tresult PLUGIN_API vst3::denoiser::processor::setProcessing(TBool state)
+try {
+	if ((state == TBool(true)) && _dirty) {
+		reset();
+	}
+
+	return kResultOk;
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in setProcessing: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setProcessing.", this);
+	return kInternalError;
+}
+
 tresult PLUGIN_API vst3::denoiser::processor::process(ProcessData& data)
 try {
 	// Are there any inputs and outputs to process?
@@ -190,7 +232,7 @@ try {
 
 		// Resample input data for current channel to effect sample rate.
 		size_t out_samples = _scratch.size();
-		if (_samplerate != channel.fx->get_sample_rate()) {
+		if (processSetup.sampleRate != channel.fx->get_sample_rate()) {
 			size_t in_samples = data.numSamples;
 			channel.input_resampler.process(data.inputs[0].channelBuffers32[idx], in_samples, _scratch.data(),
 											out_samples);
@@ -240,7 +282,7 @@ try {
 		if (channel.fx_buffer.size() > 0) {
 			// Resample the entirety of the processed data.
 			out_samples = _scratch.size();
-			if (_samplerate != channel.fx->get_sample_rate()) {
+			if (processSetup.sampleRate != channel.fx->get_sample_rate()) {
 				size_t in_samples = channel.fx_buffer.size();
 				channel.output_resampler.process(channel.fx_buffer.peek(in_samples), in_samples, _scratch.data(),
 												 out_samples);
@@ -335,19 +377,25 @@ try {
 
 void vst3::denoiser::processor::reset()
 {
-	D_LOG("(0x%08" PRIxPTR ") Resetting channel states...", this);
+	if (!_dirty) {
+		return;
+	}
 
+	D_LOG("(0x%08" PRIxPTR ") Allocating scratch memory...", this);
+	_scratch.resize(processSetup.sampleRate);
+
+	D_LOG("(0x%08" PRIxPTR ") Resetting channel states...", this);
 	for (auto& channel : _channels) {
 		channel.fx->reset();
 
 		// (Re-)Create the re-samplers.
-		channel.input_resampler.reset(_samplerate, nvafx::denoiser::get_sample_rate());
-		channel.output_resampler.reset(nvafx::denoiser::get_sample_rate(), _samplerate);
+		channel.input_resampler.reset(processSetup.sampleRate, nvafx::denoiser::get_sample_rate());
+		channel.output_resampler.reset(nvafx::denoiser::get_sample_rate(), processSetup.sampleRate);
 
 		// (Re-)Create the buffers and reset offsets.
 		channel.input_buffer.resize(nvafx::denoiser::get_sample_rate());
 		channel.fx_buffer.resize(nvafx::denoiser::get_sample_rate());
-		channel.output_buffer.resize(_samplerate);
+		channel.output_buffer.resize(processSetup.sampleRate);
 
 		// Clear Buffers
 		channel.input_buffer.clear();
@@ -363,15 +411,21 @@ void vst3::denoiser::processor::set_channel_count(size_t num)
 {
 	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %" PRIuPTR "...", this, num);
 
-	_channels.resize(num);
-	_channels.shrink_to_fit();
+	if (num != _channels.size()) {
+		// Resize the channel list.
+		_channels.reserve(num);
+		_channels.resize(num);
 
-	// Create any new effect instances.
-	for (auto& channel : _channels) {
-		if (!channel.fx) {
-			channel.fx = std::make_shared<::nvafx::denoiser>();
+		// Clear any excessive effects.
+		_channels.shrink_to_fit();
+
+		// Create any new effect instances.
+		for (auto& channel : _channels) {
+			if (!channel.fx) {
+				channel.fx = std::make_shared<::nvafx::denoiser>();
+			}
 		}
-	}
 
-	reset();
+		_dirty = true;
+	}
 }

@@ -24,7 +24,6 @@
 #pragma once
 #include "vst3.hpp"
 
-#include <list>
 #include <public.sdk/source/vst/vstaudioeffect.h>
 
 #include "audiobuffer.hpp"
@@ -48,8 +47,6 @@ namespace vst3::denoiser {
 		std::shared_ptr<::nvafx::nvafx> _nvafx;
 
 		bool     _dirty;
-		uint32_t _samplerate;
-		uint32_t _blocksize;
 		uint32_t _delaysamples;
 
 		struct channel_data {
@@ -80,6 +77,8 @@ namespace vst3::denoiser {
 		uint32 PLUGIN_API  getLatencySamples() override;
 		uint32 PLUGIN_API  getTailSamples() override;
 
+		tresult PLUGIN_API setupProcessing(ProcessSetup& setup) override;
+		tresult PLUGIN_API setProcessing(TBool state) override;
 		tresult PLUGIN_API process(ProcessData& data) override;
 
 		tresult PLUGIN_API setState(IBStream* state) override;
