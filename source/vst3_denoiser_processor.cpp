@@ -62,15 +62,7 @@ try {
 	throw;
 }
 
-vst3::denoiser::processor::~processor()
-try {
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in deconstructor: %s", this, ex.what());
-	throw;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in deconstructor.", this);
-	throw;
-}
+vst3::denoiser::processor::~processor() {}
 
 tresult PLUGIN_API vst3::denoiser::processor::initialize(FUnknown* context)
 try {
