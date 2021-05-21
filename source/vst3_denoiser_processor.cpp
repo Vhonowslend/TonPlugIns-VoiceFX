@@ -30,12 +30,18 @@
 #define D_LOG(MESSAGE, ...) voicefx::log("<VST3::Denoiser::Processor> " MESSAGE, __VA_ARGS__)
 
 FUnknown* vst3::denoiser::processor::create(void* data)
-{
+try {
 	return static_cast<IAudioProcessor*>(new processor());
+} catch (std::exception const& ex) {
+	D_LOG("Exception in create: %s", ex.what());
+	return nullptr;
+} catch (...) {
+	D_LOG("Unknown exception in create.");
+	return nullptr;
 }
 
 vst3::denoiser::processor::processor()
-{
+try {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
 	// Assign the proper controller
@@ -48,12 +54,26 @@ vst3::denoiser::processor::processor()
 
 	// Load and initialize NVIDIA Audio Effects.
 	_nvafx = nvafx::nvafx::instance();
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in constructor: %s", this, ex.what());
+	throw;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in constructor.", this);
+	throw;
 }
 
-vst3::denoiser::processor::~processor() {}
+vst3::denoiser::processor::~processor()
+try {
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in deconstructor: %s", this, ex.what());
+	throw;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in deconstructor.", this);
+	throw;
+}
 
 tresult PLUGIN_API vst3::denoiser::processor::initialize(FUnknown* context)
-{
+try {
 	if (auto res = AudioEffect::initialize(context); res != kResultOk) {
 		D_LOG("(0x%08" PRIxPTR ") Initialization failed with error code 0x%" PRIx32 ".", this,
 			  static_cast<int32_t>(res));
@@ -69,16 +89,28 @@ tresult PLUGIN_API vst3::denoiser::processor::initialize(FUnknown* context)
 
 	D_LOG("(0x%08" PRIxPTR ") Initialized.", this);
 	return kResultOk;
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in initialize: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in initialize.", this);
+	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::denoiser::processor::canProcessSampleSize(int32 symbolicSampleSize)
-{
+try {
 	return (symbolicSampleSize == kSample32) ? kResultTrue : kResultFalse;
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in canProcessSampleSize: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in canProcessSampleSize.", this);
+	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::denoiser::processor::setBusArrangements(SpeakerArrangement* inputs, int32 numIns,
 																 SpeakerArrangement* outputs, int32 numOuts)
-{
+try {
 	if (numIns < 0 || numOuts < 0) {
 		D_LOG("(0x%08" PRIxPTR ") Host called setBusArrangement with no inputs or outputs!", this);
 		return kInvalidArgument;
@@ -115,20 +147,38 @@ tresult PLUGIN_API vst3::denoiser::processor::setBusArrangements(SpeakerArrangem
 	}
 
 	return kResultTrue;
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in setBusArrangements: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setBusArrangements.", this);
+	return kInternalError;
 }
 
 uint32 PLUGIN_API vst3::denoiser::processor::getLatencySamples()
-{
+try {
 	return _channels[0].fx->get_minimum_delay();
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in setBusArrangements: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setBusArrangements.", this);
+	return kInternalError;
 }
 
 uint32 PLUGIN_API vst3::denoiser::processor::getTailSamples()
-{
+try {
 	return getLatencySamples();
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in getTailSamples: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in getTailSamples.", this);
+	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::denoiser::processor::process(ProcessData& data)
-{
+try {
 	// Are there any inputs and outputs to process?
 	if ((data.numInputs == 0) || (data.numOutputs == 0)) {
 		return kResultOk;
@@ -258,24 +308,42 @@ tresult PLUGIN_API vst3::denoiser::processor::process(ProcessData& data)
 	}
 
 	return kResultOk;
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in process: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in process.", this);
+	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::denoiser::processor::setState(IBStream* state)
-{
+try {
 	if (state == nullptr) {
 		return kResultFalse;
 	}
 
 	return kResultOk;
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in setState: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setState.", this);
+	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::denoiser::processor::getState(IBStream* state)
-{
+try {
 	if (state == nullptr) {
 		return kResultFalse;
 	}
 
 	return kResultOk;
+} catch (std::exception const& ex) {
+	D_LOG("(0x%08" PRIxPTR ") Exception in getState: %s", this, ex.what());
+	return kInternalError;
+} catch (...) {
+	D_LOG("(0x%08" PRIxPTR ") Unknown exception in getState.", this);
+	return kInternalError;
 }
 
 void vst3::denoiser::processor::reset()
