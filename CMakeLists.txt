@@ -246,8 +246,6 @@ set(CMAKE_PACKAGE_SUFFIX_OVERRIDE "" CACHE STRING "Override for the suffix.")
 set(ENABLE_STEINBERG_VST3 ON CACHE BOOL "Enable Steinberg VST3.x support.")
 set(ENABLE_STEINBERG_VST2 OFF CACHE BOOL "Enable Steinberg VST2.x support.")
 
-set(INSTALL_VST2 OFF CACHE BOOL "Package for VST2.x")
-
 ################################################################################
 # Project Setup
 ################################################################################
@@ -284,8 +282,6 @@ set(PROJECT_SOURCE
 	"source/resampler.cpp"
 	"cmake/templates/version.h.in"
 	"cmake/templates/version.rc.in"
-	"cmake/templates/installer-vst2.iss.in"
-	"cmake/templates/installer-vst3.iss.in"
 	"${PROJECT_BINARY_DIR}/generated/version.h"
 )
 set(PROJECT_DATA
@@ -313,10 +309,14 @@ if(ENABLE_STEINBERG_VST3)
 		"source/vst3_denoiser_controller.cpp"
 		"source/vst3_denoiser_processor.hpp"
 		"source/vst3_denoiser_processor.cpp"
+		"cmake/templates/installer-vst3.iss.in"
 		$<TARGET_OBJECTS:VSTSDK_VST3>
 	)
 	list(APPEND PROJECT_DEFINITIONS
 		ENABLE_VST3
+	)
+	list(APPEND PROJECT_INCLUDES
+		${VSTSDK_INCLUDE_DIRS}
 	)
 endif()
 
@@ -327,6 +327,7 @@ if(ENABLE_STEINBERG_VST2)
 		"source/vst2.cpp"
 		"source/vst2_denoiser.hpp"
 		"source/vst2_denoiser.cpp"
+		"cmake/templates/installer-vst2.iss.in"
 	)
 	list(APPEND PROJECT_DEFINITIONS
 		ENABLE_VST2
@@ -373,10 +374,9 @@ target_link_libraries(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
 	PRIVATE
 		${PROJECT_INCLUDES}
-		${VSTSDK_INCLUDE_DIRS}
 		${PROJECT_BINARY_DIR}
 )
-## VST3 requires /DELAYLOAD on Windows
+## Require delay loaded NVAudioEffects.dll
 if(WIN32)
 	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/DELAYLOAD:NVAudioEffects.dll")
 endif()
@@ -520,37 +520,51 @@ if (ENABLE_STEINBERG_VST2)
 		install(FILES "cmake/templates/desktop.ini" DESTINATION "${PROJECT_NAME}")
 		install(FILES "cmake/templates/icon.ico" DESTINATION "${PROJECT_NAME}")
 
-		# Ensure that desktop.ini is System+Hidden
+		# Ensure that desktop.ini is System+Hidden+Readonly
 		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/desktop.ini" ABSOLUTE)
 		file(TO_NATIVE_PATH "${_TMP}" _TMP)
 		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
-		install(CODE "execute_process(COMMAND attrib +S +H \"${_TMP}\")")
+		install(CODE "execute_process(COMMAND attrib +S +R +H \"${_TMP}\")")
+
+		# Ensure that icon.ico is Hidden+Readonly
+		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/icon.ico" ABSOLUTE)
+		file(TO_NATIVE_PATH "${_TMP}" _TMP)
+		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
+		install(CODE "execute_process(COMMAND attrib +R +H \"${_TMP}\")")
 	endif()
 endif()
 
 if(ENABLE_STEINBERG_VST3)
+#- Linux
+# ${PROJECT_NAME}.vst3/
+#   Contents/
+#     armv71-linux/${PROJECT_NAME}.so
+#     i686-linux/${PROJECT_NAME}.so
+#     i386-linux/${PROJECT_NAME}.so
+#     x86_64-linux/${PROJECT_NAME}.so
+# 
+#- MacOS
+# ${PROJECT_NAME}.vst3/
+#   Contents/
+#     MacOS/${PROJECT_NAME}
+#     Info.plist
+#     PkgInfo
+#
+#- Windows
+# ${PROJECT_NAME}.vst3/
+#   Contents/
+#     arm-win/${PROJECT_NAME}.dll
+#     arm_64-win/${PROJECT_NAME}.dll
+#     x86-win/${PROJECT_NAME}.dll
+#     x86_64-win/${PROJECT_NAME}.dll
+#   desktop.ini
+#   Plugin.ico
+# 
+#- Shared
 # ${PROJECT_NAME}.vst3/
 #   Contents/
 #     Resources/
 #       <your custom content>
-#     armv71-linux/
-#       ${PROJECT_NAME}.so
-#     i686-linux/
-#       ${PROJECT_NAME}.so
-#     i386-linux/
-#       ${PROJECT_NAME}.so
-#     x86_64-linux/
-#       ${PROJECT_NAME}.so
-#     MacOS/
-#       ${PROJECT_NAME}
-#     x86-win/
-#       ${PROJECT_NAME}.vst3
-#     x86_64-win/
-#       ${PROJECT_NAME}.vst3
-#     Info.plist (MacOS)
-#     PkgInfo (MacOS)
-#   desktop.ini (Windows)
-#   Plugin.ico (Windows)
 
 	# Configure VST3 installer
 	get_filename_component(ISS_FILES_DIR "${CMAKE_INSTALL_PREFIX}" ABSOLUTE)
@@ -590,16 +604,29 @@ if(ENABLE_STEINBERG_VST3)
 	if(MSVC)
 		install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${INSTALL_PREFIX}/Contents/${INSTALL_PATH}" OPTIONAL)
 	endif()
+	if(WIN32)
+		# Steinberg wants Windows DLLs to be .vst3?
+		get_filename_component(_TMPA "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}/${PROJECT_NAME}.dll" ABSOLUTE)
+		get_filename_component(_TMPB "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}/${PROJECT_NAME}.vst3" ABSOLUTE)
+		install(CODE "file(RENAME \"${_TMPA}\" \"${_TMPB}\")")
+	endif()
+
 	install(DIRECTORY "resources/" DESTINATION "${INSTALL_PREFIX}/Contents/Resources")
 	if(WIN32)
 		install(FILES "cmake/templates/desktop.ini" DESTINATION "${INSTALL_PREFIX}/")
 		install(FILES "cmake/templates/icon.ico" DESTINATION "${INSTALL_PREFIX}/")
 
-		# Ensure that desktop.ini is System+Hidden
+		# Ensure that desktop.ini is System+Hidden+Readonly
 		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/desktop.ini" ABSOLUTE)
 		file(TO_NATIVE_PATH "${_TMP}" _TMP)
 		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
-		install(CODE "execute_process(COMMAND attrib +S +H \"${_TMP}\")")
+		install(CODE "execute_process(COMMAND attrib +S +R +H \"${_TMP}\")")
+
+		# Ensure that icon.ico is Hidden+Readonly
+		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/icon.ico" ABSOLUTE)
+		file(TO_NATIVE_PATH "${_TMP}" _TMP)
+		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
+		install(CODE "execute_process(COMMAND attrib +R +H \"${_TMP}\")")
 	endif()
 	install(FILES "LICENSE.md" DESTINATION "${INSTALL_PREFIX}")
 endif()
