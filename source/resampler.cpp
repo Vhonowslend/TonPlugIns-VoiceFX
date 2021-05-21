@@ -35,7 +35,7 @@ voicefx::resampler::~resampler()
 	_instance = src_delete(reinterpret_cast<SRC_STATE*>(_instance));
 }
 
-voicefx::resampler::resampler() : _ratio(1.0)
+voicefx::resampler::resampler() : _instance(nullptr), _ratio(1.0)
 {
 	int error = 0;
 	_instance = reinterpret_cast<void*>(src_new(SRC_SINC_BEST_QUALITY, 1, &error));
