@@ -41,7 +41,8 @@ try {
 }
 
 vst3::denoiser::processor::processor()
-try {
+	: _dirty(true), _samplerate(), _blocksize(), _delaysamples(), _channels(), _scratch(0, nvafx::denoiser::get_sample_rate())
+{
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
 	// Assign the proper controller
@@ -54,12 +55,6 @@ try {
 
 	// Load and initialize NVIDIA Audio Effects.
 	_nvafx = nvafx::nvafx::instance();
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in constructor: %s", this, ex.what());
-	throw;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in constructor.", this);
-	throw;
 }
 
 vst3::denoiser::processor::~processor() {}
@@ -342,7 +337,7 @@ void vst3::denoiser::processor::reset()
 {
 	D_LOG("(0x%08" PRIxPTR ") Resetting channel states...", this);
 
-	for (auto channel : _channels) {
+	for (auto& channel : _channels) {
 		channel.fx->reset();
 
 		// (Re-)Create the re-samplers.
