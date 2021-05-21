@@ -43,6 +43,15 @@ namespace voicefx {
 		 */
 		resampler(uint32_t input_samplerate, uint32_t output_samplerate);
 
+		public:
+		// Copy not supported
+		resampler(const resampler&) = delete;
+		resampler& operator=(const resampler&) = delete;
+
+		resampler(resampler&&) noexcept;
+		resampler& operator=(resampler&&) noexcept;
+
+		public:
 		/** Process the given input buffer into the given output buffer.
 		 * 
 		 * @param input Buffer of floats containing at least #input_samples of frames.

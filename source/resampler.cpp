@@ -40,6 +40,7 @@ voicefx::resampler::resampler() : _instance(nullptr), _ratio(1.0)
 	int error = 0;
 	_instance = reinterpret_cast<void*>(src_new(SRC_SINC_BEST_QUALITY, 1, &error));
 	if (error != 0) {
+		D_LOG("Failed to create resampler with error: %s (code %" PRId32 ").", src_strerror(error), error);
 		throw std::runtime_error("Failed to create resampler.");
 	}
 }
@@ -50,8 +51,25 @@ voicefx::resampler::resampler(uint32_t input, uint32_t output) : resampler()
 	_ratio = (static_cast<float>(output) / static_cast<float>(input));
 }
 
+voicefx::resampler::resampler(resampler&& r) noexcept : _instance(nullptr), _ratio(1.0)
+{
+	std::swap(_instance, r._instance);
+	std::swap(_ratio, r._ratio);
+}
+
+voicefx::resampler& voicefx::resampler::operator=(voicefx::resampler&& r) noexcept
+{
+	std::swap(_instance, r._instance);
+	std::swap(_ratio, r._ratio);
+	return *this;
+}
+
 void voicefx::resampler::process(const float input[], size_t& input_samples, float output[], size_t& output_samples)
 {
+	if (!_instance) {
+		throw std::runtime_error("_instance is nullptr");
+	}
+
 	SRC_DATA data = {0};
 
 	// Initialize our data structure.
@@ -66,8 +84,8 @@ void voicefx::resampler::process(const float input[], size_t& input_samples, flo
 
 	// Process and resample the audio.
 	if (int error = src_process(reinterpret_cast<SRC_STATE*>(_instance), &data); error != 0) {
-		D_LOG("Failed to resample, error code %" PRId32 ".", error);
-		throw std::runtime_error("Failed to resample with the given data and parameters.");
+		D_LOG("Failed to resample with error: %s (code %" PRId32 ").", src_strerror(error), error);
+		throw std::runtime_error("Error during src_process.");
 	}
 
 	// Return some information.
@@ -77,6 +95,10 @@ void voicefx::resampler::process(const float input[], size_t& input_samples, flo
 
 void voicefx::resampler::reset(uint32_t input_samplerate, uint32_t output_samplerate)
 {
+	if (!_instance) {
+		throw std::runtime_error("_instance is nullptr");
+	}
+
 	src_reset(reinterpret_cast<SRC_STATE*>(_instance));
 	if ((input_samplerate != 0) && (output_samplerate != 0)) {
 		_ratio = static_cast<float>(output_samplerate) / static_cast<float>(input_samplerate);
@@ -85,5 +107,9 @@ void voicefx::resampler::reset(uint32_t input_samplerate, uint32_t output_sample
 
 float voicefx::resampler::ratio() const
 {
+	if (!_instance) {
+		throw std::runtime_error("_instance is nullptr");
+	}
+
 	return _ratio;
 }
