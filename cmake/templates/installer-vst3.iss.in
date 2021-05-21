@@ -60,6 +60,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 Source: "@ISS_FILES_DIR@/VoiceFX.vst3/*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "@ISS_FILES_DIR@/VoiceFX.vst3/desktop.ini"; DestDir: "{app}"; Attribs: hidden system readonly; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "@ISS_FILES_DIR@/VoiceFX.vst3/icon.ico"; DestDir: "{app}"; Attribs: hidden readonly; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "@PROJECT_SOURCE_DIR@/third-party/msvc-redist-helper.exe"; DestDir: "{app}"; DestName: "msvc-redist-helper.exe"; Flags: ignoreversion dontcopy noencryption
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
