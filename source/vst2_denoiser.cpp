@@ -75,7 +75,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 			return static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)
 				->vst2_control(opcode, p_int1, p_int2, p_ptr, p_float);
 		} catch (std::exception const& ex) {
-			D_LOG("(0x%08" PRIxPTR ") Unhandled exception in control: %s", pthis, ex.what());
+			D_LOG("(0x%08" PRIxPTR ") Exception in control: %s", pthis, ex.what());
 		} catch (...) {
 			D_LOG("(0x%08" PRIxPTR ") Unknown exception in control.", pthis);
 		}
@@ -85,7 +85,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 		try {
 			static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)->vst2_set_parameter(index, value);
 		} catch (std::exception const& ex) {
-			D_LOG("(0x%08" PRIxPTR ") Unhandled exception in set_parameter: %s", pthis, ex.what());
+			D_LOG("(0x%08" PRIxPTR ") Exception in set_parameter: %s", pthis, ex.what());
 		} catch (...) {
 			D_LOG("(0x%08" PRIxPTR ") Unknown exception in set_parameter.", pthis);
 		}
@@ -94,7 +94,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 		try {
 			return static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)->vst2_get_parameter(index);
 		} catch (std::exception const& ex) {
-			D_LOG("(0x%08" PRIxPTR ") Unhandled exception in get_parameter: %s", pthis, ex.what());
+			D_LOG("(0x%08" PRIxPTR ") Exception in get_parameter: %s", pthis, ex.what());
 		} catch (...) {
 			D_LOG("(0x%08" PRIxPTR ") Unknown exception in get_parameter.", pthis);
 		}
@@ -104,7 +104,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 		try {
 			static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)->vst2_process_float(inputs, outputs, samples);
 		} catch (std::exception const& ex) {
-			D_LOG("(0x%08" PRIxPTR ") Unhandled exception in process: %s", pthis, ex.what());
+			D_LOG("(0x%08" PRIxPTR ") Exception in process: %s", pthis, ex.what());
 		} catch (...) {
 			D_LOG("(0x%08" PRIxPTR ") Unknown exception in process.", pthis);
 		}
@@ -113,7 +113,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 		try {
 			static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)->vst2_process_float(inputs, outputs, samples);
 		} catch (std::exception const& ex) {
-			D_LOG("(0x%08" PRIxPTR ") Unhandled exception in process_float: %s", pthis, ex.what());
+			D_LOG("(0x%08" PRIxPTR ") Exception in process_float: %s", pthis, ex.what());
 		} catch (...) {
 			D_LOG("(0x%08" PRIxPTR ") Unknown exception in process_float.", pthis);
 		}
