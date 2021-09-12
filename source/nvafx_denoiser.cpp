@@ -68,9 +68,19 @@ void nvafx::denoiser::process(const float input[], float output[])
 void nvafx::denoiser::reset()
 {
 	if (_dirty) {
+		/*
 		// Re-create the effect, waiting on NVIDIA to add a way to just reset things.
 		_nvfx.reset();
 		create_effect();
+		*/
+
+		// According to NVIDIA, we can flush the effect by feeding it roughly 100ms of
+		// absolutely no sound. This should be drastically faster than unloading and
+		// reloading the effect every time.
+		std::vector<float> empty_buffer(static_cast<size_t>(get_block_size()), 0.);
+		for (size_t idx = 0; idx < 10; idx++) {
+			process(empty_buffer.data(), empty_buffer.data());
+		}
 	}
 }
 
