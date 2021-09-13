@@ -81,6 +81,7 @@ void nvafx::denoiser::reset()
 		for (size_t idx = 0; idx < 10; idx++) {
 			process(empty_buffer.data(), empty_buffer.data());
 		}
+		_dirty = false;
 	}
 }
 
