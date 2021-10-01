@@ -21,38 +21,43 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pragma once
-#include <filesystem>
-#include <memory>
-#include "nvafx.hpp"
+#include "nvidia-cuda-stream.hpp"
+#include <stdexcept>
+#include "lib.hpp"
 
-namespace nvafx {
-	class denoiser {
-		std::shared_ptr<::nvafx::nvafx> _nvafx;
-		std::filesystem::path           _model_path;
-		std::shared_ptr<void>           _nvfx;
+#define D_LOG(MESSAGE, ...) voicefx::log("<CUDA::Stream> " MESSAGE, __VA_ARGS__)
 
-		uint32_t _block_size;
-		bool     _dirty;
+voicefx::nvidia::cuda::stream::~stream()
+{
+	_cuda->cuStreamDestroy(_stream);
+}
 
-		public:
-		denoiser();
-		~denoiser();
+voicefx::nvidia::cuda::stream::stream(::voicefx::nvidia::cuda::stream_flags flags, int32_t priority)
+	: _cuda(::voicefx::nvidia::cuda::cuda::get())
+{
+	voicefx::nvidia::cuda::result res;
+	if (priority == 0) {
+		res = _cuda->cuStreamCreate(&_stream, flags);
+	} else {
+		res = _cuda->cuStreamCreateWithPriority(&_stream, flags, priority);
+	}
+	switch (res) {
+	case voicefx::nvidia::cuda::result::SUCCESS:
+		break;
+	default:
+		D_LOG("Failed to create stream with error code %" PRIu32 ".", res);
+		throw std::runtime_error("Failed to create CUstream object.");
+	}
+}
 
-		static uint32_t get_sample_rate();
+::voicefx::nvidia::cuda::stream_t voicefx::nvidia::cuda::stream::get()
+{
+	return _stream;
+}
 
-		static uint32_t get_minimum_delay();
-
-		uint32_t get_block_size() const;
-
-		void process(const float input[], float output[]);
-
-		/** Reset the effect so that new processing can take place.
-		 * 
-		 */
-		void reset();
-
-		private:
-		void create_effect();
-	};
-} // namespace nvafx
+void voicefx::nvidia::cuda::stream::synchronize()
+{
+	if (auto res = _cuda->cuStreamSynchronize(_stream); res != ::voicefx::nvidia::cuda::result::SUCCESS) {
+		throw ::voicefx::nvidia::cuda::cuda_error(res);
+	}
+}

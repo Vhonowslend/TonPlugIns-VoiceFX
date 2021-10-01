@@ -21,42 +21,42 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "nvafx_denoiser.hpp"
+#include "nvidia-afx-denoiser.hpp"
 #include "lib.hpp"
-#include "platform.hpp"
+#include "util-platform.hpp"
 
 #include <nvAudioEffects.h>
 
 #define SAMPLERATE 48000
 #define BLOCKSIZE SAMPLERATE / 100
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<NVAFX::Denoiser> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) ::voicefx::log("<NVAFX::Denoiser> " MESSAGE, __VA_ARGS__)
 
-nvafx::denoiser::denoiser() : _nvafx(nvafx::nvafx::instance()), _dirty(true)
+nvidia::afx::denoiser::denoiser() : _nvafx(::nvidia::afx::afx::instance()), _dirty(true)
 {
 	create_effect();
 }
 
-nvafx::denoiser::~denoiser() {}
+nvidia::afx::denoiser::~denoiser() {}
 
-uint32_t nvafx::denoiser::get_sample_rate()
+uint32_t nvidia::afx::denoiser::get_sample_rate()
 {
 	return SAMPLERATE;
 }
 
-uint32_t nvafx::denoiser::get_minimum_delay()
+uint32_t nvidia::afx::denoiser::get_minimum_delay()
 {
 	constexpr uint32_t min_delay_ms  = 74; // Documented is 74ms, but measured is ~82ms.
 	constexpr uint32_t ms_to_samples = 1000;
 	return (SAMPLERATE * min_delay_ms) / ms_to_samples;
 }
 
-uint32_t nvafx::denoiser::get_block_size() const
+uint32_t nvidia::afx::denoiser::get_block_size() const
 {
 	return _block_size;
 }
 
-void nvafx::denoiser::process(const float input[], float output[])
+void nvidia::afx::denoiser::process(const float input[], float output[])
 {
 	_dirty = true;
 	if (auto res = NvAFX_Run(_nvfx.get(), &input, &output, _block_size, 1); res != NVAFX_STATUS_SUCCESS) {
@@ -65,7 +65,7 @@ void nvafx::denoiser::process(const float input[], float output[])
 	}
 }
 
-void nvafx::denoiser::reset()
+void nvidia::afx::denoiser::reset()
 {
 	if (_dirty) {
 		/*
@@ -85,7 +85,7 @@ void nvafx::denoiser::reset()
 	}
 }
 
-void nvafx::denoiser::create_effect()
+void nvidia::afx::denoiser::create_effect()
 {
 	// 1. Create the NvAFX effect.
 	NvAFX_Handle effect = nullptr;
@@ -97,24 +97,29 @@ void nvafx::denoiser::create_effect()
 
 	// 2. Tell the effect where it can find the necessary models for operation.
 	_model_path = _nvafx->redistributable_path();
-	_model_path.append("models/denoiser_48k.trtpkg"); // TODO: Figure out why we need to specify the exact model.
+	_model_path /= "models";
+	_model_path /= "denoiser_48k.trtpkg"; // TODO: Figure out why we need to specify the exact model.
 	_model_path = std::filesystem::absolute(_model_path);
-	if (auto res = NvAFX_SetString(_nvfx.get(), NVAFX_PARAM_DENOISER_MODEL_PATH, _model_path.string().c_str());
+	if (auto res = NvAFX_SetString(_nvfx.get(), NVAFX_PARAM_MODEL_PATH, _model_path.string().c_str());
 		res != NVAFX_STATUS_SUCCESS) {
 		D_LOG("Unable to set appropriate model path, error code %" PRIu32 ".", res);
 		throw std::runtime_error("Failed to set up effect.");
 	}
 
 	// 3. Set it up for the appropriate high quality sample rate.
-	if (auto res = NvAFX_SetU32(_nvfx.get(), NVAFX_PARAM_DENOISER_SAMPLE_RATE, SAMPLERATE);
-		res != NVAFX_STATUS_SUCCESS) {
+	if (auto res = NvAFX_SetU32(_nvfx.get(), NVAFX_PARAM_SAMPLE_RATE, SAMPLERATE); res != NVAFX_STATUS_SUCCESS) {
 		D_LOG("Failed to set sample rate to 48kHz, error code %" PRIu32 ".", res);
 		throw std::runtime_error("Failed to set up effect.");
 	}
 
+	int32_t numSupportedDevices = 0;
+	NvAFX_GetSupportedDevices(_nvfx.get(), &numSupportedDevices, nullptr);
+	std::vector<int32_t> ret(numSupportedDevices);
+	NvAFX_GetSupportedDevices(_nvfx.get(), &numSupportedDevices, ret.data());
+
 	// 4. Set some defaults which we don't care about failing.
-	//NvAFX_SetU32(_nvfx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 1);
-	NvAFX_SetFloat(_nvfx.get(), NVAFX_PARAM_DENOISER_INTENSITY_RATIO, 1.0);
+	NvAFX_SetU32(_nvfx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 1);
+	NvAFX_SetFloat(_nvfx.get(), NVAFX_PARAM_INTENSITY_RATIO, 1.0);
 
 	// Finally, load the effect.
 	if (auto res = NvAFX_Load(_nvfx.get()); res != NVAFX_STATUS_SUCCESS) {
@@ -123,7 +128,7 @@ void nvafx::denoiser::create_effect()
 	}
 
 	// Retrieve the expected block size for processing.
-	if (auto res = NvAFX_GetU32(_nvfx.get(), NVAFX_PARAM_DENOISER_NUM_SAMPLES_PER_FRAME, &_block_size);
+	if (auto res = NvAFX_GetU32(_nvfx.get(), NVAFX_PARAM_NUM_SAMPLES_PER_FRAME, &_block_size);
 		res != NVAFX_STATUS_SUCCESS) {
 		D_LOG("Failed to retrieve expected block size, error code %" PRIu32 ".", res);
 		_block_size = BLOCKSIZE; // Assume 10ms.

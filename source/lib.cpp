@@ -22,7 +22,7 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "lib.hpp"
-#include "platform.hpp"
+#include "util-platform.hpp"
 #include "version.h"
 
 #include <chrono>
@@ -168,7 +168,7 @@ void voicefx::initialize()
 		} while (GetLastError() == ERROR_INSUFFICIENT_BUFFER);
 
 		std::string file_name =
-			platform::native_to_utf8(std::wstring(file_name_w.data(), file_name_w.data() + file_name_len));
+			util::platform::native_to_utf8(std::wstring(file_name_w.data(), file_name_w.data() + file_name_len));
 		voicefx::log("Host Process: %s (0x%08" PRIx32 ")", file_name.c_str(), GetCurrentProcessId());
 	}
 #endif

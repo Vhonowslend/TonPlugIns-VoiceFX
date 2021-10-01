@@ -55,7 +55,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", &this->_vsteffect);
 
 	// Load and initialize NVIDIA Audio Effects.
-	_nvafx = nvafx::nvafx::instance();
+	_nvafx = nvidia::afx::afx::instance();
 
 	// Initialize the VST structure.
 	_vsteffect.magic_number      = 'VstP';
@@ -151,9 +151,9 @@ void voicefx::vst2::denoiser::reset()
 	}
 
 	// Re-calculate delays
-	float ioscale    = (static_cast<float>(_samplerate) / static_cast<float>(nvafx::denoiser::get_sample_rate()));
+	float ioscale    = (static_cast<float>(_samplerate) / static_cast<float>(nvidia::afx::denoiser::get_sample_rate()));
 	_delaysamples    = static_cast<int32_t>(_channels[0].fx->get_block_size() * ioscale);
-	_vsteffect.delay = _delaysamples + (nvafx::denoiser::get_minimum_delay() * ioscale);
+	_vsteffect.delay = _delaysamples + (nvidia::afx::denoiser::get_minimum_delay() * ioscale);
 
 	D_LOG("(0x%08" PRIxPTR ") Allocating scratch memory...", &this->_vsteffect);
 	_scratch.resize(_samplerate);
@@ -163,12 +163,12 @@ void voicefx::vst2::denoiser::reset()
 		channel.fx->reset();
 
 		// (Re-)Create the re-samplers.
-		channel.input_resampler.reset(_samplerate, nvafx::denoiser::get_sample_rate());
-		channel.output_resampler.reset(nvafx::denoiser::get_sample_rate(), _samplerate);
+		channel.input_resampler.reset(_samplerate, nvidia::afx::denoiser::get_sample_rate());
+		channel.output_resampler.reset(nvidia::afx::denoiser::get_sample_rate(), _samplerate);
 
 		// (Re-)Create the buffers and reset offsets.
-		channel.input_buffer.resize(nvafx::denoiser::get_sample_rate());
-		channel.fx_buffer.resize(nvafx::denoiser::get_sample_rate());
+		channel.input_buffer.resize(nvidia::afx::denoiser::get_sample_rate());
+		channel.fx_buffer.resize(nvidia::afx::denoiser::get_sample_rate());
 		channel.output_buffer.resize(_samplerate);
 
 		// Clear Buffers
@@ -196,7 +196,7 @@ void voicefx::vst2::denoiser::set_channel_count(size_t num)
 		// Create any new effect instances.
 		for (auto& channel : _channels) {
 			if (!channel.fx) {
-				channel.fx = std::make_shared<::nvafx::denoiser>();
+				channel.fx = std::make_shared<::nvidia::afx::denoiser>();
 			}
 		}
 

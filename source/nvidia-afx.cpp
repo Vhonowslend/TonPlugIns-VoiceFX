@@ -21,10 +21,10 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "nvafx.hpp"
+#include "nvidia-afx.hpp"
 #include <mutex>
 #include "lib.hpp"
-#include "platform.hpp"
+#include "util-platform.hpp"
 
 #include <nvAudioEffects.h>
 
@@ -44,7 +44,7 @@ static std::filesystem::path find_nvafx_redistributable()
 		if (res != 0) {
 			buffer.resize(static_cast<size_t>(res) + 1);
 			GetEnvironmentVariableW(L"NVAFX_SDK_DIR", buffer.data(), buffer.size());
-			return std::filesystem::u8path(voicefx::platform::native_to_utf8(std::wstring(buffer.data())));
+			return std::filesystem::u8path(voicefx::util::platform::native_to_utf8(std::wstring(buffer.data())));
 		}
 #else
 		throw std::runtime_error("This platform is currently not supported.");
@@ -54,7 +54,7 @@ static std::filesystem::path find_nvafx_redistributable()
 	{ // 2. If that failed, assume default path for the platform of choice.
 #ifdef WIN32
 		// TODO: Make this use KnownFolders instead.
-		return std::filesystem::u8path(voicefx::platform::native_to_utf8(
+		return std::filesystem::u8path(voicefx::util::platform::native_to_utf8(
 			std::wstring(L"C:\\Program Files\\NVIDIA Corporation\\NVIDIA Audio Effects SDK")));
 #else
 		throw std::runtime_error("This platform is currently not supported.");
@@ -62,7 +62,7 @@ static std::filesystem::path find_nvafx_redistributable()
 	}
 }
 
-nvafx::nvafx::nvafx() : _redist_path(find_nvafx_redistributable())
+nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable())
 {
 	{ // Log where we found the redistributable at.
 		std::string _loc = _redist_path.string();
@@ -76,7 +76,7 @@ nvafx::nvafx::nvafx() : _redist_path(find_nvafx_redistributable())
 		{ // Add the Redistributable directory to the list of known library directories.
 			_dll_cookie = nullptr;
 			DLL_DIRECTORY_COOKIE res =
-				AddDllDirectory(voicefx::platform::utf8_to_native(_redist_path).wstring().data());
+				AddDllDirectory(voicefx::util::platform::utf8_to_native(_redist_path).wstring().data());
 			if (res == NULL) {
 				D_LOG("Unable to add redistributable path to library search paths, load may fail.");
 			} else {
@@ -106,7 +106,7 @@ nvafx::nvafx::nvafx() : _redist_path(find_nvafx_redistributable())
 	}
 }
 
-nvafx::nvafx::~nvafx()
+nvidia::afx::afx::~afx()
 {
 #ifdef WIN32
 	RemoveDllDirectory(reinterpret_cast<DLL_DIRECTORY_COOKIE>(_dll_cookie));
@@ -114,23 +114,23 @@ nvafx::nvafx::~nvafx()
 #endif
 }
 
-std::filesystem::path nvafx::nvafx::redistributable_path()
+std::filesystem::path nvidia::afx::afx::redistributable_path()
 {
 	return _redist_path;
 }
 
-std::shared_ptr<::nvafx::nvafx> nvafx::nvafx::instance()
+std::shared_ptr<::nvidia::afx::afx> nvidia::afx::afx::instance()
 {
-	static std::mutex                    _instance_guard;
-	static std::weak_ptr<::nvafx::nvafx> _instance;
+	static std::mutex                        _instance_guard;
+	static std::weak_ptr<::nvidia::afx::afx> _instance;
 
-	std::lock_guard<std::mutex>     lock(_instance_guard);
-	std::shared_ptr<::nvafx::nvafx> instance;
+	std::lock_guard<std::mutex>         lock(_instance_guard);
+	std::shared_ptr<::nvidia::afx::afx> instance;
 
 	if (!_instance.expired()) {
 		instance = _instance.lock();
 	} else {
-		instance  = std::shared_ptr<::nvafx::nvafx>(new ::nvafx::nvafx());
+		instance  = std::shared_ptr<::nvidia::afx::afx>(new ::nvidia::afx::afx());
 		_instance = instance;
 	}
 

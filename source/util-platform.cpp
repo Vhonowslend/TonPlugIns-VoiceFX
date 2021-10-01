@@ -21,7 +21,7 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "platform.hpp"
+#include "util-platform.hpp"
 #include "lib.hpp"
 
 #define D_LOG(MESSAGE, ...) voicefx::log("<Platform> " MESSAGE, __VA_ARGS__)
@@ -29,7 +29,7 @@
 #ifdef WIN32
 #include <Windows.h>
 
-std::string voicefx::platform::native_to_utf8(std::wstring const& v)
+std::string voicefx::util::platform::native_to_utf8(std::wstring const& v)
 {
 	std::vector<char> buffer((v.length() + 1) * 4, 0);
 
@@ -43,14 +43,14 @@ std::string voicefx::platform::native_to_utf8(std::wstring const& v)
 	return {buffer.data()};
 }
 
-std::filesystem::path voicefx::platform::native_to_utf8(std::filesystem::path const& v)
+std::filesystem::path voicefx::util::platform::native_to_utf8(std::filesystem::path const& v)
 {
 	auto wide   = v.wstring();
 	auto narrow = native_to_utf8(wide);
 	return std::filesystem::u8path(narrow);
 }
 
-std::wstring voicefx::platform::utf8_to_native(std::string const& v)
+std::wstring voicefx::util::platform::utf8_to_native(std::string const& v)
 {
 	std::vector<wchar_t> buffer(v.length() + 1, 0);
 
@@ -64,7 +64,7 @@ std::wstring voicefx::platform::utf8_to_native(std::string const& v)
 	return {buffer.data()};
 }
 
-std::filesystem::path voicefx::platform::utf8_to_native(std::filesystem::path const& v)
+std::filesystem::path voicefx::util::platform::utf8_to_native(std::filesystem::path const& v)
 {
 	auto narrow = v.string();
 	auto wide   = utf8_to_native(narrow);

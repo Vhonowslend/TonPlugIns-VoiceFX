@@ -105,7 +105,7 @@ else()
 endif()
 
 # Allow manual overrides of the detected version.
-set(${PREFIX}VERSION "" CACHE STRING "Override StreamFX version with this string. Format: Major.Minor.Patch[Suffix][-Tweak[-Commit8c]]")
+set(${PREFIX}VERSION "" CACHE STRING "Override voicefx version with this string. Format: Major.Minor.Patch[Suffix][-Tweak[-Commit8c]]")
 if(NOT (${PREFIX}VERSION STREQUAL ""))
 	string(REPLACE "-" "." T_VERSION "${${PREFIX}VERSION}")
 	string(REPLACE "." ";" T_VERSION "${${PREFIX}VERSION}")
@@ -274,16 +274,25 @@ configure_file(
 set(PROJECT_SOURCE
 	"source/lib.hpp"
 	"source/lib.cpp"
-	"source/platform.hpp"
-	"source/platform.cpp"
 	"source/audiobuffer.hpp"
 	"source/audiobuffer.cpp"
-	"source/nvafx.hpp"
-	"source/nvafx.cpp"
-	"source/nvafx_denoiser.hpp"
-	"source/nvafx_denoiser.cpp"
+	"source/nvidia-cuda.hpp"
+	"source/nvidia-cuda.cpp"
+	"source/nvidia-cuda-memory.hpp"
+	"source/nvidia-cuda-memory.cpp"
+	"source/nvidia-cuda-stream.hpp"
+	"source/nvidia-cuda-stream.cpp"
+	"source/nvidia-afx.hpp"
+	"source/nvidia-afx.cpp"
+	"source/nvidia-afx-denoiser.hpp"
+	"source/nvidia-afx-denoiser.cpp"
 	"source/resampler.hpp"
 	"source/resampler.cpp"
+	"source/util-bitmask.hpp"
+	"source/util-library.hpp"
+	"source/util-library.cpp"
+	"source/util-platform.hpp"
+	"source/util-platform.cpp"
 	"cmake/templates/version.h.in"
 	"cmake/templates/version.rc.in"
 	"${PROJECT_BINARY_DIR}/generated/version.h"

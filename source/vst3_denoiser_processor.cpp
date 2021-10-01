@@ -41,7 +41,7 @@ try {
 }
 
 vst3::denoiser::processor::processor()
-	: _dirty(true), _delaysamples(), _channels(0), _scratch(0, nvafx::denoiser::get_sample_rate())
+	: _dirty(true), _delaysamples(), _channels(0), _scratch(0, ::nvidia::afx::denoiser::get_sample_rate())
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
@@ -54,7 +54,7 @@ vst3::denoiser::processor::processor()
 	processContextRequirements.needFrameRate();
 
 	// Load and initialize NVIDIA Audio Effects.
-	_nvafx = nvafx::nvafx::instance();
+	_nvafx = ::nvidia::afx::afx::instance();
 }
 
 vst3::denoiser::processor::~processor() {}
@@ -389,12 +389,12 @@ void vst3::denoiser::processor::reset()
 		channel.fx->reset();
 
 		// (Re-)Create the re-samplers.
-		channel.input_resampler.reset(processSetup.sampleRate, nvafx::denoiser::get_sample_rate());
-		channel.output_resampler.reset(nvafx::denoiser::get_sample_rate(), processSetup.sampleRate);
+		channel.input_resampler.reset(processSetup.sampleRate, ::nvidia::afx::denoiser::get_sample_rate());
+		channel.output_resampler.reset(::nvidia::afx::denoiser::get_sample_rate(), processSetup.sampleRate);
 
 		// (Re-)Create the buffers and reset offsets.
-		channel.input_buffer.resize(nvafx::denoiser::get_sample_rate());
-		channel.fx_buffer.resize(nvafx::denoiser::get_sample_rate());
+		channel.input_buffer.resize(::nvidia::afx::denoiser::get_sample_rate());
+		channel.fx_buffer.resize(::nvidia::afx::denoiser::get_sample_rate());
 		channel.output_buffer.resize(processSetup.sampleRate);
 
 		// Clear Buffers
@@ -422,7 +422,7 @@ void vst3::denoiser::processor::set_channel_count(size_t num)
 		// Create any new effect instances.
 		for (auto& channel : _channels) {
 			if (!channel.fx) {
-				channel.fx = std::make_shared<::nvafx::denoiser>();
+				channel.fx = std::make_shared<::nvidia::afx::denoiser>();
 			}
 		}
 

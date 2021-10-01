@@ -25,8 +25,8 @@
 #include <filesystem>
 #include <memory>
 
-namespace nvafx {
-	class nvafx {
+namespace nvidia::afx {
+	class afx {
 		std::filesystem::path _redist_path;
 		void*                 _library;
 
@@ -35,14 +35,14 @@ namespace nvafx {
 #endif
 
 		private:
-		nvafx();
+		afx();
 
 		public:
-		~nvafx();
+		~afx();
 
 		std::filesystem::path redistributable_path();
 
 		public /* Singleton */:
-		static std::shared_ptr<::nvafx::nvafx> instance();
+		static std::shared_ptr<::nvidia::afx::afx> instance();
 	};
-} // namespace nvafx
+} // namespace nvidia::afx

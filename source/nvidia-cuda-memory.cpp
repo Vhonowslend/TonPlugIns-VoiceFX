@@ -21,36 +21,36 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pragma once
-#include <filesystem>
-#include <string>
+#include "nvidia-cuda-memory.hpp"
+#include <stdexcept>
+#include "lib.hpp"
 
-namespace voicefx {
-	namespace platform {
-#ifdef WIN32
-		std::string           native_to_utf8(std::wstring const& v);
-		std::filesystem::path native_to_utf8(std::filesystem::path const& v);
+#define D_LOG(MESSAGE, ...) voicefx::log("<CUDA::Memory> " MESSAGE, __VA_ARGS__)
 
-		std::wstring          utf8_to_native(std::string const& v);
-		std::filesystem::path utf8_to_native(std::filesystem::path const& v);
-#else
-		std::string native_to_utf8(std::string const& v)
-		{
-			return v;
-		};
-		std::filesystem::path native_to_utf8(std::filesystem::path const& v)
-		{
-			return v;
-		};
+voicefx::nvidia::cuda::memory::~memory()
+{
+	_cuda->cuMemFree(_pointer);
+}
 
-		std::string utf8_to_native(std::wstring const& v)
-		{
-			return v;
-		};
-		std::filesystem::path utf8_to_native(std::filesystem::path const& v)
-		{
-			return v;
-		};
-#endif
-	} // namespace platform
-} // namespace voicefx
+voicefx::nvidia::cuda::memory::memory(size_t size)
+	: _cuda(::voicefx::nvidia::cuda::cuda::get()), _pointer(), _size(size)
+{
+	::voicefx::nvidia::cuda::result res = _cuda->cuMemAlloc(&_pointer, _size);
+	switch (res) {
+	case ::voicefx::nvidia::cuda::result::SUCCESS:
+		break;
+	default:
+		D_LOG("Failed to create memory with error code %" PRIu32 ".", res);
+		throw std::runtime_error("nvidia::cuda::memory: cuMemAlloc failed.");
+	}
+}
+
+voicefx::nvidia::cuda::device_ptr_t voicefx::nvidia::cuda::memory::get()
+{
+	return _pointer;
+}
+
+std::size_t voicefx::nvidia::cuda::memory::size()
+{
+	return _size;
+}

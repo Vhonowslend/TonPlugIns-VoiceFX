@@ -25,8 +25,8 @@
 #include <memory>
 #include <vector>
 #include "audiobuffer.hpp"
-#include "nvafx.hpp"
-#include "nvafx_denoiser.hpp"
+#include "nvidia-afx-denoiser.hpp"
+#include "nvidia-afx.hpp"
 #include "resampler.hpp"
 
 #include <vst.h>
@@ -40,7 +40,7 @@ namespace voicefx {
 			vst_speaker_arrangement _input_arrangement;
 			vst_speaker_arrangement _output_arrangement;
 
-			std::shared_ptr<::nvafx::nvafx> _nvafx;
+			std::shared_ptr<::nvidia::afx::afx> _nvafx;
 
 			bool     _dirty;
 			uint32_t _delaysamples;
@@ -48,7 +48,7 @@ namespace voicefx {
 			uint32_t _blocksize;
 
 			struct channel_data {
-				std::shared_ptr<::nvafx::denoiser> fx;
+				std::shared_ptr<::nvidia::afx::denoiser> fx;
 
 				voicefx::resampler input_resampler;
 				voicefx::resampler output_resampler;

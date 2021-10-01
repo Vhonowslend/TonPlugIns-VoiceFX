@@ -27,8 +27,8 @@
 #include <public.sdk/source/vst/vstaudioeffect.h>
 
 #include "audiobuffer.hpp"
-#include "nvafx.hpp"
-#include "nvafx_denoiser.hpp"
+#include "nvidia-afx-denoiser.hpp"
+#include "nvidia-afx.hpp"
 #include "resampler.hpp"
 
 using namespace Steinberg;
@@ -44,13 +44,13 @@ namespace vst3::denoiser {
 									FOURCC('V', 'o', 'i', 'c'), FOURCC('e', 'F', 'X', 'N'), FOURCC('o', 'i', 's', 'e'));
 
 	class processor : AudioEffect {
-		std::shared_ptr<::nvafx::nvafx> _nvafx;
+		std::shared_ptr<::nvidia::afx::afx> _nvafx;
 
 		bool     _dirty;
 		uint32_t _delaysamples;
 
 		struct channel_data {
-			std::shared_ptr<::nvafx::denoiser> fx;
+			std::shared_ptr<::nvidia::afx::denoiser> fx;
 
 			voicefx::resampler input_resampler;
 			voicefx::resampler output_resampler;
