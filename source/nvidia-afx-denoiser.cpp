@@ -32,8 +32,14 @@
 
 #define D_LOG(MESSAGE, ...) ::voicefx::log("<NVAFX::Denoiser> " MESSAGE, __VA_ARGS__)
 
-nvidia::afx::denoiser::denoiser() : _nvafx(::nvidia::afx::afx::instance()), _dirty(true)
+nvidia::afx::denoiser::denoiser() : _nvafx(::nvidia::afx::afx::instance()), _dirty(true), _cuda(), _context(), _stream()
 {
+	try {
+		_cuda    = ::nvidia::cuda::cuda::get();
+		_context = std::make_shared<::nvidia::cuda::context>(::nvidia::cuda::context_flags::SCHEDULER_AUTO, 0);
+	} catch (...) {
+	}
+
 	create_effect();
 }
 
@@ -87,7 +93,12 @@ void nvidia::afx::denoiser::reset()
 
 void nvidia::afx::denoiser::create_effect()
 {
-	// 1. Create the NvAFX effect.
+	std::shared_ptr<::nvidia::cuda::context_stack> ctxstack;
+	if (_context) {
+		ctxstack = _context->enter();
+	}
+
+	// Create the NvAFX effect.
 	NvAFX_Handle effect = nullptr;
 	if (auto res = NvAFX_CreateEffect(NVAFX_EFFECT_DENOISER, &effect); res != NVAFX_STATUS_SUCCESS) {
 		D_LOG("Failed to create '" NVAFX_EFFECT_DENOISER "' effect, error code %" PRIu32 ".", res);
@@ -95,30 +106,26 @@ void nvidia::afx::denoiser::create_effect()
 	}
 	_nvfx = std::shared_ptr<void>(effect, [](void* p) { NvAFX_DestroyEffect(reinterpret_cast<NvAFX_Handle>(p)); });
 
-	// 2. Tell the effect where it can find the necessary models for operation.
+	// Tell the effect where it can find the necessary models for operation.
 	_model_path = _nvafx->redistributable_path();
 	_model_path /= "models";
 	_model_path /= "denoiser_48k.trtpkg"; // TODO: Figure out why we need to specify the exact model.
-	_model_path = std::filesystem::absolute(_model_path);
-	if (auto res = NvAFX_SetString(_nvfx.get(), NVAFX_PARAM_MODEL_PATH, _model_path.string().c_str());
+	_model_path                = std::filesystem::absolute(_model_path);
+	std::string _model_path_u8 = voicefx::util::platform::native_to_utf8(_model_path).string();
+	if (auto res = NvAFX_SetString(_nvfx.get(), NVAFX_PARAM_MODEL_PATH, _model_path_u8.c_str());
 		res != NVAFX_STATUS_SUCCESS) {
 		D_LOG("Unable to set appropriate model path, error code %" PRIu32 ".", res);
 		throw std::runtime_error("Failed to set up effect.");
 	}
 
-	// 3. Set it up for the appropriate high quality sample rate.
+	// Set it up for the appropriate high quality sample rate.
 	if (auto res = NvAFX_SetU32(_nvfx.get(), NVAFX_PARAM_SAMPLE_RATE, SAMPLERATE); res != NVAFX_STATUS_SUCCESS) {
 		D_LOG("Failed to set sample rate to 48kHz, error code %" PRIu32 ".", res);
 		throw std::runtime_error("Failed to set up effect.");
 	}
 
-	int32_t numSupportedDevices = 0;
-	NvAFX_GetSupportedDevices(_nvfx.get(), &numSupportedDevices, nullptr);
-	std::vector<int32_t> ret(numSupportedDevices);
-	NvAFX_GetSupportedDevices(_nvfx.get(), &numSupportedDevices, ret.data());
-
-	// 4. Set some defaults which we don't care about failing.
-	NvAFX_SetU32(_nvfx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 1);
+	// Set some defaults which we don't care about failing.
+	NvAFX_SetU32(_nvfx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 0);
 	NvAFX_SetFloat(_nvfx.get(), NVAFX_PARAM_INTENSITY_RATIO, 1.0);
 
 	// Finally, load the effect.

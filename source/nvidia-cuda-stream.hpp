@@ -25,18 +25,17 @@
 #include <memory>
 #include "nvidia-cuda.hpp"
 
-namespace voicefx::nvidia::cuda {
+namespace nvidia::cuda {
 	class stream {
-		std::shared_ptr<::voicefx::nvidia::cuda::cuda> _cuda;
-		::voicefx::nvidia::cuda::stream_t              _stream;
+		std::shared_ptr<::nvidia::cuda::cuda> _cuda;
+		::nvidia::cuda::stream_t              _stream;
 
 		public:
 		~stream();
-		stream(::voicefx::nvidia::cuda::stream_flags flags    = ::voicefx::nvidia::cuda::stream_flags::DEFAULT,
-			   int32_t                               priority = 0);
+		stream(::nvidia::cuda::stream_flags flags = ::nvidia::cuda::stream_flags::DEFAULT, int32_t priority = 0);
 
-		::voicefx::nvidia::cuda::stream_t get();
+		::nvidia::cuda::stream_t get();
 
 		void synchronize();
 	};
-} // namespace voicefx::nvidia::cuda
+} // namespace nvidia::cuda

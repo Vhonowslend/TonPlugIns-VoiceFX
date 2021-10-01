@@ -27,22 +27,21 @@
 
 #define D_LOG(MESSAGE, ...) voicefx::log("<CUDA::Stream> " MESSAGE, __VA_ARGS__)
 
-voicefx::nvidia::cuda::stream::~stream()
+nvidia::cuda::stream::~stream()
 {
 	_cuda->cuStreamDestroy(_stream);
 }
 
-voicefx::nvidia::cuda::stream::stream(::voicefx::nvidia::cuda::stream_flags flags, int32_t priority)
-	: _cuda(::voicefx::nvidia::cuda::cuda::get())
+nvidia::cuda::stream::stream(::nvidia::cuda::stream_flags flags, int32_t priority) : _cuda(::nvidia::cuda::cuda::get())
 {
-	voicefx::nvidia::cuda::result res;
+	nvidia::cuda::result res;
 	if (priority == 0) {
 		res = _cuda->cuStreamCreate(&_stream, flags);
 	} else {
 		res = _cuda->cuStreamCreateWithPriority(&_stream, flags, priority);
 	}
 	switch (res) {
-	case voicefx::nvidia::cuda::result::SUCCESS:
+	case nvidia::cuda::result::SUCCESS:
 		break;
 	default:
 		D_LOG("Failed to create stream with error code %" PRIu32 ".", res);
@@ -50,14 +49,14 @@ voicefx::nvidia::cuda::stream::stream(::voicefx::nvidia::cuda::stream_flags flag
 	}
 }
 
-::voicefx::nvidia::cuda::stream_t voicefx::nvidia::cuda::stream::get()
+::nvidia::cuda::stream_t nvidia::cuda::stream::get()
 {
 	return _stream;
 }
 
-void voicefx::nvidia::cuda::stream::synchronize()
+void nvidia::cuda::stream::synchronize()
 {
-	if (auto res = _cuda->cuStreamSynchronize(_stream); res != ::voicefx::nvidia::cuda::result::SUCCESS) {
-		throw ::voicefx::nvidia::cuda::cuda_error(res);
+	if (auto res = _cuda->cuStreamSynchronize(_stream); res != ::nvidia::cuda::result::SUCCESS) {
+		throw ::nvidia::cuda::exception(res);
 	}
 }

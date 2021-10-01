@@ -25,9 +25,16 @@
 #include <filesystem>
 #include <memory>
 #include "nvidia-afx.hpp"
+#include "nvidia-cuda-context.hpp"
+#include "nvidia-cuda-stream.hpp"
+#include "nvidia-cuda.hpp"
 
 namespace nvidia::afx {
 	class denoiser {
+		std::shared_ptr<::nvidia::cuda::cuda>    _cuda;
+		std::shared_ptr<::nvidia::cuda::context> _context;
+		std::shared_ptr<::nvidia::cuda::stream>  _stream;
+
 		std::shared_ptr<::nvidia::afx::afx> _nvafx;
 		std::filesystem::path               _model_path;
 		std::shared_ptr<void>               _nvfx;

@@ -72,12 +72,12 @@
 			D_LOG("Loading of optional symbol '" #NAME "' failed.", 0);              \
 	}
 
-voicefx::nvidia::cuda::cuda::~cuda()
+nvidia::cuda::cuda::~cuda()
 {
 	D_LOG("Unloading...");
 }
 
-voicefx::nvidia::cuda::cuda::cuda() : _library()
+nvidia::cuda::cuda::cuda() : _library()
 {
 	int32_t cuda_version = 0;
 
@@ -110,11 +110,6 @@ voicefx::nvidia::cuda::cuda::cuda() : _library()
 		P_CUDA_LOAD_SYMBOL(cuDeviceGetLuid);
 		P_CUDA_LOAD_SYMBOL(cuDeviceGetUuid);
 
-		// Primary Context Management
-		P_CUDA_LOAD_SYMBOL(cuDevicePrimaryCtxRetain);
-		P_CUDA_LOAD_SYMBOL_V2(cuDevicePrimaryCtxRelease);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuDevicePrimaryCtxSetFlags);
-
 		// Context Management
 		P_CUDA_LOAD_SYMBOL_V2(cuCtxCreate);
 		P_CUDA_LOAD_SYMBOL_V2(cuCtxDestroy);
@@ -122,48 +117,8 @@ voicefx::nvidia::cuda::cuda::cuda() : _library()
 		P_CUDA_LOAD_SYMBOL_V2(cuCtxPopCurrent);
 		P_CUDA_LOAD_SYMBOL_OPT(cuCtxGetCurrent);
 		P_CUDA_LOAD_SYMBOL_OPT(cuCtxSetCurrent);
-		P_CUDA_LOAD_SYMBOL(cuCtxGetStreamPriorityRange);
+		P_CUDA_LOAD_SYMBOL_OPT(cuCtxGetStreamPriorityRange);
 		P_CUDA_LOAD_SYMBOL(cuCtxSynchronize);
-
-		// Module Management
-		// - Not yet needed.
-
-		// Memory Management
-		P_CUDA_LOAD_SYMBOL_V2(cuMemAlloc);
-		P_CUDA_LOAD_SYMBOL_V2(cuMemAllocPitch);
-		P_CUDA_LOAD_SYMBOL_V2(cuMemFree);
-		P_CUDA_LOAD_SYMBOL(cuMemcpy);
-		P_CUDA_LOAD_SYMBOL_V2(cuMemcpy2D);
-		P_CUDA_LOAD_SYMBOL_V2(cuMemcpy2DAsync);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuArrayGetDescriptor);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyAtoA);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyAtoD);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyAtoH);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyAtoHAsync);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyDtoA);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyDtoD);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyDtoH);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyDtoHAsync);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyHtoA);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyHtoAAsync);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyHtoD);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemcpyHtoDAsync);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemHostGetDevicePointer);
-		P_CUDA_LOAD_SYMBOL_V2(cuMemsetD8);
-		P_CUDA_LOAD_SYMBOL(cuMemsetD8Async);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemsetD16);
-		P_CUDA_LOAD_SYMBOL_OPT(cuMemsetD16Async);
-		P_CUDA_LOAD_SYMBOL_OPT_V2(cuMemsetD32);
-		P_CUDA_LOAD_SYMBOL_OPT(cuMemsetD32Async);
-
-		// Virtual Memory Management
-		// - Not yet needed.
-
-		// Stream Ordered Memory Allocator
-		// - Not yet needed.
-
-		// Unified Addressing
-		// - Not yet needed.
 
 		// Stream Management
 		P_CUDA_LOAD_SYMBOL(cuStreamCreate);
@@ -171,88 +126,27 @@ voicefx::nvidia::cuda::cuda::cuda() : _library()
 		P_CUDA_LOAD_SYMBOL(cuStreamSynchronize);
 		P_CUDA_LOAD_SYMBOL_OPT(cuStreamCreateWithPriority);
 		P_CUDA_LOAD_SYMBOL_OPT(cuStreamGetPriority);
-
-		// Event Management
-		// - Not yet needed.
-
-		// External Resource Interoperability (CUDA 11.1+)
-		// - Not yet needed.
-
-		// Stream Memory Operations
-		// - Not yet needed.
-
-		// Execution Control
-		// - Not yet needed.
-
-		// Graph Management
-		// - Not yet needed.
-
-		// Occupancy
-		// - Not yet needed.
-
-		// Texture Object Management
-		// - Not yet needed.
-
-		// Surface Object Management
-		// - Not yet needed.
-
-		// Peer Context Memory Access
-		// - Not yet needed.
-
-		// Graphics Interoperability
-		P_CUDA_LOAD_SYMBOL(cuGraphicsMapResources);
-		P_CUDA_LOAD_SYMBOL(cuGraphicsSubResourceGetMappedArray);
-		P_CUDA_LOAD_SYMBOL(cuGraphicsUnmapResources);
-		P_CUDA_LOAD_SYMBOL(cuGraphicsUnregisterResource);
-
-		// Driver Entry Point Access
-		// - Not yet needed.
-
-		// Profiler Control
-		// - Not yet needed.
-
-		// OpenGL Interoperability
-		// - Not yet needed.
-
-		// VDPAU Interoperability
-		// - Not yet needed.
-
-		// EGL Interoperability
-		// - Not yet needed.
-
-#ifdef WIN32
-		// Direct3D9 Interoperability
-		// - Not yet needed.
-
-		// Direct3D10 Interoperability
-		P_CUDA_LOAD_SYMBOL(cuD3D10GetDevice);
-		P_CUDA_LOAD_SYMBOL_OPT(cuGraphicsD3D10RegisterResource);
-
-		// Direct3D11 Interoperability
-		P_CUDA_LOAD_SYMBOL(cuD3D11GetDevice);
-		P_CUDA_LOAD_SYMBOL_OPT(cuGraphicsD3D11RegisterResource);
-#endif
 	}
 
 	// Initialize CUDA
 	cuInit(0);
 }
 
-int32_t voicefx::nvidia::cuda::cuda::version()
+int32_t nvidia::cuda::cuda::version()
 {
 	int32_t v = 0;
 	cuDriverGetVersion(&v);
 	return v;
 }
 
-std::shared_ptr<voicefx::nvidia::cuda::cuda> voicefx::nvidia::cuda::cuda::get()
+std::shared_ptr<nvidia::cuda::cuda> nvidia::cuda::cuda::get()
 {
-	static std::weak_ptr<voicefx::nvidia::cuda::cuda> instance;
-	static std::mutex                                 lock;
+	static std::weak_ptr<nvidia::cuda::cuda> instance;
+	static std::mutex                        lock;
 
 	std::unique_lock<std::mutex> ul(lock);
 	if (instance.expired()) {
-		auto hard_instance = std::make_shared<voicefx::nvidia::cuda::cuda>();
+		auto hard_instance = std::make_shared<nvidia::cuda::cuda>();
 		instance           = hard_instance;
 		return hard_instance;
 	}

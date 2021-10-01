@@ -41,9 +41,14 @@ voicefx::util::library::library(std::filesystem::path file) : _library(nullptr)
 {
 #if defined(ST_WINDOWS)
 	SetLastError(ERROR_SUCCESS);
-	file     = ::voicefx::util::platform::utf8_to_native(file);
-	_library = reinterpret_cast<void*>(LoadLibraryExW(
-		file.wstring().c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS));
+	file        = ::voicefx::util::platform::utf8_to_native(file);
+	DWORD flags = 0;
+	if (file.is_absolute()) {
+		flags |= LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS;
+	} else {
+		flags |= LOAD_LIBRARY_SEARCH_DEFAULT_DIRS;
+	}
+	_library = reinterpret_cast<void*>(LoadLibraryExW(file.wstring().data(), nullptr, flags));
 	if (!_library) {
 		DWORD error = GetLastError();
 		if (error != ERROR_PROC_NOT_FOUND) {

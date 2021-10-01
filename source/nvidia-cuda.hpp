@@ -27,23 +27,14 @@
 #include "util-bitmask.hpp"
 #include "util-library.hpp"
 
-#ifdef WIN32
-#pragma warning(push)
-#pragma warning(disable : 4365)
-#pragma warning(disable : 5204)
-#include <d3d11.h>
-#include <dxgi.h>
-#pragma warning(pop)
-#endif
-
-#define P_CUDA_DEFINE_FUNCTION(name, ...)                            \
-	private:                                                         \
-	typedef ::voicefx::nvidia::cuda::result (*t##name)(__VA_ARGS__); \
-                                                                     \
-	public:                                                          \
+#define P_CUDA_DEFINE_FUNCTION(name, ...)                   \
+	private:                                                \
+	typedef ::nvidia::cuda::result (*t##name)(__VA_ARGS__); \
+                                                            \
+	public:                                                 \
 	t##name name = nullptr;
 
-namespace voicefx::nvidia::cuda {
+namespace nvidia::cuda {
 	enum class result : std::size_t {
 		SUCCESS                  = 0,
 		INVALID_VALUE            = 1,
@@ -191,14 +182,14 @@ namespace voicefx::nvidia::cuda {
 		};
 	};
 
-	class cuda_error : public std::exception {
-		::voicefx::nvidia::cuda::result _code;
+	class exception : public std::exception {
+		::nvidia::cuda::result _code;
 
 		public:
-		~cuda_error(){};
-		cuda_error(::voicefx::nvidia::cuda::result code) : _code(code) {}
+		~exception(){};
+		exception(::nvidia::cuda::result code) : _code(code) {}
 
-		::voicefx::nvidia::cuda::result code()
+		::nvidia::cuda::result code()
 		{
 			return _code;
 		}
@@ -224,12 +215,6 @@ namespace voicefx::nvidia::cuda {
 		P_CUDA_DEFINE_FUNCTION(cuDeviceGetName, char* name, int32_t length, device_t device);
 		P_CUDA_DEFINE_FUNCTION(cuDeviceGetLuid, luid_t* luid, uint32_t* device_node_mask, device_t device);
 		P_CUDA_DEFINE_FUNCTION(cuDeviceGetUuid, uuid_t* uuid, device_t device);
-		// - Not yet needed.
-
-		// Primary Context Management
-		P_CUDA_DEFINE_FUNCTION(cuDevicePrimaryCtxRelease, device_t device);
-		P_CUDA_DEFINE_FUNCTION(cuDevicePrimaryCtxRetain, context_t* ctx, device_t device);
-		P_CUDA_DEFINE_FUNCTION(cuDevicePrimaryCtxSetFlags, device_t device, context_flags flags);
 
 		// Context Management
 		P_CUDA_DEFINE_FUNCTION(cuCtxCreate, context_t* ctx, context_flags flags, device_t device);
@@ -241,50 +226,6 @@ namespace voicefx::nvidia::cuda {
 		P_CUDA_DEFINE_FUNCTION(cuCtxSetCurrent, context_t ctx);
 		P_CUDA_DEFINE_FUNCTION(cuCtxSynchronize);
 
-		// Module Management
-		// - Not yet needed.
-
-		// Memory Management
-		P_CUDA_DEFINE_FUNCTION(cuArrayGetDescriptor, array_descriptor_v2_t* pArrayDescripter, array_t array);
-		P_CUDA_DEFINE_FUNCTION(cuMemAlloc, device_ptr_t* ptr, std::size_t bytes);
-		P_CUDA_DEFINE_FUNCTION(cuMemAllocPitch, device_ptr_t* ptr, std::size_t* pitch, std::size_t width_in_bytes,
-							   std::size_t height, uint32_t element_size_bytes);
-		P_CUDA_DEFINE_FUNCTION(cuMemFree, device_ptr_t ptr);
-		P_CUDA_DEFINE_FUNCTION(cuMemHostGetDevicePointer, device_ptr_t* devptr, void* ptr, uint32_t flags);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpy, device_ptr_t dst, device_ptr_t src, std::size_t bytes);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpy2D, const memcpy2d_v2_t* copy);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpy2DAsync, const memcpy2d_v2_t* copy, stream_t stream);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyAtoA, array_t dst, std::size_t dstOffset, array_t src, std::size_t srcOffset,
-							   std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyAtoD, device_ptr_t dst, array_t src, std::size_t srcOffset,
-							   std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyAtoH, void* dst, array_t src, std::size_t srcOffset, std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyAtoHAsync, void* dst, array_t src, std::size_t srcOffset, std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyDtoA, array_t dst, std::size_t dstOffset, device_ptr_t src,
-							   std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyDtoD, device_ptr_t dst, array_t srcArray, std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyDtoH, void* dst, array_t src, std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyDtoHAsync, void* dst, array_t src, std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyHtoA, array_t dst, std::size_t dstOffset, void* src, std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyHtoAAsync, array_t dst, std::size_t dstOffset, void* src, std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyHtoD, device_ptr_t dst, void* src, std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemcpyHtoDAsync, device_ptr_t dst, void* src, std::size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemsetD8, device_ptr_t dst, uint8_t d, size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemsetD8Async, device_ptr_t dst, uint8_t d, size_t byteCount, stream_t stream);
-		P_CUDA_DEFINE_FUNCTION(cuMemsetD16, device_ptr_t dst, uint16_t d, size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemsetD16Async, device_ptr_t dst, uint16_t d, size_t byteCount, stream_t stream);
-		P_CUDA_DEFINE_FUNCTION(cuMemsetD32, device_ptr_t dst, uint32_t d, size_t byteCount);
-		P_CUDA_DEFINE_FUNCTION(cuMemsetD32Async, device_ptr_t dst, uint32_t d, size_t byteCount, stream_t stream);
-
-		// Virtual Memory Management
-		// - Not yet needed.
-
-		// Stream Ordered Memory Allocator
-		// - Not yet needed.
-
-		// Unified Addressing
-		// - Not yet needed.
-
 		// Stream Managment
 		P_CUDA_DEFINE_FUNCTION(cuStreamCreate, stream_t* stream, stream_flags flags);
 		P_CUDA_DEFINE_FUNCTION(cuStreamCreateWithPriority, stream_t* stream, stream_flags flags, int32_t priority);
@@ -292,74 +233,10 @@ namespace voicefx::nvidia::cuda {
 		P_CUDA_DEFINE_FUNCTION(cuStreamSynchronize, stream_t stream);
 		P_CUDA_DEFINE_FUNCTION(cuStreamGetPriority, stream_t stream, int32_t* priority);
 
-		// Event Management
-		// - Not yet needed.
-
-		// External Resource Interoperability (CUDA 11.1+)
-		// - Not yet needed.
-
-		// Stream Memory Operations
-		// - Not yet needed.
-
-		// Execution Control
-		// - Not yet needed.
-
-		// Graph Management
-		// - Not yet needed.
-
-		// Occupancy
-		// - Not yet needed.
-
-		// Texture Object Management
-		// - Not yet needed.
-
-		// Surface Object Management
-		// - Not yet needed.
-
-		// Peer Context Memory Access
-		// - Not yet needed.
-
-		// Graphics Interoperability
-		P_CUDA_DEFINE_FUNCTION(cuGraphicsMapResources, uint32_t count, graphics_resource_t* resources, stream_t stream);
-		P_CUDA_DEFINE_FUNCTION(cuGraphicsSubResourceGetMappedArray, array_t* array, graphics_resource_t resource,
-							   uint32_t index, uint32_t level);
-		P_CUDA_DEFINE_FUNCTION(cuGraphicsUnmapResources, uint32_t count, graphics_resource_t* resources,
-							   stream_t stream);
-		P_CUDA_DEFINE_FUNCTION(cuGraphicsUnregisterResource, graphics_resource_t resource);
-
-		// Driver Entry Point Access
-		// - Not yet needed.
-
-		// Profiler Control
-		// - Not yet needed.
-
-		// OpenGL Interoperability
-		// - Not yet needed.
-
-		// VDPAU Interoperability
-		// - Not yet needed.
-
-		// EGL Interoperability
-		// - Not yet needed.
-
-#ifdef WIN32
-		// Direct3D9 Interoperability
-		// - Not yet needed.
-
-		// Direct3D10 Interoperability
-		P_CUDA_DEFINE_FUNCTION(cuD3D10GetDevice, device_t* device, IDXGIAdapter* adapter);
-		P_CUDA_DEFINE_FUNCTION(cuGraphicsD3D10RegisterResource, graphics_resource_t* resource,
-							   ID3D10Resource* d3dresource, uint32_t flags);
-
-		// Direct3D11 Interoperability
-		P_CUDA_DEFINE_FUNCTION(cuD3D11GetDevice, device_t* device, IDXGIAdapter* adapter);
-		P_CUDA_DEFINE_FUNCTION(cuGraphicsD3D11RegisterResource, graphics_resource_t* resource,
-							   ID3D11Resource* d3dresource, uint32_t flags);
-#endif
 		public:
-		static std::shared_ptr<::voicefx::nvidia::cuda::cuda> get();
+		static std::shared_ptr<::nvidia::cuda::cuda> get();
 	};
-} // namespace voicefx::nvidia::cuda
+} // namespace nvidia::cuda
 
-P_ENABLE_BITMASK_OPERATORS(::voicefx::nvidia::cuda::context_flags)
-P_ENABLE_BITMASK_OPERATORS(::voicefx::nvidia::cuda::stream_flags)
+P_ENABLE_BITMASK_OPERATORS(::nvidia::cuda::context_flags)
+P_ENABLE_BITMASK_OPERATORS(::nvidia::cuda::stream_flags)

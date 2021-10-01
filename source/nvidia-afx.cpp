@@ -69,9 +69,15 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable())
 		D_LOG("Found Redistributable at: %s", _loc.c_str());
 	}
 
+	try {
+		_cuda = ::nvidia::cuda::cuda::get();
+	} catch (...) {
+		D_LOG("CUDA not available, some features may not work.");
+	}
+
 	{ // Load the actual NVIDIA Audio Effects library.
 #ifdef WIN32
-		SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+		//SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 
 		{ // Add the Redistributable directory to the list of known library directories.
 			_dll_cookie = nullptr;
@@ -83,12 +89,15 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable())
 				_dll_cookie = reinterpret_cast<void*>(res);
 			}
 		}
-
-		_library =
-			reinterpret_cast<void*>(LoadLibraryExW(L"NVAudioEffects.dll", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS));
-		if (_library == nullptr) {
-			D_LOG("Failed to load the NVIDIA Audio Effects library, nothing will be available.");
-			throw std::runtime_error("Failed to load NVIDIA Audio Effects library.");
+		try {
+			_library = ::voicefx::util::library::load(std::filesystem::path("NVAudioEffects.dll"));
+		} catch (...) {
+			try {
+				_library = ::voicefx::util::library::load(std::filesystem::path(_redist_path) / "NVAudioEffects.dll");
+			} catch (...) {
+				D_LOG("Failed to load the NVIDIA Audio Effects library, nothing will be available.");
+				throw std::runtime_error("Failed to load NVIDIA Audio Effects library.");
+			}
 		}
 #else
 		throw std::runtime_error("This platform is currently not supported.");
@@ -110,7 +119,6 @@ nvidia::afx::afx::~afx()
 {
 #ifdef WIN32
 	RemoveDllDirectory(reinterpret_cast<DLL_DIRECTORY_COOKIE>(_dll_cookie));
-	FreeLibrary(reinterpret_cast<HMODULE>(_library));
 #endif
 }
 

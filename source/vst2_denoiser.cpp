@@ -153,7 +153,7 @@ void voicefx::vst2::denoiser::reset()
 	// Re-calculate delays
 	float ioscale    = (static_cast<float>(_samplerate) / static_cast<float>(nvidia::afx::denoiser::get_sample_rate()));
 	_delaysamples    = static_cast<int32_t>(_channels[0].fx->get_block_size() * ioscale);
-	_vsteffect.delay = _delaysamples + (nvidia::afx::denoiser::get_minimum_delay() * ioscale);
+	_vsteffect.delay = _delaysamples + std::lround(nvidia::afx::denoiser::get_minimum_delay() * ioscale);
 
 	D_LOG("(0x%08" PRIxPTR ") Allocating scratch memory...", &this->_vsteffect);
 	_scratch.resize(_samplerate);

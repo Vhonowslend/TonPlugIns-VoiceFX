@@ -24,11 +24,14 @@
 #pragma once
 #include <filesystem>
 #include <memory>
+#include "nvidia-cuda.hpp"
+#include "util-library.hpp"
 
 namespace nvidia::afx {
 	class afx {
-		std::filesystem::path _redist_path;
-		void*                 _library;
+		std::filesystem::path                     _redist_path;
+		std::shared_ptr<::voicefx::util::library> _library;
+		std::shared_ptr<::nvidia::cuda::cuda>     _cuda;
 
 #ifdef WIN32
 		void* _dll_cookie;
