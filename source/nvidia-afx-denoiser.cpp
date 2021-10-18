@@ -52,7 +52,7 @@ uint32_t nvidia::afx::denoiser::get_sample_rate()
 
 uint32_t nvidia::afx::denoiser::get_minimum_delay()
 {
-	constexpr uint32_t min_delay_ms  = 74; // Documented is 74ms, but measured is ~82ms.
+	constexpr uint32_t min_delay_ms  = 82; // Documented is 74ms, but measured is ~82ms.
 	constexpr uint32_t ms_to_samples = 1000;
 	return (SAMPLERATE * min_delay_ms) / ms_to_samples;
 }
