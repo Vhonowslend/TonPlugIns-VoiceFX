@@ -41,7 +41,7 @@ try {
 }
 
 vst3::denoiser::processor::processor()
-	: _dirty(true), _delaysamples(), _channels(0), _scratch(0, ::nvidia::afx::denoiser::get_sample_rate())
+	: _dirty(true), _channel_delay(), _channels(0), _scratch(0, ::nvidia::afx::denoiser::get_sample_rate())
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
@@ -144,7 +144,7 @@ try {
 
 uint32 PLUGIN_API vst3::denoiser::processor::getLatencySamples()
 try {
-	return _channels[0].fx->get_minimum_delay();
+	return _total_delay;
 } catch (std::exception const& ex) {
 	D_LOG("(0x%08" PRIxPTR ") Exception in setBusArrangements: %s", this, ex.what());
 	return kInternalError;
@@ -155,7 +155,7 @@ try {
 
 uint32 PLUGIN_API vst3::denoiser::processor::getTailSamples()
 try {
-	return getLatencySamples();
+	return _total_delay;
 } catch (std::exception const& ex) {
 	D_LOG("(0x%08" PRIxPTR ") Exception in getTailSamples: %s", this, ex.what());
 	return kInternalError;
@@ -313,26 +313,21 @@ try {
 		}
 
 		// Copy the output data back to the host.
-		if (channel.delay <= 0) {
+		{
+			int32_t out_samples = data.numSamples - channel.delay;
+
 			// Update the output buffer with the new content.
-			memcpy(data.outputs[0].channelBuffers32[idx], channel.output_buffer.peek(data.numSamples),
-				   data.numSamples * sizeof(float));
-			channel.output_buffer.pop(data.numSamples);
+			memcpy(data.outputs[0].channelBuffers32[idx], channel.output_buffer.peek(out_samples),
+				   out_samples * sizeof(float));
+			channel.output_buffer.pop(out_samples);
 #ifdef DEBUG_PROCESSING
 			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR
 				  " |%7" PRIuPTR,
-				  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
-				  channel.output_buffer.size(), data.numSamples);
+				  &this->_vsteffect, idx, samples, channel.input_buffer.size(), channel.fx_buffer.size(),
+				  channel.output_buffer.size(), out_samples);
 #endif
-		} else {
-			memset(data.outputs[0].channelBuffers32[idx], 0, data.numSamples * sizeof(float));
-			channel.delay -= data.numSamples;
-#ifdef DEBUG_PROCESSING
-			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR
-				  " |%7" PRIuPTR,
-				  this, idx, data.numSamples, channel.input_buffer.size(), channel.fx_buffer.size(),
-				  channel.output_buffer.size(), 0);
-#endif
+			if (channel.delay > 0)
+				channel.delay -= std::min<int32_t>(channel.delay, data.numSamples);
 		}
 	}
 
@@ -381,6 +376,14 @@ void vst3::denoiser::processor::reset()
 		return;
 	}
 
+	// Re-calculate delays
+	float ioscale =
+		(static_cast<float>(processSetup.sampleRate) / static_cast<float>(nvidia::afx::denoiser::get_sample_rate()));
+	_channel_delay = std::lround(
+		((processSetup.maxSamplesPerBlock % _channels[0].fx->get_block_size()) + _channels[0].fx->get_block_size())
+		* ioscale);
+	_total_delay = _channel_delay + std::lround(nvidia::afx::denoiser::get_minimum_delay() * ioscale);
+
 	D_LOG("(0x%08" PRIxPTR ") Allocating scratch memory...", this);
 	_scratch.resize(processSetup.sampleRate);
 
@@ -403,7 +406,7 @@ void vst3::denoiser::processor::reset()
 		channel.output_buffer.clear();
 
 		// Reset delay
-		channel.delay = _delaysamples;
+		channel.delay = _channel_delay;
 	}
 }
 

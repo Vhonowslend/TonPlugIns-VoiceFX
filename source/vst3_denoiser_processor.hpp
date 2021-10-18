@@ -47,7 +47,8 @@ namespace vst3::denoiser {
 		std::shared_ptr<::nvidia::afx::afx> _nvafx;
 
 		bool     _dirty;
-		uint32_t _delaysamples;
+		uint32_t _channel_delay;
+		uint32_t _total_delay;
 
 		struct channel_data {
 			std::shared_ptr<::nvidia::afx::denoiser> fx;
