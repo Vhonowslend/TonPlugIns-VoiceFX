@@ -43,7 +43,7 @@ namespace voicefx {
 			std::shared_ptr<::nvidia::afx::afx> _nvafx;
 
 			bool     _dirty;
-			uint32_t _delaysamples;
+			uint32_t _channel_delay;
 			uint32_t _samplerate;
 			uint32_t _blocksize;
 
@@ -92,6 +92,8 @@ namespace voicefx {
 			intptr_t vst2_get_speaker_arrangement(vst_speaker_arrangement const** input,
 												  vst_speaker_arrangement const** output) const;
 			intptr_t vst2_set_speaker_arrangement(vst_speaker_arrangement* input, vst_speaker_arrangement* output);
+
+			intptr_t vst2_suspend_resume(bool should_resume);
 
 			void  vst2_set_parameter(uint32_t index, float value);
 			float vst2_get_parameter(uint32_t index) const;

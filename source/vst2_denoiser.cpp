@@ -151,9 +151,10 @@ void voicefx::vst2::denoiser::reset()
 	}
 
 	// Re-calculate delays
-	float ioscale    = (static_cast<float>(_samplerate) / static_cast<float>(nvidia::afx::denoiser::get_sample_rate()));
-	_delaysamples    = static_cast<int32_t>(_channels[0].fx->get_block_size() * ioscale);
-	_vsteffect.delay = _delaysamples + std::lround(nvidia::afx::denoiser::get_minimum_delay() * ioscale);
+	float ioscale = (static_cast<float>(_samplerate) / static_cast<float>(nvidia::afx::denoiser::get_sample_rate()));
+	_channel_delay =
+		std::lround(((_blocksize % _channels[0].fx->get_block_size()) + _channels[0].fx->get_block_size()) * ioscale);
+	_vsteffect.delay = _channel_delay + std::lround(nvidia::afx::denoiser::get_minimum_delay() * ioscale);
 
 	D_LOG("(0x%08" PRIxPTR ") Allocating scratch memory...", &this->_vsteffect);
 	_scratch.resize(_samplerate);
@@ -177,7 +178,7 @@ void voicefx::vst2::denoiser::reset()
 		channel.output_buffer.clear();
 
 		// Reset delay
-		channel.delay = _delaysamples;
+		channel.delay = _channel_delay;
 	}
 }
 
@@ -252,7 +253,7 @@ intptr_t voicefx::vst2::denoiser::vst2_control(VST_EFFECT_OPCODE opcode, int32_t
 	// -------------------------------------------------------------------------- //
 	// Processing
 	case VST_EFFECT_OPCODE_SUSPEND:
-		return 0;
+		return vst2_suspend_resume(p2 != 0);
 	case VST_EFFECT_OPCODE_PROCESS_BEGIN:
 		reset();
 		return 0;
@@ -389,6 +390,13 @@ intptr_t voicefx::vst2::denoiser::vst2_set_speaker_arrangement(vst_speaker_arran
 	return 0;
 }
 
+intptr_t voicefx::vst2::denoiser::vst2_suspend_resume(bool should_resume)
+{
+	if (should_resume)
+		reset();
+	return 0;
+}
+
 void voicefx::vst2::denoiser::vst2_set_parameter(uint32_t index, float value) {}
 
 float voicefx::vst2::denoiser::vst2_get_parameter(uint32_t index) const
@@ -503,25 +511,20 @@ void voicefx::vst2::denoiser::vst2_process_float(const float* const* inputs, flo
 		}
 
 		// Copy the output data back to the host.
-		if (channel.delay <= 0) {
+		{
+			int32_t out_samples = samples - channel.delay;
+
 			// Update the output buffer with the new content.
-			memcpy(outputs[idx], channel.output_buffer.peek(samples), samples * sizeof(float));
-			channel.output_buffer.pop(samples);
+			memcpy(outputs[idx], channel.output_buffer.peek(out_samples), out_samples * sizeof(float));
+			channel.output_buffer.pop(out_samples);
 #ifdef DEBUG_PROCESSING
 			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR
 				  " |%7" PRIuPTR,
 				  &this->_vsteffect, idx, samples, channel.input_buffer.size(), channel.fx_buffer.size(),
-				  channel.output_buffer.size(), samples);
+				  channel.output_buffer.size(), out_samples);
 #endif
-		} else {
-			memset(outputs[idx], 0, samples * sizeof(float));
-			channel.delay -= samples;
-#ifdef DEBUG_PROCESSING
-			D_LOG("(0x%08" PRIxPTR ")[%" PRIuPTR "] %7" PRId32 " |%7" PRIuPTR " |%7" PRIuPTR " |%7" PRIuPTR
-				  " |%7" PRIuPTR,
-				  &this->_vsteffect, idx, samples, channel.input_buffer.size(), channel.fx_buffer.size(),
-				  channel.output_buffer.size(), 0);
-#endif
+			if (channel.delay > 0)
+				channel.delay -= std::min<int32_t>(channel.delay, samples);
 		}
 	}
 }
