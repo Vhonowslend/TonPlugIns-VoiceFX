@@ -26,7 +26,9 @@ namespace nvidia::cuda {
 
 	class context : public std::enable_shared_from_this<::nvidia::cuda::context> {
 		std::shared_ptr<::nvidia::cuda::cuda> _cuda;
+		::nvidia::cuda::device_t              _dev;
 		::nvidia::cuda::context_t             _ctx;
+		bool                                  _is_primary;
 
 		public:
 		~context();
@@ -35,7 +37,11 @@ namespace nvidia::cuda {
 		context();
 
 		public:
-		context(context_flags flags, device_t device);
+		// Retrieve the primary context of the device.
+		context(::nvidia::cuda::device_t device);
+
+		// Create a new context from scratch.
+		context(::nvidia::cuda::context_flags flags, ::nvidia::cuda::device_t device);
 
 		::nvidia::cuda::context_t get();
 

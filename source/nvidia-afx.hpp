@@ -24,6 +24,7 @@
 #pragma once
 #include <filesystem>
 #include <memory>
+#include "nvidia-cuda-context.hpp"
 #include "nvidia-cuda.hpp"
 #include "util-library.hpp"
 
@@ -32,6 +33,7 @@ namespace nvidia::afx {
 		std::filesystem::path                     _redist_path;
 		std::shared_ptr<::voicefx::util::library> _library;
 		std::shared_ptr<::nvidia::cuda::cuda>     _cuda;
+		std::shared_ptr<::nvidia::cuda::context>  _cuda_context;
 
 #ifdef WIN32
 		void* _dll_cookie;
@@ -44,6 +46,8 @@ namespace nvidia::afx {
 		~afx();
 
 		std::filesystem::path redistributable_path();
+
+		std::shared_ptr<::nvidia::cuda::context> cuda_context();
 
 		public /* Singleton */:
 		static std::shared_ptr<::nvidia::afx::afx> instance();

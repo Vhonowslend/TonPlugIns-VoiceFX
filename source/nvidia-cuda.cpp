@@ -106,9 +106,15 @@ nvidia::cuda::cuda::cuda() : _library()
 
 	{ // 3. Load remaining functions.
 		// Device Management
+		P_CUDA_LOAD_SYMBOL(cuDeviceGetCount);
+		P_CUDA_LOAD_SYMBOL(cuDeviceGet);
 		P_CUDA_LOAD_SYMBOL(cuDeviceGetName);
 		P_CUDA_LOAD_SYMBOL(cuDeviceGetLuid);
 		P_CUDA_LOAD_SYMBOL(cuDeviceGetUuid);
+
+		// Primary Context Management
+		P_CUDA_LOAD_SYMBOL(cuDevicePrimaryCtxRetain);
+		P_CUDA_LOAD_SYMBOL(cuDevicePrimaryCtxRelease);
 
 		// Context Management
 		P_CUDA_LOAD_SYMBOL_V2(cuCtxCreate);

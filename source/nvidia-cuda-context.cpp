@@ -25,16 +25,36 @@
 
 nvidia::cuda::context::~context()
 {
-	_cuda->cuCtxDestroy(_ctx);
+	if (_is_primary) {
+		_cuda->cuDevicePrimaryCtxRelease(_dev);
+	} else {
+		_cuda->cuCtxDestroy(_ctx);
+	}
 }
 
-nvidia::cuda::context::context() : _cuda(::nvidia::cuda::cuda::get()), _ctx() {}
+nvidia::cuda::context::context() : _cuda(::nvidia::cuda::cuda::get()), _dev(), _ctx(), _is_primary(false) {}
 
-nvidia::cuda::context::context(context_flags flags, device_t device) : context()
+nvidia::cuda::context::context(::nvidia::cuda::device_t device) : context()
 {
+	_dev        = device;
+	_is_primary = true;
+
+	if (auto res = _cuda->cuDevicePrimaryCtxRetain(&_ctx, device); res != ::nvidia::cuda::result::SUCCESS) {
+		throw ::nvidia::cuda::exception(res);
+	}
+}
+
+nvidia::cuda::context::context(::nvidia::cuda::context_flags flags, ::nvidia::cuda::device_t device) : context()
+{
+	_dev        = device;
+	_is_primary = false;
+
 	if (auto res = _cuda->cuCtxCreate(&_ctx, flags, device); res != ::nvidia::cuda::result::SUCCESS) {
 		throw ::nvidia::cuda::exception(res);
 	}
+
+	// Restore original Context.
+	pop();
 }
 
 ::nvidia::cuda::context_t nvidia::cuda::context::get()

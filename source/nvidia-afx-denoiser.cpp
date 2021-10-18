@@ -36,7 +36,7 @@ nvidia::afx::denoiser::denoiser() : _nvafx(::nvidia::afx::afx::instance()), _dir
 {
 	try {
 		_cuda    = ::nvidia::cuda::cuda::get();
-		_context = std::make_shared<::nvidia::cuda::context>(::nvidia::cuda::context_flags::SCHEDULER_AUTO, 0);
+		_context = _nvafx->cuda_context();
 	} catch (...) {
 	}
 
@@ -93,9 +93,9 @@ void nvidia::afx::denoiser::reset()
 
 void nvidia::afx::denoiser::create_effect()
 {
-	std::shared_ptr<::nvidia::cuda::context_stack> ctxstack;
+	std::shared_ptr<::nvidia::cuda::context_stack> ctx_stack;
 	if (_context) {
-		ctxstack = _context->enter();
+		ctx_stack = _context->enter();
 	}
 
 	// Create the NvAFX effect.

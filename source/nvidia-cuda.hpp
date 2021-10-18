@@ -212,9 +212,15 @@ namespace nvidia::cuda {
 		P_CUDA_DEFINE_FUNCTION(cuDriverGetVersion, int32_t* driverVersion);
 
 		// Device Management
+		P_CUDA_DEFINE_FUNCTION(cuDeviceGetCount, int32_t* count);
+		P_CUDA_DEFINE_FUNCTION(cuDeviceGet, device_t* device, int32_t idx);
 		P_CUDA_DEFINE_FUNCTION(cuDeviceGetName, char* name, int32_t length, device_t device);
 		P_CUDA_DEFINE_FUNCTION(cuDeviceGetLuid, luid_t* luid, uint32_t* device_node_mask, device_t device);
 		P_CUDA_DEFINE_FUNCTION(cuDeviceGetUuid, uuid_t* uuid, device_t device);
+
+		// Primary Context Management
+		P_CUDA_DEFINE_FUNCTION(cuDevicePrimaryCtxRetain, context_t* ctx, device_t dev);
+		P_CUDA_DEFINE_FUNCTION(cuDevicePrimaryCtxRelease, device_t);
 
 		// Context Management
 		P_CUDA_DEFINE_FUNCTION(cuCtxCreate, context_t* ctx, context_flags flags, device_t device);
