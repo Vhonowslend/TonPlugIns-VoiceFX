@@ -142,7 +142,7 @@ void voicefx::initialize()
 			try {
 				for (auto& entry : std::filesystem::directory_iterator(log_path)) {
 					auto wt = entry.last_write_time();
-					if ((decltype(wt)::clock::now() - wt) > std::chrono::hours(30 * 60)) {
+					if ((decltype(wt)::clock::now() - wt) > std::chrono::hours(24 * 14)) {
 						std::filesystem::remove(entry);
 					} else {
 						_logs.push_back(entry);
