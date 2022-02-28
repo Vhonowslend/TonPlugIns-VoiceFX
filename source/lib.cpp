@@ -118,7 +118,9 @@ void voicefx::initialize()
 	}
 
 	// Adjust both paths to have our app name.
+	_local_data /= voicefx::vendor;
 	_local_data /= voicefx::name;
+	_user_data /= voicefx::vendor;
 	_user_data /= voicefx::name;
 
 	// Create missing directories.
