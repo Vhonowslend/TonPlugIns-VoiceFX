@@ -22,44 +22,62 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
+#include <atomic>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include "nvidia-afx.hpp"
 #include "nvidia-cuda-context.hpp"
 #include "nvidia-cuda-stream.hpp"
 #include "nvidia-cuda.hpp"
 
 namespace nvidia::afx {
-	class denoiser {
+	class effect {
 		std::shared_ptr<::nvidia::cuda::cuda>    _cuda;
 		std::shared_ptr<::nvidia::cuda::context> _context;
 		std::shared_ptr<::nvidia::cuda::stream>  _stream;
 
 		std::shared_ptr<::nvidia::afx::afx> _nvafx;
-		std::filesystem::path               _model_path;
-		std::shared_ptr<void>               _nvfx;
 
-		uint32_t _block_size;
-		bool     _dirty;
+		std::mutex                         _lock;
+		std::filesystem::path              _model_path;
+		std::string                        _model_path_str;
+		std::vector<std::shared_ptr<void>> _fx;
+
+		std::atomic_bool   _fx_dirty;
+		std::atomic_bool   _fx_denoise;
+		std::atomic_bool   _fx_dereverb;
+		std::atomic_size_t _fx_channels;
+
+		std::atomic_bool   _cfg_dirty;
+		std::atomic<float> _cfg_intensity;
 
 		public:
-		denoiser();
-		~denoiser();
+		effect();
+		~effect();
 
-		static uint32_t get_sample_rate();
+		public:
+		static size_t samplerate();
 
-		static uint32_t get_minimum_delay();
+		static size_t blocksize();
 
-		uint32_t get_block_size() const;
+		public:
+		bool denoise_enabled();
+		void enable_denoise(bool v);
 
-		void process(const float input[], float output[]);
+		bool dereverb_enabled();
+		void enable_dereverb(bool v);
 
-		/** Reset the effect so that new processing can take place.
-		 * 
-		 */
-		void reset();
+		size_t channels();
+		void   channels(size_t v);
 
-		private:
-		void create_effect();
+		float intensity();
+		void  intensity(float v);
+
+		void load();
+
+		void clear();
+
+		void process(const float** input, float** output, size_t samples);
 	};
 } // namespace nvidia::afx
