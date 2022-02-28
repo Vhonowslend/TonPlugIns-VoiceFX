@@ -83,52 +83,11 @@ void voicefx::initialize()
 		return;
 	}
 
-#ifdef _WIN32
-	PWSTR             widebuffer;
-	std::vector<char> buffer;
-
-	// Local User Data
-	if (SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &widebuffer) == S_OK) {
-		size_t wsz = static_cast<size_t>(wcslen(widebuffer));
-		size_t sz =
-			static_cast<size_t>(WideCharToMultiByte(CP_UTF8, 0, widebuffer, static_cast<int>(wsz), 0, 0, 0, nullptr));
-		buffer.resize(sz + 1);
-		WideCharToMultiByte(CP_UTF8, 0, widebuffer, static_cast<int>(wsz), buffer.data(),
-							static_cast<int>(buffer.size()), 0, nullptr);
-		CoTaskMemFree(widebuffer);
-
-		_local_data = std::filesystem::u8path(std::string_view(buffer.data(), buffer.size() - 1));
-	} else {
-		_local_data = std::filesystem::temp_directory_path();
-	}
-
-	// Roaming User Data
-	if (SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &widebuffer) == S_OK) {
-		size_t wsz = static_cast<size_t>(wcslen(widebuffer));
-		size_t sz =
-			static_cast<size_t>(WideCharToMultiByte(CP_UTF8, 0, widebuffer, static_cast<int>(wsz), 0, 0, 0, nullptr));
-		buffer.resize(sz + 1);
-		WideCharToMultiByte(CP_UTF8, 0, widebuffer, static_cast<int>(wsz), buffer.data(),
-							static_cast<int>(buffer.size()), 0, nullptr);
-		CoTaskMemFree(widebuffer);
-
-		_user_data = std::filesystem::u8path(std::string_view(buffer.data(), buffer.size() - 1));
-	} else {
-		_user_data = std::filesystem::temp_directory_path();
-	}
-
-	// Adjust both paths to have our app name.
-	_local_data /= voicefx::vendor;
-	_local_data /= voicefx::name;
-	_user_data /= voicefx::vendor;
-	_user_data /= voicefx::name;
-
-	// Create missing directories.
+	// Pre-calculate and create storage directories.
+	_local_data = util::platform::data_path() / voicefx::vendor / voicefx::name;
+	_user_data  = util::platform::config_path() / voicefx::vendor / voicefx::name;
 	std::filesystem::create_directories(_local_data);
 	std::filesystem::create_directories(_user_data);
-#else
-	// TODO: Weird situation because nobody could agree on a thing.
-#endif
 
 	// Try and open a log file
 	{
