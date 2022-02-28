@@ -52,5 +52,30 @@ namespace voicefx {
 			return v;
 		};
 #endif
+
+		/** Path for user-specific configuration.
+		 *
+		 * Windows: %RoamingAppData%
+		 * Linux: $XDG_CONFIG_HOME
+		 * MacOS: ~/Library/Preferences/
+		 */
+		std::filesystem::path config_path();
+
+		/** Path for user-specific data.
+		 *
+		 * Windows: %LocalAppData%
+		 * Linux: $XDG_DATA_HOME
+		 * MacOS: ~/Library/
+		 */
+		std::filesystem::path data_path();
+
+		/** Path at which to cache information.
+		 *
+		 * Windows: %LocalAppData%
+		 * Linux: $XDG_CACHE_HOME
+		 * MacOS: ~/Library/Caches/
+		 */
+		std::filesystem::path cache_path();
+
 	} // namespace util::platform
 } // namespace voicefx
