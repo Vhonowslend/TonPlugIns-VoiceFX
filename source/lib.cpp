@@ -149,7 +149,7 @@ void voicefx::initialize()
 					}
 				}
 			} catch (std::exception const& ex) {
-				voicefx::log("Failed to remove old log files.");
+				voicefx::log("Failed to clean up log file(s): %s", ex.what());
 			}
 		}
 	}
