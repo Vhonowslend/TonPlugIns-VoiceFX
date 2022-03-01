@@ -35,38 +35,6 @@ namespace voicefx {
 		audiobuffer(size_t size);
 		~audiobuffer();
 
-		/** Insert new data to the back of the buffer.
-		 * 
-		 * @param buffer 
-		 * @param length 
-		 */
-		void push(const float* buffer, size_t length);
-
-		/** Peek at data at or before the front of the buffer.
-		 *
-		 * @param length The length of data to look at. If the length exceeds the currently used data, empty data is shown.
-		 */
-		const float* peek(size_t length);
-
-		/** Pop data from the front of the buffer.
-		 *
-		 * Assigned memory is automatically cleared.
-		 * 
-		 * @param length The length of data to pop.
-		 */
-		void pop(size_t length);
-
-		/** Clear the buffer.
-		 * 
-		 */
-		void clear();
-
-		/** Resizes the buffer to the new size and clears it.
-		 * 
-		 * @param size New size for the buffer.
-		 */
-		void resize(size_t size);
-
 		/** Calculate the available space in the buffer.
 		 * 
 		 * @return The currently available space in the buffer.
@@ -84,6 +52,61 @@ namespace voicefx {
 		 * @return The total capacity.
 		 */
 		size_t capacity() const;
+
+		/** Resizes the buffer to the new size and clears it.
+		 * 
+		 * @param size New size for the buffer.
+		 */
+		void resize(size_t size);
+
+		/** Clear all data contained in the buffer.
+		 * 
+		 */
+		void clear();
+
+		/** Peek at data at or before the front of the buffer.
+		 *
+		 * @param length The length of data to look at. If the length exceeds the currently used data, empty data is shown.
+		 */
+		const float* peek(size_t length);
+
+		/** Pop data from the front of the buffer.
+		 *
+		 * Assigned memory is automatically cleared.
+		 * 
+		 * @param length The number of samples to pop.
+		 */
+		void pop(size_t length);
+
+		/** Reserve an area at the end of the buffer for data.
+		 * 
+		 * @param length The number of samples to reserve. Set to 0 to just get the pointer.
+		 * @return A pointer to the start of the area.
+		 */
+		float* reserve(size_t length);
+
+		/** Insert new data to the back of the buffer.
+		 * 
+		 * @param buffer 
+		 * @param length The number of samples to push in.
+		 */
+		void push(const float* buffer, size_t length);
+
+		/** Retrieve a pointer to the front of the buffer.
+		 *
+		 * Same as peek(0).
+		 * 
+		 * @return A pointer to the front of the buffer.
+		 */
+		float* front();
+
+		/** Retrieve a pointer to the back of the buffer.
+		 *
+		 * Same as reserve(0).
+		 * 
+		 * @return A pointer to the back of the buffer.
+		 */
+		float* back();
 	};
 
 } // namespace voicefx

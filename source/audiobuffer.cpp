@@ -35,89 +35,6 @@ voicefx::audiobuffer::audiobuffer(size_t size) : _buffer(size, 0), _avail(size),
 
 voicefx::audiobuffer::~audiobuffer() {}
 
-void voicefx::audiobuffer::push(const float* buffer, size_t length)
-{
-	// Calculate the new potential offset if everything goes well.
-	int64_t avail = _avail - length;
-	int64_t used  = _used + length;
-
-	// Check if the new offset would overflow the buffer capacity.
-	if (avail < 0) {
-		throw std::runtime_error("Buffer Overflow");
-	}
-
-	// Move the already contained data further back.
-	for (size_t idx = 0; idx < _used; idx++) {
-		_buffer[avail + idx] = _buffer[_avail + idx];
-	}
-
-	// Copy the new data to the end.
-	memcpy(&_buffer.at(avail + _used), buffer, length * sizeof(float));
-
-	// Adjust internal values.
-	_avail = avail;
-	_used  = used;
-}
-
-const float* voicefx::audiobuffer::peek(size_t length)
-{
-	// Calculate the current offset.
-	int64_t offset_a = _avail;
-
-	// Calculate the required minimum offset to fulfill request.
-	int64_t offset_b = _buffer.size() - length;
-
-	// Figure out which one of these is the one that can fulfill the request.
-	int64_t offset = std::min(offset_a, offset_b);
-
-	// If the offset is outside of the buffer, error out.
-	if (offset < 0) {
-		throw std::runtime_error("Buffer Overflow");
-	}
-
-	// Otherwise, return a pointer to the area that fits the request.
-	return &_buffer.at(offset);
-}
-
-void voicefx::audiobuffer::pop(size_t length)
-{
-	int64_t avail = _avail + length;
-	int64_t used  = _used - length;
-
-	// Check if the new offset would underflow the buffer.
-	if (used < 0) {
-		// If so, clamp to 0.
-		avail = _buffer.size();
-		used  = 0;
-	}
-
-	// Clear the popped memory.
-	memset(_buffer.data(), 0, avail * sizeof(float));
-
-	// Adjust internal values.
-	_avail = avail;
-	_used  = used;
-}
-
-void voicefx::audiobuffer::clear()
-{
-	// Adjust internal values.
-	_avail = _buffer.size();
-	_used  = 0;
-
-	// Clear all memory.
-	memset(_buffer.data(), 0, _avail * sizeof(float));
-}
-
-void voicefx::audiobuffer::resize(size_t size)
-{
-	_buffer.resize(size);
-	_buffer.shrink_to_fit();
-
-	// Clear the buffer.
-	this->clear();
-}
-
 size_t voicefx::audiobuffer::avail() const
 {
 	return _avail;
@@ -131,4 +48,84 @@ size_t voicefx::audiobuffer::size() const
 size_t voicefx::audiobuffer::capacity() const
 {
 	return _buffer.size();
+}
+
+void voicefx::audiobuffer::resize(size_t size)
+{
+	_buffer.resize(size);
+	_buffer.shrink_to_fit();
+
+	clear();
+}
+
+void voicefx::audiobuffer::clear()
+{
+	// Clear all stored data.
+	memset(_buffer.data(), 0, _buffer.size());
+
+	// Reset internal data.
+	_avail = _buffer.size();
+	_used  = 0;
+}
+
+const float* voicefx::audiobuffer::peek(size_t length)
+{
+	// If there is not enough data, throw a buffer underflow error.
+	if (_used < length) {
+		throw std::runtime_error("Buffer Underflow");
+	}
+
+	// Otherwise, return a pointer to the area that fits the request.
+	return _buffer.data();
+}
+
+void voicefx::audiobuffer::pop(size_t length)
+{
+	// Calculate and verify information
+	if (_used < length) {
+		throw std::runtime_error("Buffer Underflow");
+	}
+
+	// If everything is fine, move the entire buffer back to the start.
+	memmove(_buffer.data(), &_buffer.at(length), _buffer.size() - length);
+
+	// Update our internal state.
+	_avail += length;
+	_used -= length;
+}
+
+float* voicefx::audiobuffer::reserve(size_t length)
+{
+	// Early-exit if there is a problem.
+	if (_avail < length) {
+		throw std::runtime_error("Buffer Overflow");
+	}
+
+	// If things work out, calculate the offset.
+	size_t offset = _used;
+
+	// Update the internal state.
+	_used += length;
+	_avail -= length;
+
+	return &_buffer.at(offset);
+}
+
+void voicefx::audiobuffer::push(const float* buffer, size_t length)
+{
+	// Reserve some space on the buffer.
+	float* area = reserve(length);
+
+	// Copy the data into the buffer.
+	memcpy(area, buffer, length * sizeof(float));
+}
+
+float* voicefx::audiobuffer::front()
+{
+	return _buffer.data();
+}
+
+float* voicefx::audiobuffer::back()
+{
+	return &_buffer[_used];
 }
