@@ -22,94 +22,165 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "resampler.hpp"
+#include <cmath>
 #include <stdexcept>
-#include "lib.hpp"
 
 #include <samplerate.h>
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<Resampler> " MESSAGE, __VA_ARGS__)
-
 voicefx::resampler::~resampler()
 {
-	src_reset(reinterpret_cast<SRC_STATE*>(_instance));
-	_instance = src_delete(reinterpret_cast<SRC_STATE*>(_instance));
+	_instance.clear();
 }
 
-voicefx::resampler::resampler() : _instance(nullptr), _ratio(1.0)
-{
-	int error = 0;
-	_instance = reinterpret_cast<void*>(src_new(SRC_SINC_BEST_QUALITY, 1, &error));
-	if (error != 0) {
-		D_LOG("Failed to create resampler with error: %s (code %" PRId32 ").", src_strerror(error), error);
-		throw std::runtime_error("Failed to create resampler.");
-	}
-}
+voicefx::resampler::resampler() : _instance(), _channels(0), _ratio(0.0), _dirty(true) {}
 
-voicefx::resampler::resampler(uint32_t input, uint32_t output) : resampler()
-{
-	// Calculate resampling ratio.
-	_ratio = (static_cast<float>(output) / static_cast<float>(input));
-}
-
-voicefx::resampler::resampler(resampler&& r) noexcept : _instance(nullptr), _ratio(1.0)
+voicefx::resampler::resampler(resampler&& r) noexcept : _instance(nullptr), _ratio(1.0), _channels(1)
 {
 	std::swap(_instance, r._instance);
 	std::swap(_ratio, r._ratio);
+	std::swap(_channels, r._channels);
+	std::swap(_dirty, r._dirty);
 }
 
 voicefx::resampler& voicefx::resampler::operator=(voicefx::resampler&& r) noexcept
 {
 	std::swap(_instance, r._instance);
 	std::swap(_ratio, r._ratio);
+	std::swap(_channels, r._channels);
+	std::swap(_dirty, r._dirty);
 	return *this;
 }
 
-void voicefx::resampler::process(const float input[], size_t& input_samples, float output[], size_t& output_samples)
+float voicefx::resampler::ratio()
 {
-	if (!_instance) {
-		throw std::runtime_error("_instance is nullptr");
-	}
-
-	SRC_DATA data = {0};
-
-	// Initialize our data structure.
-	data.data_in           = input;
-	data.data_out          = output;
-	data.input_frames      = static_cast<long>(input_samples);
-	data.output_frames     = static_cast<long>(output_samples);
-	data.input_frames_used = 0;
-	data.output_frames_gen = 0;
-	data.end_of_input      = 0;
-	data.src_ratio         = _ratio;
-
-	// Process and resample the audio.
-	if (int error = src_process(reinterpret_cast<SRC_STATE*>(_instance), &data); error != 0) {
-		D_LOG("Failed to resample with error: %s (code %" PRId32 ").", src_strerror(error), error);
-		throw std::runtime_error("Error during src_process.");
-	}
-
-	// Return some information.
-	input_samples  = data.input_frames_used;
-	output_samples = data.output_frames_gen;
-}
-
-void voicefx::resampler::reset(uint32_t input_samplerate, uint32_t output_samplerate)
-{
-	if (!_instance) {
-		throw std::runtime_error("_instance is nullptr");
-	}
-
-	src_reset(reinterpret_cast<SRC_STATE*>(_instance));
-	if ((input_samplerate != 0) && (output_samplerate != 0)) {
-		_ratio = static_cast<float>(output_samplerate) / static_cast<float>(input_samplerate);
-	}
-}
-
-float voicefx::resampler::ratio() const
-{
-	if (!_instance) {
-		throw std::runtime_error("_instance is nullptr");
-	}
-
 	return _ratio;
+}
+
+void voicefx::resampler::ratio(uint32_t in_samplerate, uint32_t out_samplerate)
+{
+	_ratio = static_cast<float>(in_samplerate) / static_cast<float>(out_samplerate);
+}
+
+uint32_t voicefx::resampler::channels()
+{
+	return _channels;
+}
+
+void voicefx::resampler::channels(uint32_t channels)
+{
+	if (_channels != channels) {
+		_channels = channels;
+		_dirty    = true;
+	}
+}
+
+void voicefx::resampler::load()
+{
+	if (!_dirty) {
+		return;
+	}
+
+	_instance.resize(_channels);
+	_instance.shrink_to_fit();
+
+	for (auto& instance : _instance) {
+		if (instance) {
+			src_reset(reinterpret_cast<SRC_STATE*>(instance.get()));
+		} else {
+			int error = 0;
+			instance = std::shared_ptr<void>(reinterpret_cast<void*>(src_new(SRC_SINC_BEST_QUALITY, _channels, &error)),
+											 [](void* v) { src_delete(reinterpret_cast<SRC_STATE*>(v)); });
+			if (error != 0) {
+				throw std::runtime_error(src_strerror(error));
+			}
+		}
+	}
+
+	_dirty = false;
+}
+
+void voicefx::resampler::clear()
+{
+	for (auto& instance : _instance) {
+		if (instance) {
+			src_reset(reinterpret_cast<SRC_STATE*>(instance.get()));
+		}
+	}
+}
+
+void voicefx::resampler::process(const float* in_buffer[], size_t in_samples, size_t& in_samples_used,
+								 float* out_buffer[], size_t out_samples, size_t& out_samples_generated)
+{
+	// Ensure we have a resampler
+	if (_dirty) {
+		load();
+	}
+
+	// Prepare the data object.
+	SRC_DATA data      = {0};
+	data.input_frames  = static_cast<long>(in_samples);
+	data.output_frames = static_cast<long>(out_samples);
+	data.end_of_input  = in_buffer == nullptr ? true : false;
+	data.src_ratio     = _ratio;
+
+	// Process each channel.
+	for (size_t idx = 0; idx < _channels; idx++) {
+		auto& instance = _instance[idx];
+
+		data.data_in           = in_buffer[idx];
+		data.data_out          = out_buffer[idx];
+		data.input_frames_used = 0;
+		data.output_frames_gen = 0;
+
+		if (int error = src_process(reinterpret_cast<SRC_STATE*>(instance.get()), &data); error != 0) {
+			throw std::runtime_error(src_strerror(error));
+		}
+
+		in_samples_used       = data.input_frames_used;
+		out_samples_generated = data.output_frames_gen;
+	}
+}
+
+uint32_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_samplerate)
+{
+	int  error    = 0;
+	auto instance = src_new(SRC_SINC_BEST_QUALITY, 1, &error);
+	if (error != 0) {
+		throw std::runtime_error(src_strerror(error));
+	}
+
+	// Calculate the ratio for the conversion.
+	float sr_ratio = static_cast<float>(out_samplerate) / static_cast<float>(in_samplerate);
+
+	// Prepare some data.
+	SRC_DATA data = {0};
+	float    in_buffer[1024];
+	float    out_buffer[1024];
+	memset(in_buffer, 0, sizeof(in_buffer));
+	memset(out_buffer, 0, sizeof(out_buffer));
+	in_buffer[0]           = 1.;
+	in_buffer[1]           = -1.;
+	data.data_in           = in_buffer;
+	data.data_out          = out_buffer;
+	data.input_frames      = static_cast<long>(1);
+	data.output_frames     = static_cast<long>(sizeof(out_buffer) / sizeof(*out_buffer));
+	data.input_frames_used = 0;
+	data.output_frames_gen = data.output_frames;
+	data.end_of_input      = 0;
+	data.src_ratio         = sr_ratio;
+
+	// Calculate the delay
+	for (uint32_t delay = 0; delay < in_samplerate; delay++) {
+		if (int error = src_process(instance, &data); error != 0) {
+			throw std::runtime_error(src_strerror(error));
+		}
+
+		if (data.output_frames_gen > 0) {
+			src_delete(instance);
+			return delay;
+		}
+	}
+
+	src_delete(instance);
+	return -1;
 }
