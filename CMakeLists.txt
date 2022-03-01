@@ -318,10 +318,10 @@ if(ENABLE_STEINBERG_VST3)
 	list(APPEND PROJECT_SOURCE
 		"source/vst3.hpp"
 		"source/vst3.cpp"
-		"source/vst3_denoiser_controller.hpp"
-		"source/vst3_denoiser_controller.cpp"
-		"source/vst3_denoiser_processor.hpp"
-		"source/vst3_denoiser_processor.cpp"
+		"source/vst3_effect_controller.hpp"
+		"source/vst3_effect_controller.cpp"
+		"source/vst3_effect_processor.hpp"
+		"source/vst3_effect_processor.cpp"
 		"cmake/templates/installer-vst3.iss.in"
 		$<TARGET_OBJECTS:VSTSDK_VST3>
 	)
@@ -338,8 +338,8 @@ if(ENABLE_STEINBERG_VST2)
 	list(APPEND PROJECT_SOURCE
 		"source/vst2.hpp"
 		"source/vst2.cpp"
-		"source/vst2_denoiser.hpp"
-		"source/vst2_denoiser.cpp"
+		"source/vst2_effect.hpp"
+		"source/vst2_effect.cpp"
 		"cmake/templates/installer-vst2.iss.in"
 	)
 	list(APPEND PROJECT_DEFINITIONS

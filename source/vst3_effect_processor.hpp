@@ -27,7 +27,7 @@
 #include <public.sdk/source/vst/vstaudioeffect.h>
 
 #include "audiobuffer.hpp"
-#include "nvidia-afx-denoiser.hpp"
+#include "nvidia-afx-effect.hpp"
 #include "nvidia-afx.hpp"
 #include "resampler.hpp"
 
@@ -39,7 +39,7 @@ using namespace Steinberg::Vst;
 // - We can't tell the application that uses us how many samples per call we can process.
 // - We can't tell the application anything. Who designed this?
 
-namespace vst3::denoiser {
+namespace vst3::effect {
 	static const FUID processor_uid(FOURCC_CREATOR_PROCESSOR, // Creator, Type
 									FOURCC('V', 'o', 'i', 'c'), FOURCC('e', 'F', 'X', 'N'), FOURCC('o', 'i', 's', 'e'));
 
@@ -51,7 +51,7 @@ namespace vst3::denoiser {
 		uint32_t _total_delay;
 
 		struct channel_data {
-			std::shared_ptr<::nvidia::afx::denoiser> fx;
+			std::shared_ptr<::nvidia::afx::effect> fx;
 
 			voicefx::resampler input_resampler;
 			voicefx::resampler output_resampler;
@@ -92,4 +92,4 @@ namespace vst3::denoiser {
 		public:
 		static FUnknown* create(void* data);
 	};
-} // namespace vst3::denoiser
+} // namespace vst3::effect

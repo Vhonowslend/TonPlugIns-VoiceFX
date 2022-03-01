@@ -25,7 +25,7 @@
 #include <memory>
 #include <vector>
 #include "audiobuffer.hpp"
-#include "nvidia-afx-denoiser.hpp"
+#include "nvidia-afx-effect.hpp"
 #include "nvidia-afx.hpp"
 #include "resampler.hpp"
 
@@ -33,7 +33,7 @@
 
 namespace voicefx {
 	namespace vst2 {
-		class alignas(sizeof(intptr_t)) denoiser {
+		class alignas(sizeof(intptr_t)) effect {
 			vst_effect        _vsteffect;
 			vst_host_callback _vstcb;
 
@@ -48,7 +48,7 @@ namespace voicefx {
 			uint32_t _blocksize;
 
 			struct channel_data {
-				std::shared_ptr<::nvidia::afx::denoiser> fx;
+				std::shared_ptr<::nvidia::afx::effect> fx;
 
 				voicefx::resampler input_resampler;
 				voicefx::resampler output_resampler;
@@ -63,8 +63,8 @@ namespace voicefx {
 			std::vector<float>        _scratch;
 
 			public:
-			denoiser(vst_host_callback cb);
-			~denoiser();
+			effect(vst_host_callback cb);
+			~effect();
 
 			vst_effect* get_effect_structure()
 			{

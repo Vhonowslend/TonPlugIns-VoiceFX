@@ -29,7 +29,7 @@
 using namespace Steinberg;
 using namespace Steinberg::Vst;
 
-namespace vst3::denoiser {
+namespace vst3::effect {
 	static const FUID controller_uid(FOURCC_CREATOR_CONTROLLER, // Creator, Type
 									 FOURCC('V', 'o', 'i', 'c'), FOURCC('e', 'F', 'X', 'N'),
 									 FOURCC('o', 'i', 's', 'e'));
@@ -61,4 +61,4 @@ namespace vst3::denoiser {
 		static FUnknown* create(void* data);
 	};
 
-} // namespace vst3::denoiser
+} // namespace vst3::effect

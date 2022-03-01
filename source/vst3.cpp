@@ -26,32 +26,32 @@
 #include "lib.hpp"
 #include "version.h"
 #include "vst3.hpp"
-#include "vst3_denoiser_controller.hpp"
-#include "vst3_denoiser_processor.hpp"
+#include "vst3_effect_controller.hpp"
+#include "vst3_effect_processor.hpp"
 
 #define D_LOG(MESSAGE, ...) voicefx::log("<VST3> " MESSAGE, __VA_ARGS__)
 
 BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:info@xaymar.com")
 
-DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::denoiser::processor_uid),
-		   PClassInfo::kManyInstances,       // Allow many instances
-		   kVstAudioEffectClass,             // Type
-		   "VoiceFX",                        // Name
-		   Vst::kDistributable,              // Allow cross-computer usage.
-		   Vst::PlugType::kFxRestoration,    // Categories (separate with |)
-		   VERSION_STRING,                   // Version
-		   kVstVersionString,                // VST SDK Version
-		   vst3::denoiser::processor::create // Function to create the instance.
+DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::effect::processor_uid),
+		   PClassInfo::kManyInstances,     // Allow many instances
+		   kVstAudioEffectClass,           // Type
+		   "VoiceFX",                      // Name
+		   Vst::kDistributable,            // Allow cross-computer usage.
+		   Vst::PlugType::kFxRestoration,  // Categories (separate with |)
+		   VERSION_STRING,                 // Version
+		   kVstVersionString,              // VST SDK Version
+		   vst3::effect::processor::create // Function to create the instance.
 )
-DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::denoiser::controller_uid),
-		   PClassInfo::kManyInstances,        // Allow many instances
-		   kVstComponentControllerClass,      // Type
-		   "VoiceFX Controller",              // Name
-		   0,                                 // Unused
-		   "",                                // Unused
-		   VERSION_STRING,                    // Version
-		   kVstVersionString,                 // VST SDK Version
-		   vst3::denoiser::controller::create // Function to create the instance.
+DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::effect::controller_uid),
+		   PClassInfo::kManyInstances,      // Allow many instances
+		   kVstComponentControllerClass,    // Type
+		   "VoiceFX Controller",            // Name
+		   0,                               // Unused
+		   "",                              // Unused
+		   VERSION_STRING,                  // Version
+		   kVstVersionString,               // VST SDK Version
+		   vst3::effect::controller::create // Function to create the instance.
 )
 
 END_FACTORY

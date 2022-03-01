@@ -25,9 +25,9 @@
 
 #include "lib.hpp"
 #include "vst2.hpp"
-#include "vst2_denoiser.hpp"
+#include "vst2_effect.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<VST2> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::log("<vst2> " MESSAGE, __VA_ARGS__)
 
 // Entry Points for different platforms.
 extern "C" __declspec(dllexport) VST_ENTRYPOINT
@@ -37,7 +37,7 @@ extern "C" __declspec(dllexport) VST_ENTRYPOINT
 		voicefx::initialize();
 
 		// Create an instance of the VST2.x effect, and return its internal structure.
-		return (new voicefx::vst2::denoiser(callback))->get_effect_structure();
+		return (new voicefx::vst2::effect(callback))->get_effect_structure();
 	} catch (std::exception const& ex) {
 		voicefx::log("Exception: %s", ex.what());
 		return nullptr;

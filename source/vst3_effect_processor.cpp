@@ -21,15 +21,15 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "vst3_denoiser_processor.hpp"
+#include "vst3_effect_processor.hpp"
 #include <base/source/fstreamer.h>
 #include <filesystem>
 #include <pluginterfaces/vst/ivstparameterchanges.h>
-#include "vst3_denoiser_controller.hpp"
+#include "vst3_effect_controller.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<VST3::Denoiser::Processor> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::log("<vst3::effect::processor> " MESSAGE, __VA_ARGS__)
 
-FUnknown* vst3::denoiser::processor::create(void* data)
+FUnknown* vst3::effect::processor::create(void* data)
 try {
 	return static_cast<IAudioProcessor*>(new processor());
 } catch (std::exception const& ex) {
@@ -40,13 +40,13 @@ try {
 	return nullptr;
 }
 
-vst3::denoiser::processor::processor()
-	: _dirty(true), _channel_delay(), _channels(0), _scratch(0, ::nvidia::afx::denoiser::get_sample_rate())
+vst3::effect::processor::processor()
+	: _dirty(true), _channel_delay(), _channels(0), _scratch(0, ::nvidia::afx::effect::get_sample_rate())
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
 	// Assign the proper controller
-	setControllerClass(vst3::denoiser::controller_uid);
+	setControllerClass(vst3::effect::controller_uid);
 
 	// Require some things from the host.
 	processContextRequirements.needContinousTimeSamples();
@@ -57,9 +57,9 @@ vst3::denoiser::processor::processor()
 	_nvafx = ::nvidia::afx::afx::instance();
 }
 
-vst3::denoiser::processor::~processor() {}
+vst3::effect::processor::~processor() {}
 
-tresult PLUGIN_API vst3::denoiser::processor::initialize(FUnknown* context)
+tresult PLUGIN_API vst3::effect::processor::initialize(FUnknown* context)
 try {
 	if (auto res = AudioEffect::initialize(context); res != kResultOk) {
 		D_LOG("(0x%08" PRIxPTR ") Initialization failed with error code 0x%" PRIx32 ".", this,
@@ -84,7 +84,7 @@ try {
 	return kInternalError;
 }
 
-tresult PLUGIN_API vst3::denoiser::processor::canProcessSampleSize(int32 symbolicSampleSize)
+tresult PLUGIN_API vst3::effect::processor::canProcessSampleSize(int32 symbolicSampleSize)
 try {
 	return (symbolicSampleSize == kSample32) ? kResultTrue : kResultFalse;
 } catch (std::exception const& ex) {
@@ -95,8 +95,8 @@ try {
 	return kInternalError;
 }
 
-tresult PLUGIN_API vst3::denoiser::processor::setBusArrangements(SpeakerArrangement* inputs, int32 numIns,
-																 SpeakerArrangement* outputs, int32 numOuts)
+tresult PLUGIN_API vst3::effect::processor::setBusArrangements(SpeakerArrangement* inputs, int32 numIns,
+															   SpeakerArrangement* outputs, int32 numOuts)
 try {
 	if (numIns < 0 || numOuts < 0) {
 		D_LOG("(0x%08" PRIxPTR ") Host called setBusArrangement with no inputs or outputs!", this);
@@ -142,7 +142,7 @@ try {
 	return kInternalError;
 }
 
-uint32 PLUGIN_API vst3::denoiser::processor::getLatencySamples()
+uint32 PLUGIN_API vst3::effect::processor::getLatencySamples()
 try {
 	return _total_delay;
 } catch (std::exception const& ex) {
@@ -153,7 +153,7 @@ try {
 	return kInternalError;
 }
 
-uint32 PLUGIN_API vst3::denoiser::processor::getTailSamples()
+uint32 PLUGIN_API vst3::effect::processor::getTailSamples()
 try {
 	return _total_delay;
 } catch (std::exception const& ex) {
@@ -164,7 +164,7 @@ try {
 	return kInternalError;
 }
 
-tresult PLUGIN_API vst3::denoiser::processor::setupProcessing(ProcessSetup& newSetup)
+tresult PLUGIN_API vst3::effect::processor::setupProcessing(ProcessSetup& newSetup)
 try {
 	// Copy non-important stuff.
 	processSetup.maxSamplesPerBlock = newSetup.maxSamplesPerBlock;
@@ -191,7 +191,7 @@ try {
 	return kInternalError;
 }
 
-tresult PLUGIN_API vst3::denoiser::processor::setProcessing(TBool state)
+tresult PLUGIN_API vst3::effect::processor::setProcessing(TBool state)
 try {
 	if ((state == TBool(true)) && _dirty) {
 		reset();
@@ -206,7 +206,7 @@ try {
 	return kInternalError;
 }
 
-tresult PLUGIN_API vst3::denoiser::processor::process(ProcessData& data)
+tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 try {
 	// Are there any inputs and outputs to process?
 	if ((data.numInputs == 0) || (data.numOutputs == 0)) {
@@ -340,7 +340,7 @@ try {
 	return kInternalError;
 }
 
-tresult PLUGIN_API vst3::denoiser::processor::setState(IBStream* state)
+tresult PLUGIN_API vst3::effect::processor::setState(IBStream* state)
 try {
 	if (state == nullptr) {
 		return kResultFalse;
@@ -355,7 +355,7 @@ try {
 	return kInternalError;
 }
 
-tresult PLUGIN_API vst3::denoiser::processor::getState(IBStream* state)
+tresult PLUGIN_API vst3::effect::processor::getState(IBStream* state)
 try {
 	if (state == nullptr) {
 		return kResultFalse;
@@ -370,7 +370,7 @@ try {
 	return kInternalError;
 }
 
-void vst3::denoiser::processor::reset()
+void vst3::effect::processor::reset()
 {
 	if (!_dirty) {
 		return;
@@ -378,11 +378,11 @@ void vst3::denoiser::processor::reset()
 
 	// Re-calculate delays
 	float ioscale =
-		(static_cast<float>(processSetup.sampleRate) / static_cast<float>(nvidia::afx::denoiser::get_sample_rate()));
+		(static_cast<float>(processSetup.sampleRate) / static_cast<float>(nvidia::afx::effect::get_sample_rate()));
 	_channel_delay = std::lround(
 		((processSetup.maxSamplesPerBlock % _channels[0].fx->get_block_size()) + _channels[0].fx->get_block_size())
 		* ioscale);
-	_total_delay = _channel_delay + std::lround(nvidia::afx::denoiser::get_minimum_delay() * ioscale);
+	_total_delay = _channel_delay + std::lround(nvidia::afx::effect::get_minimum_delay() * ioscale);
 
 	D_LOG("(0x%08" PRIxPTR ") Allocating scratch memory...", this);
 	_scratch.resize(processSetup.sampleRate);
@@ -392,12 +392,12 @@ void vst3::denoiser::processor::reset()
 		channel.fx->reset();
 
 		// (Re-)Create the re-samplers.
-		channel.input_resampler.reset(processSetup.sampleRate, ::nvidia::afx::denoiser::get_sample_rate());
-		channel.output_resampler.reset(::nvidia::afx::denoiser::get_sample_rate(), processSetup.sampleRate);
+		channel.input_resampler.reset(processSetup.sampleRate, ::nvidia::afx::effect::get_sample_rate());
+		channel.output_resampler.reset(::nvidia::afx::effect::get_sample_rate(), processSetup.sampleRate);
 
 		// (Re-)Create the buffers and reset offsets.
-		channel.input_buffer.resize(::nvidia::afx::denoiser::get_sample_rate());
-		channel.fx_buffer.resize(::nvidia::afx::denoiser::get_sample_rate());
+		channel.input_buffer.resize(::nvidia::afx::effect::get_sample_rate());
+		channel.fx_buffer.resize(::nvidia::afx::effect::get_sample_rate());
 		channel.output_buffer.resize(processSetup.sampleRate);
 
 		// Clear Buffers
@@ -410,7 +410,7 @@ void vst3::denoiser::processor::reset()
 	}
 }
 
-void vst3::denoiser::processor::set_channel_count(size_t num)
+void vst3::effect::processor::set_channel_count(size_t num)
 {
 	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %" PRIuPTR "...", this, num);
 
@@ -425,7 +425,7 @@ void vst3::denoiser::processor::set_channel_count(size_t num)
 		// Create any new effect instances.
 		for (auto& channel : _channels) {
 			if (!channel.fx) {
-				channel.fx = std::make_shared<::nvidia::afx::denoiser>();
+				channel.fx = std::make_shared<::nvidia::afx::effect>();
 			}
 		}
 

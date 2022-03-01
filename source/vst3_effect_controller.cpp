@@ -21,19 +21,19 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "vst3_denoiser_controller.hpp"
+#include "vst3_effect_controller.hpp"
 #include <base/source/fstreamer.h>
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<VST3::Denoiser::Controller> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::log("<vst3::effect::controller> " MESSAGE, __VA_ARGS__)
 
-vst3::denoiser::controller::controller()
+vst3::effect::controller::controller()
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 }
 
-vst3::denoiser::controller::~controller() {}
+vst3::effect::controller::~controller() {}
 
-tresult PLUGIN_API vst3::denoiser::controller::initialize(FUnknown* context)
+tresult PLUGIN_API vst3::effect::controller::initialize(FUnknown* context)
 {
 	if (tresult result = EditControllerEx1::initialize(context); result != kResultOk) {
 		D_LOG("(0x%08" PRIxPTR ") Initialization failed with error code 0x%" PRIx32 ".", this,
@@ -45,7 +45,7 @@ tresult PLUGIN_API vst3::denoiser::controller::initialize(FUnknown* context)
 	return kResultOk;
 }
 
-tresult PLUGIN_API vst3::denoiser::controller::setComponentState(IBStream* state)
+tresult PLUGIN_API vst3::effect::controller::setComponentState(IBStream* state)
 {
 	if (state == nullptr) {
 		return kResultFalse;
@@ -56,12 +56,12 @@ tresult PLUGIN_API vst3::denoiser::controller::setComponentState(IBStream* state
 	return kResultOk;
 }
 
-tresult PLUGIN_API vst3::denoiser::controller::setChannelContextInfos(IAttributeList* list)
+tresult PLUGIN_API vst3::effect::controller::setChannelContextInfos(IAttributeList* list)
 {
 	return kResultOk;
 }
 
-FUnknown* vst3::denoiser::controller::create(void* data)
+FUnknown* vst3::effect::controller::create(void* data)
 {
 	return static_cast<IEditController*>(new controller());
 }

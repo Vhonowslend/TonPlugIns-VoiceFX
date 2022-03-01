@@ -21,11 +21,11 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "vst2_denoiser.hpp"
+#include "vst2_effect.hpp"
 #include <algorithm>
 #include "lib.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<VST2::Denoiser> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::log("<vst2::effect> " MESSAGE, __VA_ARGS__)
 
 //#define DEBUG_PROCESSING
 
@@ -48,7 +48,7 @@ void sized_memset(void* dst, size_t dst_off, int value, size_t cnt)
 	memset(reinterpret_cast<uint8_t*>(dst) + (dst_off * N), value, cnt * N);
 }
 
-voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
+voicefx::vst2::effect::effect(vst_host_callback cb)
 	: _vsteffect(), _vstcb(cb), _input_arrangement(), _output_arrangement(), _dirty(true), _samplerate(44100),
 	  _blocksize(_samplerate / 100), _scratch(_samplerate, 0)
 {
@@ -71,7 +71,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 	_vsteffect.control = [](vst_effect* pthis, VST_EFFECT_OPCODE opcode, int32_t p_int1, intptr_t p_int2, void* p_ptr,
 							float p_float) {
 		try {
-			return static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)
+			return static_cast<voicefx::vst2::effect*>(pthis->effect_internal)
 				->vst2_control(opcode, p_int1, p_int2, p_ptr, p_float);
 		} catch (std::exception const& ex) {
 			D_LOG("(0x%08" PRIxPTR ") Exception in control: %s", pthis, ex.what());
@@ -82,7 +82,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 	};
 	_vsteffect.set_parameter = [](vst_effect* pthis, uint32_t index, float value) {
 		try {
-			static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)->vst2_set_parameter(index, value);
+			static_cast<voicefx::vst2::effect*>(pthis->effect_internal)->vst2_set_parameter(index, value);
 		} catch (std::exception const& ex) {
 			D_LOG("(0x%08" PRIxPTR ") Exception in set_parameter: %s", pthis, ex.what());
 		} catch (...) {
@@ -91,7 +91,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 	};
 	_vsteffect.get_parameter = [](vst_effect* pthis, uint32_t index) {
 		try {
-			return static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)->vst2_get_parameter(index);
+			return static_cast<voicefx::vst2::effect*>(pthis->effect_internal)->vst2_get_parameter(index);
 		} catch (std::exception const& ex) {
 			D_LOG("(0x%08" PRIxPTR ") Exception in get_parameter: %s", pthis, ex.what());
 		} catch (...) {
@@ -101,7 +101,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 	};
 	_vsteffect.process = [](vst_effect* pthis, const float* const* inputs, float** outputs, int32_t samples) {
 		try {
-			static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)->vst2_process_float(inputs, outputs, samples);
+			static_cast<voicefx::vst2::effect*>(pthis->effect_internal)->vst2_process_float(inputs, outputs, samples);
 		} catch (std::exception const& ex) {
 			D_LOG("(0x%08" PRIxPTR ") Exception in process: %s", pthis, ex.what());
 		} catch (...) {
@@ -110,7 +110,7 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 	};
 	_vsteffect.process_float = [](vst_effect* pthis, const float* const* inputs, float** outputs, int32_t samples) {
 		try {
-			static_cast<voicefx::vst2::denoiser*>(pthis->effect_internal)->vst2_process_float(inputs, outputs, samples);
+			static_cast<voicefx::vst2::effect*>(pthis->effect_internal)->vst2_process_float(inputs, outputs, samples);
 		} catch (std::exception const& ex) {
 			D_LOG("(0x%08" PRIxPTR ") Exception in process_float: %s", pthis, ex.what());
 		} catch (...) {
@@ -138,23 +138,23 @@ voicefx::vst2::denoiser::denoiser(vst_host_callback cb)
 	D_LOG("(0x%08" PRIxPTR ") Initialized.", &this->_vsteffect);
 }
 
-voicefx::vst2::denoiser::~denoiser()
+voicefx::vst2::effect::~effect()
 {
 	_channels.clear();
 	_nvafx.reset();
 }
 
-void voicefx::vst2::denoiser::reset()
+void voicefx::vst2::effect::reset()
 {
 	if (!_dirty) {
 		return;
 	}
 
 	// Re-calculate delays
-	float ioscale = (static_cast<float>(_samplerate) / static_cast<float>(nvidia::afx::denoiser::get_sample_rate()));
+	float ioscale = (static_cast<float>(_samplerate) / static_cast<float>(nvidia::afx::effect::get_sample_rate()));
 	_channel_delay =
 		std::lround(((_blocksize % _channels[0].fx->get_block_size()) + _channels[0].fx->get_block_size()) * ioscale);
-	_vsteffect.delay = _channel_delay + std::lround(nvidia::afx::denoiser::get_minimum_delay() * ioscale);
+	_vsteffect.delay = _channel_delay + std::lround(nvidia::afx::effect::get_minimum_delay() * ioscale);
 
 	D_LOG("(0x%08" PRIxPTR ") Allocating scratch memory...", &this->_vsteffect);
 	_scratch.resize(_samplerate);
@@ -164,12 +164,12 @@ void voicefx::vst2::denoiser::reset()
 		channel.fx->reset();
 
 		// (Re-)Create the re-samplers.
-		channel.input_resampler.reset(_samplerate, nvidia::afx::denoiser::get_sample_rate());
-		channel.output_resampler.reset(nvidia::afx::denoiser::get_sample_rate(), _samplerate);
+		channel.input_resampler.reset(_samplerate, nvidia::afx::effect::get_sample_rate());
+		channel.output_resampler.reset(nvidia::afx::effect::get_sample_rate(), _samplerate);
 
 		// (Re-)Create the buffers and reset offsets.
-		channel.input_buffer.resize(nvidia::afx::denoiser::get_sample_rate());
-		channel.fx_buffer.resize(nvidia::afx::denoiser::get_sample_rate());
+		channel.input_buffer.resize(nvidia::afx::effect::get_sample_rate());
+		channel.fx_buffer.resize(nvidia::afx::effect::get_sample_rate());
 		channel.output_buffer.resize(_samplerate);
 
 		// Clear Buffers
@@ -182,7 +182,7 @@ void voicefx::vst2::denoiser::reset()
 	}
 }
 
-void voicefx::vst2::denoiser::set_channel_count(size_t num)
+void voicefx::vst2::effect::set_channel_count(size_t num)
 {
 	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %" PRIuPTR "...", &this->_vsteffect, num);
 
@@ -197,7 +197,7 @@ void voicefx::vst2::denoiser::set_channel_count(size_t num)
 		// Create any new effect instances.
 		for (auto& channel : _channels) {
 			if (!channel.fx) {
-				channel.fx = std::make_shared<::nvidia::afx::denoiser>();
+				channel.fx = std::make_shared<::nvidia::afx::effect>();
 			}
 		}
 
@@ -205,7 +205,7 @@ void voicefx::vst2::denoiser::set_channel_count(size_t num)
 	}
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_control(VST_EFFECT_OPCODE opcode, int32_t p1, intptr_t p2, void* p3, float p4)
+intptr_t voicefx::vst2::effect::vst2_control(VST_EFFECT_OPCODE opcode, int32_t p1, intptr_t p2, void* p3, float p4)
 {
 	D_LOG("(0x%08" PRIxPTR ") Control Call: %08lX %08lX %016llX %016llX %f", &this->_vsteffect, opcode, p1, p2, p3, p4);
 
@@ -274,50 +274,50 @@ intptr_t voicefx::vst2::denoiser::vst2_control(VST_EFFECT_OPCODE opcode, int32_t
 	return intptr_t();
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_get_vendor_name(char* buffer, size_t buffer_len) const
+intptr_t voicefx::vst2::effect::vst2_get_vendor_name(char* buffer, size_t buffer_len) const
 {
 	memset(buffer, 0, buffer_len);
 	memcpy(buffer, voicefx::vendor.data(), std::min<size_t>(voicefx::vendor.size(), buffer_len));
 	return 0;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_get_vendor_version() const
+intptr_t voicefx::vst2::effect::vst2_get_vendor_version() const
 {
 	return 0;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_get_product_name(char* buffer, size_t buffer_len) const
-{
-	memset(buffer, 0, buffer_len);
-	memcpy(buffer, voicefx::name.data(), std::min<size_t>(voicefx::name.size(), buffer_len));
-	return 0;
-}
-
-intptr_t voicefx::vst2::denoiser::vst2_get_effect_name(char* buffer, size_t buffer_len) const
+intptr_t voicefx::vst2::effect::vst2_get_product_name(char* buffer, size_t buffer_len) const
 {
 	memset(buffer, 0, buffer_len);
 	memcpy(buffer, voicefx::name.data(), std::min<size_t>(voicefx::name.size(), buffer_len));
 	return 0;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_get_effect_category() const
+intptr_t voicefx::vst2::effect::vst2_get_effect_name(char* buffer, size_t buffer_len) const
+{
+	memset(buffer, 0, buffer_len);
+	memcpy(buffer, voicefx::name.data(), std::min<size_t>(voicefx::name.size(), buffer_len));
+	return 0;
+}
+
+intptr_t voicefx::vst2::effect::vst2_get_effect_category() const
 {
 	return VST_CATEGORY_RESTORATION;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_create()
+intptr_t voicefx::vst2::effect::vst2_create()
 {
 	reset();
 	return 0;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_destroy()
+intptr_t voicefx::vst2::effect::vst2_destroy()
 {
 	delete this;
 	return 0;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_set_sample_rate(float_t sample_rate)
+intptr_t voicefx::vst2::effect::vst2_set_sample_rate(float_t sample_rate)
 {
 	uint32_t samplerate = static_cast<uint32_t>(sample_rate);
 
@@ -330,7 +330,7 @@ intptr_t voicefx::vst2::denoiser::vst2_set_sample_rate(float_t sample_rate)
 	return 0;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_set_block_size(intptr_t block_size)
+intptr_t voicefx::vst2::effect::vst2_set_block_size(intptr_t block_size)
 {
 	uint32_t blocksize = static_cast<uint32_t>(block_size);
 
@@ -343,16 +343,16 @@ intptr_t voicefx::vst2::denoiser::vst2_set_block_size(intptr_t block_size)
 	return 0;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_get_speaker_arrangement(vst_speaker_arrangement const** input,
-															   vst_speaker_arrangement const** output) const
+intptr_t voicefx::vst2::effect::vst2_get_speaker_arrangement(vst_speaker_arrangement const** input,
+															 vst_speaker_arrangement const** output) const
 {
 	*input  = &_input_arrangement;
 	*output = &_output_arrangement;
 	return 0;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_set_speaker_arrangement(vst_speaker_arrangement* input,
-															   vst_speaker_arrangement* output)
+intptr_t voicefx::vst2::effect::vst2_set_speaker_arrangement(vst_speaker_arrangement* input,
+															 vst_speaker_arrangement* output)
 {
 	// We ignore the requested output here, this VST does not perform any down/up mixing.
 
@@ -390,21 +390,21 @@ intptr_t voicefx::vst2::denoiser::vst2_set_speaker_arrangement(vst_speaker_arran
 	return 0;
 }
 
-intptr_t voicefx::vst2::denoiser::vst2_suspend_resume(bool should_resume)
+intptr_t voicefx::vst2::effect::vst2_suspend_resume(bool should_resume)
 {
 	if (should_resume)
 		reset();
 	return 0;
 }
 
-void voicefx::vst2::denoiser::vst2_set_parameter(uint32_t index, float value) {}
+void voicefx::vst2::effect::vst2_set_parameter(uint32_t index, float value) {}
 
-float voicefx::vst2::denoiser::vst2_get_parameter(uint32_t index) const
+float voicefx::vst2::effect::vst2_get_parameter(uint32_t index) const
 {
 	return 0.0F;
 }
 
-void voicefx::vst2::denoiser::vst2_process_float(const float* const* inputs, float** outputs, int32_t samples)
+void voicefx::vst2::effect::vst2_process_float(const float* const* inputs, float** outputs, int32_t samples)
 {
 	// Processing Structure
 	// - The first call to this function fills the "buffer" for delay, but our outputs stay empty.
