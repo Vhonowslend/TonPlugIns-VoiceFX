@@ -53,17 +53,23 @@ nvidia::afx::effect::~effect()
 	_cuda.reset();
 }
 
-size_t nvidia::afx::effect::samplerate()
+uint32_t nvidia::afx::effect::samplerate()
 {
 	// FIXME: This is hardcoded, but may change in the future.
 	return 48000; // 48kHz.
 }
 
-size_t nvidia::afx::effect::blocksize()
+uint32_t nvidia::afx::effect::blocksize()
 {
 	// FIXME: At the moment, the block size is 10ms.
 	return samplerate() / (1000 / 10);
 	//return 480; // 10ms at 48kHz.
+}
+
+uint32_t nvidia::afx::effect::delay()
+{
+	// Latency is no longer documented, but originally was documented as 72/74ms, measured as 82/84ms.
+	return blocksize() * 7;
 }
 
 bool nvidia::afx::effect::denoise_enabled()
@@ -98,12 +104,12 @@ void nvidia::afx::effect::enable_dereverb(bool v)
 	}
 }
 
-size_t nvidia::afx::effect::channels()
+uint8_t nvidia::afx::effect::channels()
 {
 	return _fx_channels;
 }
 
-void nvidia::afx::effect::channels(size_t v)
+void nvidia::afx::effect::channels(uint8_t v)
 {
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
@@ -255,3 +261,4 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 		}
 	}
 }
+

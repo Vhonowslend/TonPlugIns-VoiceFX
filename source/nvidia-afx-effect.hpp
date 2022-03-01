@@ -44,10 +44,10 @@ namespace nvidia::afx {
 		std::string                        _model_path_str;
 		std::vector<std::shared_ptr<void>> _fx;
 
-		std::atomic_bool   _fx_dirty;
-		std::atomic_bool   _fx_denoise;
-		std::atomic_bool   _fx_dereverb;
-		std::atomic_size_t _fx_channels;
+		std::atomic_bool     _fx_dirty;
+		std::atomic_bool     _fx_denoise;
+		std::atomic_bool     _fx_dereverb;
+		std::atomic<uint8_t> _fx_channels;
 
 		std::atomic_bool   _cfg_dirty;
 		std::atomic<float> _cfg_intensity;
@@ -57,9 +57,11 @@ namespace nvidia::afx {
 		~effect();
 
 		public:
-		static size_t samplerate();
+		static uint32_t samplerate();
 
-		static size_t blocksize();
+		static uint32_t blocksize();
+
+		static uint32_t delay();
 
 		public:
 		bool denoise_enabled();
@@ -68,8 +70,8 @@ namespace nvidia::afx {
 		bool dereverb_enabled();
 		void enable_dereverb(bool v);
 
-		size_t channels();
-		void   channels(size_t v);
+		uint8_t channels();
+		void    channels(uint8_t v);
 
 		float intensity();
 		void  intensity(float v);
