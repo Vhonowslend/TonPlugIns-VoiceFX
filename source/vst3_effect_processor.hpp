@@ -44,26 +44,30 @@ namespace vst3::effect {
 									FOURCC('V', 'o', 'i', 'c'), FOURCC('e', 'F', 'X', 'N'), FOURCC('o', 'i', 's', 'e'));
 
 	class processor : AudioEffect {
-		std::shared_ptr<::nvidia::afx::afx> _nvafx;
+		bool _dirty;
 
-		bool     _dirty;
-		uint32_t _channel_delay;
-		uint32_t _total_delay;
+		struct channel_buffers {
+			// Raw -> Buffer
+			// Buffer -> (Resampled) FX
+			// (Resampled) FX -> Buffer
+			// Buffer -> Raw
 
-		struct channel_data {
-			std::shared_ptr<::nvidia::afx::effect> fx;
-
-			voicefx::resampler input_resampler;
-			voicefx::resampler output_resampler;
-
-			voicefx::audiobuffer input_buffer;
-			voicefx::audiobuffer fx_buffer;
-			voicefx::audiobuffer output_buffer;
-
-			int64_t delay;
+			voicefx::audiobuffer in_buffer;
+			voicefx::audiobuffer in_fx;
+			voicefx::audiobuffer out_fx;
+			voicefx::audiobuffer out_buffer;
 		};
-		std::vector<channel_data> _channels;
-		std::vector<float>        _scratch;
+
+		std::shared_ptr<::voicefx::resampler>  _in_resampler;
+		std::shared_ptr<::nvidia::afx::effect> _fx;
+		std::shared_ptr<::voicefx::resampler>  _out_resampler;
+		std::vector<channel_buffers>           _channels;
+
+		uint32_t _delay;
+		int64_t  _local_delay;
+
+		public:
+		static FUnknown* create(void* data);
 
 		public:
 		processor();
@@ -88,8 +92,5 @@ namespace vst3::effect {
 		private:
 		void reset();
 		void set_channel_count(size_t num);
-
-		public:
-		static FUnknown* create(void* data);
 	};
 } // namespace vst3::effect

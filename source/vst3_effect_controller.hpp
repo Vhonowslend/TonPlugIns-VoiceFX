@@ -36,6 +36,9 @@ namespace vst3::effect {
 
 	enum class parameters : ParamID {
 		BYPASS,
+		DENOISER,
+		DEREVERB,
+		INTENSITY,
 	};
 
 	class controller : public EditControllerEx1, public ChannelContext::IInfoListener {
