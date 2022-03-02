@@ -34,7 +34,7 @@ voicefx::resampler::~resampler()
 
 voicefx::resampler::resampler() : _instance(), _channels(0), _ratio(0.0), _dirty(true) {}
 
-voicefx::resampler::resampler(resampler&& r) noexcept : _instance(nullptr), _ratio(1.0), _channels(1)
+voicefx::resampler::resampler(resampler&& r) noexcept : _instance(), _ratio(1.0), _channels(1)
 {
 	std::swap(_instance, r._instance);
 	std::swap(_ratio, r._ratio);
