@@ -141,7 +141,7 @@ void nvidia::afx::effect::load()
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
-	if (!_fx_dirty) {
+	if (_fx_dirty) {
 		// Decide on the effect to load.
 		NvAFX_EffectSelector effect = NVAFX_EFFECT_DEREVERB_DENOISER;
 		if (_fx_denoise && !_fx_dereverb) {
@@ -261,4 +261,3 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 		}
 	}
 }
-
