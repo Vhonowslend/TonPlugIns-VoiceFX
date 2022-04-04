@@ -48,7 +48,7 @@ voicefx::util::library::library(std::filesystem::path file) : _library(nullptr)
 	} else {
 		flags |= LOAD_LIBRARY_SEARCH_DEFAULT_DIRS;
 	}
-	_library = reinterpret_cast<void*>(LoadLibraryExW(file.wstring().data(), nullptr, flags));
+	_library = reinterpret_cast<void*>(LoadLibraryExW(file.wstring().data(), NULL, flags));
 	if (!_library) {
 		DWORD error = GetLastError();
 		if (error != ERROR_PROC_NOT_FOUND) {
