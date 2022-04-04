@@ -39,18 +39,18 @@ namespace nvidia::afx {
 
 		std::shared_ptr<::nvidia::afx::afx> _nvafx;
 
-		std::mutex                         _lock;
-		std::filesystem::path              _model_path;
-		std::string                        _model_path_str;
+		std::mutex            _lock;
+		std::filesystem::path _model_path;
+		std::string           _model_path_str;
+
 		std::vector<std::shared_ptr<void>> _fx;
+		std::atomic_bool                   _fx_dirty;
 
-		std::atomic_bool     _fx_dirty;
-		std::atomic_bool     _fx_denoise;
-		std::atomic_bool     _fx_dereverb;
-		std::atomic<uint8_t> _fx_channels;
-
-		std::atomic_bool   _cfg_dirty;
-		std::atomic<float> _cfg_intensity;
+		std::atomic_bool     _cfg_dirty;
+		std::atomic_bool     _cfg_enable_denoise;
+		std::atomic_bool     _cfg_enable_dereverb;
+		std::atomic<uint8_t> _cfg_channels;
+		std::atomic<float>   _cfg_intensity;
 
 		public:
 		effect();

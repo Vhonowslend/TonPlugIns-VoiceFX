@@ -30,27 +30,42 @@
 #define D_LOG(MESSAGE, ...) ::voicefx::log("<nvidia::afx::effect> " MESSAGE, __VA_ARGS__)
 
 nvidia::afx::effect::effect()
+	: _cuda(::nvidia::cuda::cuda::get()), _context(), _stream(), _nvafx(), _lock(), _model_path(), _model_path_str(),
+	  _fx_dirty(), _cfg_enable_denoise(), _cfg_enable_dereverb(), _cfg_channels(), _cfg_dirty(), _cfg_intensity()
 {
+	_nvafx = ::nvidia::afx::afx::instance();
+
 	// Set up initial state.
-	_fx_dirty      = true;
-	_fx_denoise    = true;
-	_fx_dereverb   = true;
-	_fx_channels   = true;
-	_cfg_dirty     = true;
-	_cfg_intensity = 1.0;
+	_fx_dirty            = true;
+	_cfg_enable_denoise  = true;
+	_cfg_enable_dereverb = true;
+	_cfg_channels        = true;
+	_cfg_dirty           = true;
+	_cfg_intensity       = 1.0;
 }
 
 nvidia::afx::effect::~effect()
 {
-	for (auto& fx : _fx) {
-		fx.reset();
+	if (_fx.size() > 0) {
+		for (auto& fx : _fx) {
+			fx.reset();
+		}
+		_fx.clear();
 	}
-	_fx.clear();
-	_stream->synchronize();
-	_stream.reset();
-	_context->synchronize();
-	_context.reset();
-	_cuda.reset();
+	if (_nvafx) {
+		_nvafx.reset();
+	}
+	if (_stream) {
+		_stream->synchronize();
+		_stream.reset();
+	}
+	if (_context) {
+		_context->synchronize();
+		_context.reset();
+	}
+	if (_cuda) {
+		_cuda.reset();
+	}
 }
 
 uint32_t nvidia::afx::effect::samplerate()
@@ -74,7 +89,7 @@ uint32_t nvidia::afx::effect::delay()
 
 bool nvidia::afx::effect::denoise_enabled()
 {
-	return _fx_denoise;
+	return _cfg_enable_denoise;
 }
 
 void nvidia::afx::effect::enable_denoise(bool v)
@@ -82,15 +97,15 @@ void nvidia::afx::effect::enable_denoise(bool v)
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
-	if (v != _fx_denoise) {
-		_fx_denoise = v;
-		_fx_dirty   = true;
+	if (v != _cfg_enable_denoise) {
+		_cfg_enable_denoise = v;
+		_fx_dirty           = true;
 	}
 }
 
 bool nvidia::afx::effect::dereverb_enabled()
 {
-	return _fx_dereverb;
+	return _cfg_enable_dereverb;
 }
 
 void nvidia::afx::effect::enable_dereverb(bool v)
@@ -98,15 +113,15 @@ void nvidia::afx::effect::enable_dereverb(bool v)
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
-	if (v != _fx_dereverb) {
-		_fx_dereverb = v;
-		_fx_dirty    = true;
+	if (v != _cfg_enable_dereverb) {
+		_cfg_enable_dereverb = v;
+		_fx_dirty            = true;
 	}
 }
 
 uint8_t nvidia::afx::effect::channels()
 {
-	return _fx_channels;
+	return _cfg_channels;
 }
 
 void nvidia::afx::effect::channels(uint8_t v)
@@ -114,9 +129,9 @@ void nvidia::afx::effect::channels(uint8_t v)
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
-	if (v != _fx_channels) {
-		_fx_channels = v;
-		_fx_dirty    = true;
+	if (v != _cfg_channels) {
+		_cfg_channels = v;
+		_fx_dirty     = true;
 	}
 }
 
@@ -138,69 +153,114 @@ void nvidia::afx::effect::intensity(float v)
 
 void nvidia::afx::effect::load()
 {
+	char message_buffer[1024] = {0};
+
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
 	if (_fx_dirty) {
+		auto cstk = _nvafx->cuda_context()->enter();
+
+#ifdef WIN32
+		// Fix the search paths if some other plugin messed with them.
+		_nvafx->windows_fix_dll_search_paths();
+#endif
+
 		// Decide on the effect to load.
-		NvAFX_EffectSelector effect = NVAFX_EFFECT_DEREVERB_DENOISER;
-		if (_fx_denoise && !_fx_dereverb) {
-			effect = NVAFX_EFFECT_DENOISER;
-		} else if (!_fx_denoise && _fx_dereverb) {
-			effect = NVAFX_EFFECT_DEREVERB;
+		NvAFX_EffectSelector effect       = NVAFX_EFFECT_DENOISER;
+		std::string          effect_model = "denoiser_48k.trtpkg";
+		if (_cfg_enable_denoise && _cfg_enable_dereverb) {
+			effect       = NVAFX_EFFECT_DEREVERB_DENOISER;
+			effect_model = "dereverb_denoiser_48k.trtpkg";
+		} else if (!_cfg_enable_denoise && _cfg_enable_dereverb) {
+			effect       = NVAFX_EFFECT_DEREVERB;
+			effect_model = "dereverb_48k.trtpkg";
 		}
 
 		// Unload all previous effects.
-		_fx.resize(_fx_channels);
+		_fx.resize(_cfg_channels);
 		for (auto fx : _fx) {
 			fx.reset();
 		}
 
 		{ // Figure out where exactly models are located.
-			_model_path     = _nvafx->redistributable_path() / "models";
-			_model_path     = std::filesystem::absolute(_model_path);
+			_model_path = _nvafx->redistributable_path();
+			_model_path = std::filesystem::absolute(_model_path);
+			_model_path /= "models";
+			_model_path /= effect_model;
+			_model_path.make_preferred();
 			_model_path     = voicefx::util::platform::native_to_utf8(_model_path);
 			_model_path_str = _model_path.u8string();
 		}
 
 		// Create and initialize effects.
-		for (auto& fx : _fx) {
+		for (size_t idx = 0; idx < _fx.size(); idx++) {
+			auto& fx = _fx.at(idx);
+
 			// Create the chosen effect.
 			NvAFX_Handle pfx = nullptr;
 			if (auto error = NvAFX_CreateEffect(effect, &pfx); error != NVAFX_STATUS_SUCCESS) {
-				char buffer[1024];
-				snprintf(buffer, sizeof(buffer), "Failed to create effect, error code %" PRIx32 ".\0", error);
-				throw std::runtime_error(buffer);
+				snprintf(message_buffer, sizeof(message_buffer),
+						 "{%02" PRIuMAX "} Failed to create effect. (Code %08" PRIX32 ")\0", idx, error);
+				throw std::runtime_error(message_buffer);
 			}
 			fx = std::shared_ptr<void>(pfx, [](NvAFX_Handle v) { NvAFX_DestroyEffect(v); });
 
-			// Assign correct model path
-			if (auto error = NvAFX_SetString(fx.get(), NVAFX_PARAM_MODEL_PATH, _model_path_str.c_str());
-				error != NVAFX_STATUS_SUCCESS) {
-				char buffer[1024];
-				snprintf(buffer, sizeof(buffer), "Failed to configure effect paths, error code %" PRIx32 ".\0", error);
-				throw std::runtime_error(buffer);
-			}
-
-			// Assign correct sample rate.
-			if (auto error = NvAFX_SetU32(fx.get(), NVAFX_PARAM_SAMPLE_RATE, static_cast<unsigned int>(samplerate()));
-				error != NVAFX_STATUS_SUCCESS) {
-				char buffer[1024];
-				snprintf(buffer, sizeof(buffer), "Failed to configure effect samplerate, error code %" PRIx32 ".\0",
-						 error);
-				throw std::runtime_error(buffer);
+			// Sample Rate
+			try {
+				if (auto error =
+						NvAFX_SetU32(fx.get(), NVAFX_PARAM_INPUT_SAMPLE_RATE, static_cast<unsigned int>(samplerate()));
+					error != NVAFX_STATUS_SUCCESS) {
+					snprintf(message_buffer, sizeof(message_buffer),
+							 "{%02" PRIuMAX "} Failed to set input sample rate to %" PRIu32 ". (Code %08" PRIX32 ")\0",
+							 idx, samplerate(), error);
+					throw std::runtime_error(message_buffer);
+				}
+				D_LOG("{%02" PRIuMAX "} Input Sample Rate is now %" PRIu32 ".", idx, samplerate());
+				if (auto error =
+						NvAFX_SetU32(fx.get(), NVAFX_PARAM_OUTPUT_SAMPLE_RATE, static_cast<unsigned int>(samplerate()));
+					error != NVAFX_STATUS_SUCCESS) {
+					snprintf(message_buffer, sizeof(message_buffer),
+							 "{%02" PRIuMAX "} Failed to set output sample rate to %" PRIu32 ". (Code %08" PRIX32 ")\0",
+							 idx, samplerate(), error);
+					throw std::runtime_error(message_buffer);
+				}
+				D_LOG("{%02" PRIuMAX "} Output Sample Rate is now %" PRIu32 ".", idx, samplerate());
+			} catch (std::exception& ex) {
+				D_LOG("{%02" PRIuMAX "} Falling back to simple sample rate due error: %s", idx, ex.what());
+				if (auto error =
+						NvAFX_SetU32(fx.get(), NVAFX_PARAM_SAMPLE_RATE, static_cast<unsigned int>(samplerate()));
+					error != NVAFX_STATUS_SUCCESS) {
+					snprintf(message_buffer, sizeof(message_buffer),
+							 "{%02" PRIuMAX "} Failed to set sample rate to %" PRIu32 ". (Code %08" PRIX32 ").\0", idx,
+							 samplerate(), error);
+					throw std::runtime_error(message_buffer);
+				}
+				D_LOG("{%02" PRIuMAX "} Sample Rate is now %" PRIu32 ".", idx, samplerate());
 			}
 
 			// Automatically let the effect pick the correct GPU.
-			NvAFX_SetU32(fx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 1);
+			NvAFX_SetU32(fx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 0);
+			NvAFX_SetU32(fx.get(), NVAFX_PARAM_USER_CUDA_CONTEXT, 1);
+
+			// Model Paths
+			if (auto error = NvAFX_SetString(fx.get(), NVAFX_PARAM_MODEL_PATH, _model_path_str.c_str());
+				error != NVAFX_STATUS_SUCCESS) {
+				snprintf(message_buffer, sizeof(message_buffer),
+						 "{%02" PRIuMAX "} Failed to configure effect paths. (Code %08" PRIX32 ")\0", idx, error);
+				throw std::runtime_error(message_buffer);
+			}
+			D_LOG("{%02" PRIuMAX "} Effect Path is now: '%s'.", idx, _model_path_str.c_str());
 		}
 
 		// Load effects.
-		for (auto& fx : _fx) {
+		for (size_t idx = 0; idx < _fx.size(); idx++) {
+			auto& fx = _fx.at(idx);
+
 			if (auto error = NvAFX_Load(fx.get()); error != NVAFX_STATUS_SUCCESS) {
-				char buffer[1024];
-				snprintf(buffer, sizeof(buffer), "Failed to initialize effect, error code %" PRIx32 ".\0", error);
-				throw std::runtime_error(buffer);
+				snprintf(message_buffer, sizeof(message_buffer),
+						 "{%02" PRIuMAX "} Failed to initialize effect.(Code %08" PRIX32 ").\0", idx, error);
+				throw std::runtime_error(message_buffer);
 			}
 		}
 
@@ -208,12 +268,14 @@ void nvidia::afx::effect::load()
 	}
 
 	if (_cfg_dirty) {
+		auto cstk = _nvafx->cuda_context()->enter();
+
 		for (auto& fx : _fx) {
 			if (auto error = NvAFX_SetFloat(fx.get(), NVAFX_PARAM_INTENSITY_RATIO, _cfg_intensity);
 				error != NVAFX_STATUS_SUCCESS) {
-				char buffer[1024];
-				snprintf(buffer, sizeof(buffer), "Failed to set intensity, error code %" PRIx32 ".\0", error);
-				throw std::runtime_error(buffer);
+				snprintf(message_buffer, sizeof(message_buffer),
+						 "Failed to configure intensity. (Code %08" PRIX32 ").\0", error);
+				throw std::runtime_error(message_buffer);
 			}
 		}
 
@@ -228,7 +290,7 @@ void nvidia::afx::effect::clear()
 
 	// Soft-clear the effect by flooding the internal buffer.
 	std::vector<float>  data(blocksize() * 10, 0.f);
-	std::vector<float*> channel_data(_fx_channels, data.data());
+	std::vector<float*> channel_data(_cfg_channels, data.data());
 	process(const_cast<const float**>(channel_data.data()), channel_data.data(), data.size());
 }
 
@@ -247,8 +309,10 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
+	auto cstk = _nvafx->cuda_context()->enter();
+
 	// Process all data passed in.
-	for (size_t channel = 0; channel < _fx_channels; channel++) {
+	for (size_t channel = 0; channel < _cfg_channels; channel++) {
 		auto& fx = _fx[channel];
 		for (size_t offset = 0; offset < samples; offset += blocksize()) {
 			if (auto error =
