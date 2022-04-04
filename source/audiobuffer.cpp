@@ -87,7 +87,7 @@ void voicefx::audiobuffer::pop(size_t length)
 	}
 
 	// If everything is fine, move the entire buffer back to the start.
-	memmove(_buffer.data(), &_buffer.at(length), _buffer.size() - length);
+	memmove(_buffer.data(), &_buffer.at(length), (_buffer.size() - length) * sizeof(float));
 
 	// Update our internal state.
 	_avail += length;
