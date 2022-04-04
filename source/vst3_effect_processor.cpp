@@ -243,9 +243,11 @@ try {
 			if (resample) {
 				channel.in_buffer.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
 				in_buffers[idx] = channel.in_buffer.peek(0);
+				D_LOG("[Cx%" PRIuMAX "] Pushed %" PRId32 " samples to input resample buffer.", idx, data.numSamples);
 			} else {
 				channel.in_fx.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
 				in_buffers[idx] = channel.in_fx.peek(0);
+				D_LOG("[Cx%" PRIuMAX "] Pushed %" PRId32 " samples to effect input buffer.", idx, data.numSamples);
 			}
 		}
 
@@ -275,6 +277,9 @@ try {
 
 				// Update input buffer for next effect.
 				in_buffers[idx] = channel.in_fx.peek(0);
+
+				D_LOG("[Cx%" PRIuMAX "] Resampled % " PRIuMAX " samples to %" PRIuMAX " samples.", idx, in_samples,
+					  out_samples);
 			}
 		}
 
@@ -295,6 +300,8 @@ try {
 			}
 
 			// Process data.
+			D_LOG("Processing %" PRIuMAX " samples (%" PRIuMAX " blocks).", chunks,
+				  chunks / ::nvidia::afx::effect::blocksize());
 			_fx->process(in_buffers.data(), out_buffers.data(), chunks);
 
 			// Update channel information and pointers.
@@ -415,9 +422,11 @@ void vst3::effect::processor::reset()
 
 	// Update resamplers
 	_in_resampler->ratio(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
-	_out_resampler->ratio(::nvidia::afx::effect::samplerate(), processSetup.sampleRate);
 	_in_resampler->clear();
+	_in_resampler->load();
+	_out_resampler->ratio(::nvidia::afx::effect::samplerate(), processSetup.sampleRate);
 	_out_resampler->clear();
+	_out_resampler->load();
 
 	// Calculate absolute effect delay
 	_delay = ::nvidia::afx::effect::delay();
@@ -438,6 +447,9 @@ void vst3::effect::processor::reset()
 		channel.out_fx.resize(::nvidia::afx::effect::samplerate());
 		channel.out_buffer.resize(processSetup.sampleRate);
 	}
+
+	// Load the effect itself.
+	_fx->load();
 
 	_dirty = false;
 }
