@@ -27,6 +27,9 @@
 #include <pluginterfaces/vst/ivstparameterchanges.h>
 #include "vst3_effect_controller.hpp"
 
+//#define DEBUG_BUFFERS
+//#define DEBUG_BUFFER_CONTENT
+
 #define D_LOG(MESSAGE, ...) voicefx::log("<vst3::effect::processor> " MESSAGE, __VA_ARGS__)
 
 FUnknown* vst3::effect::processor::create(void* data)
@@ -243,12 +246,21 @@ try {
 			if (resample) {
 				channel.in_buffer.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
 				in_buffers[idx] = channel.in_buffer.peek(0);
-				D_LOG("[Cx%" PRIuMAX "] Pushed %" PRId32 " samples to input resample buffer.", idx, data.numSamples);
+#ifdef DEBUG_BUFFERS
+				D_LOG("{%02" PRIuMAX "} Pushed %" PRId32 " samples to input resample buffer.", idx, data.numSamples);
+#endif
 			} else {
 				channel.in_fx.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
 				in_buffers[idx] = channel.in_fx.peek(0);
-				D_LOG("[Cx%" PRIuMAX "] Pushed %" PRId32 " samples to effect input buffer.", idx, data.numSamples);
+#ifdef DEBUG_BUFFERS
+				D_LOG("{%02" PRIuMAX "} Pushed %" PRId32 " samples to effect input buffer.", idx, data.numSamples);
+#endif
 			}
+#ifdef DEBUG_BUFFERS
+			D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
+				  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
+				  _local_delay);
+#endif
 		}
 
 		// Resample the input data to match the effect sample rate.
@@ -278,8 +290,13 @@ try {
 				// Update input buffer for next effect.
 				in_buffers[idx] = channel.in_fx.peek(0);
 
-				D_LOG("[Cx%" PRIuMAX "] Resampled % " PRIuMAX " samples to %" PRIuMAX " samples.", idx, in_samples,
+#ifdef DEBUG_BUFFERS
+				D_LOG("{%02" PRIuMAX "} Resampled % " PRIuMAX " samples to %" PRIuMAX " samples.", idx, in_samples,
 					  out_samples);
+				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
+					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
+					  _local_delay);
+#endif
 			}
 		}
 
@@ -300,8 +317,10 @@ try {
 			}
 
 			// Process data.
+#ifdef DEBUG_BUFFERS
 			D_LOG("Processing %" PRIuMAX " samples (%" PRIuMAX " blocks).", chunks,
 				  chunks / ::nvidia::afx::effect::blocksize());
+#endif
 			_fx->process(in_buffers.data(), out_buffers.data(), chunks);
 
 			// Update channel information and pointers.
@@ -319,6 +338,12 @@ try {
 					channel.out_buffer.reserve(chunks);
 					in_buffers[idx] = channel.out_buffer.peek(0);
 				}
+
+#ifdef DEBUG_BUFFERS
+				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
+					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
+					  _local_delay);
+#endif
 			}
 		}
 
@@ -348,10 +373,19 @@ try {
 
 				// Update input buffer for next effect.
 				in_buffers[idx] = channel.out_buffer.peek(0);
+
+#ifdef DEBUG_BUFFERS
+				D_LOG("{%02" PRIuMAX "} Resampled % " PRIuMAX " samples to %" PRIuMAX " samples.", idx, in_samples,
+					  out_samples);
+				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
+					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
+					  _local_delay);
+#endif
 			}
 		}
 
 		// Output data.
+		int64_t delay_adjustment = _channels[0].out_buffer.size();
 		if ((_local_delay < data.numSamples) || (_local_delay == 0)) {
 			// Return full or partial data.
 			size_t offset = _local_delay;
@@ -359,22 +393,58 @@ try {
 
 			for (size_t idx = 0; idx < _channels.size(); idx++) {
 				auto& channel = _channels[idx];
+				if (offset > 0) {
+					memset(data.outputs[0].channelBuffers32[idx], 0, offset * sizeof(float));
+				}
 				memcpy(data.outputs[0].channelBuffers32[idx] + offset, channel.out_buffer.front(),
 					   length * sizeof(float));
 				channel.out_buffer.pop(length);
+
+#ifdef DEBUG_BUFFER_CONTENT
+				for (size_t ndx = 0; ndx < data.numSamples; ndx += 8) {
+					D_LOG(
+						"{%02" PRIuMAX "} %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f", idx,
+						data.outputs[0].channelBuffers32[idx][ndx], data.outputs[0].channelBuffers32[idx][ndx + 1],
+						data.outputs[0].channelBuffers32[idx][ndx + 2], data.outputs[0].channelBuffers32[idx][ndx + 3],
+						data.outputs[0].channelBuffers32[idx][ndx + 4], data.outputs[0].channelBuffers32[idx][ndx + 5],
+						data.outputs[0].channelBuffers32[idx][ndx + 6], data.outputs[0].channelBuffers32[idx][ndx + 7]);
+				}
+#endif
+
+#ifdef DEBUG_BUFFERS
+				D_LOG("{%02" PRIuMAX "} Output % " PRIuMAX " samples at %" PRIuMAX " sample offset.", idx, length,
+					  offset);
+				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
+					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
+					  _local_delay);
+#endif
 			}
 		} else {
 			// In all other cases, return nothing.
 			for (size_t idx = 0; idx < _channels.size(); idx++) {
+				auto& channel = _channels[idx];
 				memset(data.outputs[0].channelBuffers32[idx], 0, data.numSamples * sizeof(float));
+#ifdef DEBUG_BUFFERS
+				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
+					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
+					  _local_delay);
+#endif
 			}
 		}
-		_local_delay = std::max<int64_t>(_local_delay - data.numSamples, 0);
+		_local_delay = std::max<int64_t>(_local_delay - delay_adjustment, 0);
 	}
 
 	return kResultOk;
 } catch (std::exception const& ex) {
 	D_LOG("(0x%08" PRIxPTR ") Exception in process: %s", this, ex.what());
+#ifdef DEBUG_BUFFERS
+	for (size_t idx = 0; idx < _channels.size(); idx++) {
+		auto& channel = _channels[idx];
+		D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
+			  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
+			  _local_delay);
+	}
+#endif
 	return kInternalError;
 } catch (...) {
 	D_LOG("(0x%08" PRIxPTR ") Unknown exception in process.", this);
@@ -436,8 +506,7 @@ void vst3::effect::processor::reset()
 		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 	}
-	_delay       = 0;
-	_local_delay = _delay;
+	_local_delay = ::nvidia::afx::effect::blocksize();
 	D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRIu32 " samples.", this, _delay);
 
 	// Update channel buffers.
