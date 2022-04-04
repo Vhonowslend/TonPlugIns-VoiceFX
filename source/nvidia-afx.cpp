@@ -112,18 +112,9 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable())
 
 	{ // Load the actual NVIDIA Audio Effects library.
 #ifdef WIN32
-		//SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 
-		{ // Add the Redistributable directory to the list of known library directories.
-			_dll_cookie = nullptr;
-			DLL_DIRECTORY_COOKIE res =
-				AddDllDirectory(voicefx::util::platform::utf8_to_native(_redist_path).wstring().data());
-			if (res == NULL) {
-				D_LOG("Unable to add redistributable path to library search paths, load may fail.");
-			} else {
-				_dll_cookie = reinterpret_cast<void*>(res);
-			}
-		}
+		windows_fix_dll_search_paths();
+
 		try {
 			_library = ::voicefx::util::library::load(std::filesystem::path("NVAudioEffects.dll"));
 		} catch (...) {
@@ -183,4 +174,29 @@ std::shared_ptr<::nvidia::afx::afx> nvidia::afx::afx::instance()
 std::shared_ptr<nvidia::cuda::context> nvidia::afx::afx::cuda_context()
 {
 	return _cuda_context;
+}
+
+void nvidia::afx::afx::windows_fix_dll_search_paths()
+{
+	// Set default look-up path to be System + Application + User + DLL-Load Dir
+	SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
+
+	// Generate the search path for later use.
+	if (_dll_search_path.length() == 0) {
+		auto path = voicefx::util::platform::utf8_to_native(_redist_path);
+		//path += "\\";
+		_dll_search_path = path.wstring();
+	}
+
+	// Specify search paths for LoadLibary.
+	SetDllDirectoryW(_dll_search_path.c_str());
+
+	// Generate a new DLL Directory Cookie for LoadLibraryEx.
+	if (_dll_cookie) {
+		RemoveDllDirectory(_dll_cookie);
+	}
+	_dll_cookie = AddDllDirectory(_dll_search_path.c_str());
+	if (_dll_cookie == NULL) {
+		D_LOG("Unable to add redistributable path to library search paths, load may fail.");
+	}
 }

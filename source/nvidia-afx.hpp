@@ -36,7 +36,8 @@ namespace nvidia::afx {
 		std::shared_ptr<::nvidia::cuda::context>  _cuda_context;
 
 #ifdef WIN32
-		void* _dll_cookie;
+		std::wstring _dll_search_path;
+		void*        _dll_cookie = nullptr;
 #endif
 
 		private:
@@ -48,6 +49,10 @@ namespace nvidia::afx {
 		std::filesystem::path redistributable_path();
 
 		std::shared_ptr<::nvidia::cuda::context> cuda_context();
+
+#ifdef WIN32
+		void windows_fix_dll_search_paths();
+#endif
 
 		public /* Singleton */:
 		static std::shared_ptr<::nvidia::afx::afx> instance();
