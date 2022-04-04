@@ -41,7 +41,7 @@
 #include "Knownfolders.h"
 #endif
 
-#define LOG_PREFIX "[VoiceFX] "
+#define LOG_PREFIX "[VoiceFX]"
 
 static bool _initialized = false;
 
