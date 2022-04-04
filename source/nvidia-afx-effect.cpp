@@ -77,14 +77,14 @@ uint32_t nvidia::afx::effect::samplerate()
 uint32_t nvidia::afx::effect::blocksize()
 {
 	// FIXME: At the moment, the block size is 10ms.
-	return samplerate() / (1000 / 10);
+	return samplerate() / 100;
 	//return 480; // 10ms at 48kHz.
 }
 
 uint32_t nvidia::afx::effect::delay()
 {
 	// Latency is no longer documented, but originally was documented as 72/74ms, measured as 82/84ms.
-	return blocksize() * 7;
+	return blocksize() * 8;
 }
 
 bool nvidia::afx::effect::denoise_enabled()
@@ -312,14 +312,19 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 	auto cstk = _nvafx->cuda_context()->enter();
 
 	// Process all data passed in.
-	for (size_t channel = 0; channel < _cfg_channels; channel++) {
-		auto& fx = _fx[channel];
+	const float* input_ptr;
+	float*       output_ptr;
+	for (size_t idx = 0; idx < _cfg_channels; idx++) {
+		auto& fx = _fx[idx];
 		for (size_t offset = 0; offset < samples; offset += blocksize()) {
-			if (auto error =
-					NvAFX_Run(fx.get(), &input[channel], &output[channel], static_cast<unsigned int>(blocksize()), 1);
+			input_ptr  = input[idx] + offset;
+			output_ptr = output[idx] + offset;
+
+			if (auto error = NvAFX_Run(fx.get(), &input_ptr, &output_ptr, static_cast<unsigned int>(blocksize()), 1);
 				error != NVAFX_STATUS_SUCCESS) {
 				char buffer[1024];
-				snprintf(buffer, sizeof(buffer), "Failed to set intensity, error code %" PRIx32 ".\0", error);
+				snprintf(buffer, sizeof(buffer), "{%02" PRIuMAX "} Failed to process audio. (Code %08" PRIX32 ").\0",
+						 idx, error);
 				throw std::runtime_error(buffer);
 			}
 		}
