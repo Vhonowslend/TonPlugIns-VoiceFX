@@ -30,8 +30,8 @@
 #define D_LOG(MESSAGE, ...) ::voicefx::log("<nvidia::afx::effect> " MESSAGE, __VA_ARGS__)
 
 nvidia::afx::effect::effect()
-	: _cuda(::nvidia::cuda::cuda::get()), _context(), _stream(), _nvafx(), _lock(), _model_path(), _model_path_str(),
-	  _fx_dirty(), _cfg_dirty(), _cfg_channels(), _cfg_enable_denoise()
+	: _nvafx(), _lock(), _model_path(), _model_path_str(), _fx_dirty(), _cfg_dirty(), _cfg_channels(),
+	  _cfg_enable_denoise()
 {
 	_nvafx = ::nvidia::afx::afx::instance();
 
@@ -55,18 +55,8 @@ nvidia::afx::effect::~effect()
 		_fx.clear();
 	}
 	if (_nvafx) {
+		_nvafx->cuda_context()->synchronize();
 		_nvafx.reset();
-	}
-	if (_stream) {
-		_stream->synchronize();
-		_stream.reset();
-	}
-	if (_context) {
-		_context->synchronize();
-		_context.reset();
-	}
-	if (_cuda) {
-		_cuda.reset();
 	}
 }
 

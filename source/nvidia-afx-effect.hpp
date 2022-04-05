@@ -33,10 +33,6 @@
 
 namespace nvidia::afx {
 	class effect {
-		std::shared_ptr<::nvidia::cuda::cuda>    _cuda;
-		std::shared_ptr<::nvidia::cuda::context> _context;
-		std::shared_ptr<::nvidia::cuda::stream>  _stream;
-
 		std::shared_ptr<::nvidia::afx::afx> _nvafx;
 
 		std::mutex            _lock;
