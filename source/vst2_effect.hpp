@@ -40,27 +40,30 @@ namespace voicefx {
 			vst_speaker_arrangement _input_arrangement;
 			vst_speaker_arrangement _output_arrangement;
 
-			std::shared_ptr<::nvidia::afx::afx> _nvafx;
+			uint32_t _sample_rate;
+			//uint32_t _block_size;
 
-			bool     _dirty;
-			uint32_t _channel_delay;
-			uint32_t _samplerate;
-			uint32_t _blocksize;
+			bool _dirty;
 
-			struct channel_data {
-				std::shared_ptr<::nvidia::afx::effect> fx;
+			struct channel_buffers {
+				// Raw -> Buffer
+				// Buffer -> (Resampled) FX
+				// (Resampled) FX -> Buffer
+				// Buffer -> Raw
 
-				voicefx::resampler input_resampler;
-				voicefx::resampler output_resampler;
-
-				voicefx::audiobuffer input_buffer;
-				voicefx::audiobuffer fx_buffer;
-				voicefx::audiobuffer output_buffer;
-
-				int64_t delay;
+				voicefx::audiobuffer in_buffer;
+				voicefx::audiobuffer in_fx;
+				voicefx::audiobuffer out_fx;
+				voicefx::audiobuffer out_buffer;
 			};
-			std::vector<channel_data> _channels;
-			std::vector<float>        _scratch;
+
+			std::shared_ptr<::voicefx::resampler>  _in_resampler;
+			std::shared_ptr<::nvidia::afx::effect> _fx;
+			std::shared_ptr<::voicefx::resampler>  _out_resampler;
+			std::vector<channel_buffers>           _channels;
+
+			int64_t _delay;
+			int64_t _local_delay;
 
 			public:
 			effect(vst_host_callback cb);

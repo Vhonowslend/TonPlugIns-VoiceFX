@@ -24,10 +24,11 @@
 #include <vst.h>
 
 #include "lib.hpp"
+#include "version.h"
 #include "vst2.hpp"
 #include "vst2_effect.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<vst2> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::log("<VST2> " MESSAGE, __VA_ARGS__)
 
 // Entry Points for different platforms.
 extern "C" __declspec(dllexport) VST_ENTRYPOINT
