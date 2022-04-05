@@ -247,10 +247,9 @@ set(CMAKE_PACKAGE_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "Path for generated ar
 set(CMAKE_PACKAGE_NAME "${PROJECT_NAME}" CACHE STRING "Name for the generated archives.")
 set(CMAKE_PACKAGE_SUFFIX_OVERRIDE "" CACHE STRING "Override for the suffix.")
 
+set(ENABLE_FULL_VERSION ON CACHE BOOL "Enable the full feature set? (Do not enable for Demo/Free builds!)")
 set(ENABLE_STEINBERG_VST3 ON CACHE BOOL "Enable Steinberg VST3.x support.")
 set(ENABLE_STEINBERG_VST2 OFF CACHE BOOL "Enable Steinberg VST2.x support.")
-
-set(ENABLE_FULL_VERSION ON CACHE BOOL "Enable the full feature set? (Do not enable for Demo/Free builds!)")
 
 ################################################################################
 # Project Setup
@@ -515,7 +514,7 @@ endif()
 
 if (ENABLE_STEINBERG_VST2)
 	# Configure VST2 installer
-	get_filename_component(ISS_FILES_DIR "${CMAKE_INSTALL_PREFIX}" ABSOLUTE)
+	get_filename_component(ISS_FILES_DIR "${CMAKE_INSTALL_PREFIX}/VST2" ABSOLUTE)
 	file(TO_NATIVE_PATH "${ISS_FILES_DIR}" ISS_FILES_DIR)
 	get_filename_component(ISS_PACKAGE_DIR "${CMAKE_PACKAGE_PREFIX}" ABSOLUTE)
 	file(TO_NATIVE_PATH "${ISS_PACKAGE_DIR}" ISS_PACKAGE_DIR)
@@ -533,30 +532,31 @@ if (ENABLE_STEINBERG_VST2)
 	)
 
 	# Install files
+	set(INSTALL_PREFIX "VST2/${PROJECT_NAME}")
 	# - Binary files
 	install(TARGETS ${PROJECT_NAME}
-		LIBRARY DESTINATION "${PROJECT_NAME}"
-		RUNTIME DESTINATION "${PROJECT_NAME}"
+		LIBRARY DESTINATION "${INSTALL_PREFIX}/"
+		RUNTIME DESTINATION "${INSTALL_PREFIX}/"
 	)
 	# - Debug files
 	if(MSVC)
-		install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${PROJECT_NAME}" OPTIONAL)
+		install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION "${INSTALL_PREFIX}/" OPTIONAL)
 	endif()
 	# - License
-	install(FILES "LICENSE.md" DESTINATION "${PROJECT_NAME}")
+	install(FILES "LICENSE.md" DESTINATION "${INSTALL_PREFIX}/")
 	# - Windows Explorer modifications.
 	if(WIN32)
-		install(FILES "cmake/templates/desktop.ini" DESTINATION "${PROJECT_NAME}")
-		install(FILES "cmake/templates/icon.ico" DESTINATION "${PROJECT_NAME}")
+		install(FILES "cmake/templates/desktop.ini" DESTINATION "${INSTALL_PREFIX}/")
+		install(FILES "cmake/templates/icon.ico" DESTINATION "${INSTALL_PREFIX}/")
 
 		# Ensure that desktop.ini is System+Hidden+Readonly
-		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/desktop.ini" ABSOLUTE)
+		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/desktop.ini" ABSOLUTE)
 		file(TO_NATIVE_PATH "${_TMP}" _TMP)
 		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
 		install(CODE "execute_process(COMMAND attrib +S +R +H \"${_TMP}\")")
 
 		# Ensure that icon.ico is Hidden+Readonly
-		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/icon.ico" ABSOLUTE)
+		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/icon.ico" ABSOLUTE)
 		file(TO_NATIVE_PATH "${_TMP}" _TMP)
 		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
 		install(CODE "execute_process(COMMAND attrib +R +H \"${_TMP}\")")
@@ -596,7 +596,7 @@ if(ENABLE_STEINBERG_VST3)
 #       <your custom content>
 
 	# Configure VST3 installer
-	get_filename_component(ISS_FILES_DIR "${CMAKE_INSTALL_PREFIX}" ABSOLUTE)
+	get_filename_component(ISS_FILES_DIR "${CMAKE_INSTALL_PREFIX}/VST3" ABSOLUTE)
 	file(TO_NATIVE_PATH "${ISS_FILES_DIR}" ISS_FILES_DIR)
 	get_filename_component(ISS_PACKAGE_DIR "${CMAKE_PACKAGE_PREFIX}" ABSOLUTE)
 	file(TO_NATIVE_PATH "${ISS_PACKAGE_DIR}" ISS_PACKAGE_DIR)
@@ -614,7 +614,7 @@ if(ENABLE_STEINBERG_VST3)
 	)
 
 	# Install files
-	set(INSTALL_PREFIX "${PROJECT_NAME}.vst3")
+	set(INSTALL_PREFIX "VST3/${PROJECT_NAME}.vst3")
 	if(WIN32)
 		if(${BITS} STREQUAL "32")
 			set(INSTALL_PATH "x86-win")
@@ -639,24 +639,24 @@ if(ENABLE_STEINBERG_VST3)
 	endif()
 	if(WIN32)
 		# Steinberg wants Windows DLLs to be .vst3?
-		get_filename_component(_TMPA "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}/${PROJECT_NAME}.dll" ABSOLUTE)
-		get_filename_component(_TMPB "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/Contents/${INSTALL_PATH}/${PROJECT_NAME}.vst3" ABSOLUTE)
+		get_filename_component(_TMPA "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/Contents/${INSTALL_PATH}/${PROJECT_NAME}.dll" ABSOLUTE)
+		get_filename_component(_TMPB "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/Contents/${INSTALL_PATH}/${PROJECT_NAME}.vst3" ABSOLUTE)
 		install(CODE "file(RENAME \"${_TMPA}\" \"${_TMPB}\")")
 	endif()
 
-	install(DIRECTORY "resources/" DESTINATION "${INSTALL_PREFIX}/Contents/Resources")
+	install(DIRECTORY "resources/" DESTINATION "${INSTALL_PREFIX}/Contents/Resources" OPTIONAL)
 	if(WIN32)
 		install(FILES "cmake/templates/desktop.ini" DESTINATION "${INSTALL_PREFIX}/")
 		install(FILES "cmake/templates/icon.ico" DESTINATION "${INSTALL_PREFIX}/")
 
 		# Ensure that desktop.ini is System+Hidden+Readonly
-		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/desktop.ini" ABSOLUTE)
+		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/desktop.ini" ABSOLUTE)
 		file(TO_NATIVE_PATH "${_TMP}" _TMP)
 		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
 		install(CODE "execute_process(COMMAND attrib +S +R +H \"${_TMP}\")")
 
 		# Ensure that icon.ico is Hidden+Readonly
-		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.vst3/icon.ico" ABSOLUTE)
+		get_filename_component(_TMP "${CMAKE_INSTALL_PREFIX}/${INSTALL_PREFIX}/icon.ico" ABSOLUTE)
 		file(TO_NATIVE_PATH "${_TMP}" _TMP)
 		STRING(REGEX REPLACE "\\\\" "\\\\\\\\" _TMP "${_TMP}")
 		install(CODE "execute_process(COMMAND attrib +R +H \"${_TMP}\")")
