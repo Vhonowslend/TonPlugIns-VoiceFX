@@ -84,8 +84,8 @@ void voicefx::initialize()
 	}
 
 	// Pre-calculate and create storage directories.
-	_local_data = util::platform::data_path() / voicefx::vendor / voicefx::name;
-	_user_data  = util::platform::config_path() / voicefx::vendor / voicefx::name;
+	_local_data = util::platform::data_path() / voicefx::product_vendor / voicefx::product_name;
+	_user_data  = util::platform::config_path() / voicefx::product_vendor / voicefx::product_name;
 	std::filesystem::create_directories(_local_data);
 	std::filesystem::create_directories(_user_data);
 

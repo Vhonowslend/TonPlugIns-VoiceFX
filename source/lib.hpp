@@ -29,8 +29,8 @@
 #define FOURCC(a, b, c, d) ((a << 24) | (b << 16) | (c << 8) | d)
 
 namespace voicefx {
-	static constexpr std::string_view name   = "VoiceFX";
-	static constexpr std::string_view vendor = "Xaymar";
+	static constexpr std::string_view product_name   = "VoiceFX";
+	static constexpr std::string_view product_vendor = "Xaymar";
 
 	void initialize();
 
