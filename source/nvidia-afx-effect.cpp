@@ -31,17 +31,19 @@
 
 nvidia::afx::effect::effect()
 	: _cuda(::nvidia::cuda::cuda::get()), _context(), _stream(), _nvafx(), _lock(), _model_path(), _model_path_str(),
-	  _fx_dirty(), _cfg_enable_denoise(), _cfg_enable_dereverb(), _cfg_channels(), _cfg_dirty(), _cfg_intensity()
+	  _fx_dirty(), _cfg_dirty(), _cfg_channels(), _cfg_enable_denoise()
 {
 	_nvafx = ::nvidia::afx::afx::instance();
 
 	// Set up initial state.
-	_fx_dirty            = true;
-	_cfg_enable_denoise  = true;
+	_fx_dirty           = true;
+	_cfg_enable_denoise = true;
+	_cfg_channels       = true;
+	_cfg_dirty          = true;
+#ifdef ENABLE_FULL_VERSION
 	_cfg_enable_dereverb = true;
-	_cfg_channels        = true;
-	_cfg_dirty           = true;
 	_cfg_intensity       = 1.0;
+#endif
 }
 
 nvidia::afx::effect::~effect()
@@ -74,14 +76,14 @@ uint32_t nvidia::afx::effect::samplerate()
 	return 48000; // 48kHz.
 }
 
-uint32_t nvidia::afx::effect::blocksize()
+size_t nvidia::afx::effect::blocksize()
 {
 	// FIXME: At the moment, the block size is 10ms.
 	return samplerate() / 100;
 	//return 480; // 10ms at 48kHz.
 }
 
-uint32_t nvidia::afx::effect::delay()
+size_t nvidia::afx::effect::delay()
 {
 	// Latency is no longer documented, but originally was documented as 72/74ms, measured as 82/84ms.
 	return blocksize() * 8;
@@ -103,6 +105,7 @@ void nvidia::afx::effect::enable_denoise(bool v)
 	}
 }
 
+#ifdef ENABLE_FULL_VERSION
 bool nvidia::afx::effect::dereverb_enabled()
 {
 	return _cfg_enable_dereverb;
@@ -118,13 +121,14 @@ void nvidia::afx::effect::enable_dereverb(bool v)
 		_fx_dirty            = true;
 	}
 }
+#endif
 
-uint8_t nvidia::afx::effect::channels()
+size_t nvidia::afx::effect::channels()
 {
 	return _cfg_channels;
 }
 
-void nvidia::afx::effect::channels(uint8_t v)
+void nvidia::afx::effect::channels(size_t v)
 {
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
@@ -135,6 +139,7 @@ void nvidia::afx::effect::channels(uint8_t v)
 	}
 }
 
+#ifdef ENABLE_FULL_VERSION
 float nvidia::afx::effect::intensity()
 {
 	return _cfg_intensity;
@@ -150,6 +155,7 @@ void nvidia::afx::effect::intensity(float v)
 		_cfg_dirty     = true;
 	}
 }
+#endif
 
 void nvidia::afx::effect::load()
 {
@@ -169,6 +175,7 @@ void nvidia::afx::effect::load()
 		// Decide on the effect to load.
 		NvAFX_EffectSelector effect       = NVAFX_EFFECT_DENOISER;
 		std::string          effect_model = "denoiser_48k.trtpkg";
+#ifdef ENABLE_FULL_VERSION
 		if (_cfg_enable_denoise && _cfg_enable_dereverb) {
 			effect       = NVAFX_EFFECT_DEREVERB_DENOISER;
 			effect_model = "dereverb_denoiser_48k.trtpkg";
@@ -176,6 +183,7 @@ void nvidia::afx::effect::load()
 			effect       = NVAFX_EFFECT_DEREVERB;
 			effect_model = "dereverb_48k.trtpkg";
 		}
+#endif
 
 		// Unload all previous effects.
 		_fx.resize(_cfg_channels);
@@ -271,12 +279,14 @@ void nvidia::afx::effect::load()
 		auto cstk = _nvafx->cuda_context()->enter();
 
 		for (auto& fx : _fx) {
+#ifdef ENABLE_FULL_VERSION
 			if (auto error = NvAFX_SetFloat(fx.get(), NVAFX_PARAM_INTENSITY_RATIO, _cfg_intensity);
 				error != NVAFX_STATUS_SUCCESS) {
 				snprintf(message_buffer, sizeof(message_buffer),
 						 "Failed to configure intensity. (Code %08" PRIX32 ").\0", error);
 				throw std::runtime_error(message_buffer);
 			}
+#endif
 		}
 
 		_cfg_dirty = false;
