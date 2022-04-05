@@ -250,6 +250,8 @@ set(CMAKE_PACKAGE_SUFFIX_OVERRIDE "" CACHE STRING "Override for the suffix.")
 set(ENABLE_STEINBERG_VST3 ON CACHE BOOL "Enable Steinberg VST3.x support.")
 set(ENABLE_STEINBERG_VST2 OFF CACHE BOOL "Enable Steinberg VST2.x support.")
 
+set(ENABLE_FULL_VERSION ON CACHE BOOL "Enable the full feature set? (Do not enable for Demo/Free builds!)")
+
 ################################################################################
 # Project Setup
 ################################################################################
@@ -310,6 +312,12 @@ set(PROJECT_INCLUDES
 	"${PROJECT_SOURCE_DIR}/third-party/vst2sdk"
 )
 
+if(ENABLE_FULL_VERSION)
+	list(APPEND PROJECT_DEFINITIONS
+		ENABLE_FULL_VERSION
+	)
+endif()
+
 # VST 3.x
 if(ENABLE_STEINBERG_VST3)
 	set(VSTSDK_DIR "${PROJECT_SOURCE_DIR}/third-party/vst3sdk")
@@ -360,7 +368,11 @@ if(WIN32)
 	set(_PACKAGE_FULL_NAME "${CMAKE_PACKAGE_PREFIX}/${CMAKE_PACKAGE_NAME}-${_PACKAGE_SUFFIX_OVERRIDE}")
 
 	# Windows Specific Resource Definition
-	set(PROJECT_PRODUCT_NAME "${PROJECT_FULL_NAME}")
+	if(ENABLE_FULL_VERSION)
+		set(PROJECT_PRODUCT_NAME "${PROJECT_FULL_NAME}")
+	else()
+		set(PROJECT_PRODUCT_NAME "${PROJECT_FULL_NAME} (Demo)")
+	endif()
 	set(PROJECT_COMPANY_NAME "${PROJECT_AUTHORS}")
 	set(PROJECT_COPYRIGHT "${PROJECT_AUTHORS} © ${PROJECT_COPYRIGHT_YEARS}")
 	set(PROJECT_LEGAL_TRADEMARKS_1 "")
@@ -511,6 +523,10 @@ if (ENABLE_STEINBERG_VST2)
 	file(TO_NATIVE_PATH "${ISS_SOURCE_DIR}" ISS_SOURCE_DIR)
 	get_filename_component(ISS_MSVCHELPER_PATH "${msvc-redist-helper_BUILD_DIR}" ABSOLUTE)
 	file(TO_NATIVE_PATH "${ISS_MSVCHELPER_PATH}" ISS_MSVCHELPER_PATH)
+	if(NOT ENABLE_FULL_VERSION)
+		set(_PACKAGE_EXTRA_NAME " (Demo)")
+		set(_PACKAGE_EXTRA_FILENAME "-Demo")
+	endif()
 	configure_file(
 		"cmake/templates/installer-vst2.iss.in"
 		"${PROJECT_BINARY_DIR}/installer-vst2.iss"
@@ -588,6 +604,10 @@ if(ENABLE_STEINBERG_VST3)
 	file(TO_NATIVE_PATH "${ISS_SOURCE_DIR}" ISS_SOURCE_DIR)
 	get_filename_component(ISS_MSVCHELPER_PATH "${msvc-redist-helper_BUILD_DIR}" ABSOLUTE)
 	file(TO_NATIVE_PATH "${ISS_MSVCHELPER_PATH}" ISS_MSVCHELPER_PATH)
+	if(NOT ENABLE_FULL_VERSION)
+		set(_PACKAGE_EXTRA_NAME " (Demo)")
+		set(_PACKAGE_EXTRA_FILENAME "-Demo")
+	endif()
 	configure_file(
 		"cmake/templates/installer-vst3.iss.in"
 		"${PROJECT_BINARY_DIR}/installer-vst3.iss"
