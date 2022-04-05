@@ -27,6 +27,12 @@
 
 #define D_LOG(MESSAGE, ...) voicefx::log("<vst2::effect> " MESSAGE, __VA_ARGS__)
 
+#ifdef ENABLE_FULL_VERSION
+#define VST_NAME "VoiceFX"
+#else
+#define VST_NAME "VoiceFX (Demo)"
+#endif
+
 voicefx::vst2::effect::effect(vst_host_callback cb)
 	: _vsteffect(), _vstcb(cb), _input_arrangement(), _output_arrangement(), _dirty(true), _in_resampler(), _fx(),
 	  _out_resampler(), _channels(), _delay(0), _local_delay(0)
@@ -272,7 +278,7 @@ intptr_t voicefx::vst2::effect::vst2_get_vendor_version() const
 intptr_t voicefx::vst2::effect::vst2_get_product_name(char* buffer, size_t buffer_len) const
 {
 	memset(buffer, 0, buffer_len);
-	memcpy(buffer, voicefx::product_name.data(), std::min<size_t>(voicefx::product_name.size(), buffer_len));
+	memcpy(buffer, VST_NAME, std::min<size_t>(sizeof(VST_NAME), buffer_len));
 	return 0;
 }
 
