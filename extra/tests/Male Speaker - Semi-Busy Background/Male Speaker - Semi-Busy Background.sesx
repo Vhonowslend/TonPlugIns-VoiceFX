@@ -12,7 +12,7 @@
           <trackOutput outputID="10000" type="trackID"/>
           <trackInput inputID="1"/>
           <component componentGuid="1e0a1d2c-e44d-44a7-bfa5-2df0344bf025" componentID="Audition.Fader" id="trackFader" name="volume" powered="true">
-            <parameter index="0" name="volume" parameterValue="3.1622784137725830078125"/>
+            <parameter index="0" name="volume" parameterValue="1.7782795429229736328125"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
           <component componentGuid="72c50de2-893c-4c2a-92af-87f49ab77f85" componentID="Audition.Mute" id="trackMute" name="Mute" powered="true">
@@ -76,7 +76,7 @@
             <parameter index="0" name="volume" parameterValue="1"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
-          <component componentGuid="95edb822-ca0b-472e-883e-6eeb43873454" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+          <component componentGuid="f0a884e3-14f1-4988-a2e1-1cb5a47bb374" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
             <parameter index="1" name="mute" parameterValue="0"/>
           </component>
@@ -161,12 +161,12 @@
           </component>
         </trackAudioParameters>
         <editParameter parameterIndex="0" slotIndex="4294967280"/>
-        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="719872" fileID="2" hue="-1" id="0" lockedInTime="false" looped="false" name="277755__alexkandrell__train-int-moving-swedish-train-passenger-talking-useng" offline="false" select="false" sourceInPoint="0" sourceOutPoint="719872" startPoint="0" zOrder="0">
+        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="719872" fileID="1" hue="-1" id="0" lockedInTime="false" looped="false" name="277755__alexkandrell__train-int-moving-swedish-train-passenger-talking-useng" offline="false" select="false" sourceInPoint="0" sourceOutPoint="719872" startPoint="0" zOrder="0">
           <component componentGuid="ac63b9c7-9dd7-4d95-bf67-2be77450b958" componentID="Audition.Fader" id="clipGain" name="volume" powered="true">
             <parameter index="0" name="volume" parameterValue="1"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
-          <component componentGuid="2f11c6ae-cd7c-492d-8ec7-d80feb7545f2" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+          <component componentGuid="ebf2a264-7e64-47f1-85b1-0fc5950f7afb" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
             <parameter index="1" name="mute" parameterValue="0"/>
           </component>
@@ -250,12 +250,12 @@
           </component>
         </trackAudioParameters>
         <editParameter parameterIndex="0" slotIndex="4294967280"/>
-        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="273372" fileID="3" hue="-1" id="0" lockedInTime="false" looped="false" name="522222__nox-sound__car-passby-exterior" offline="false" select="false" sourceInPoint="254516" sourceOutPoint="527888" startPoint="0" zOrder="1">
+        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="273372" fileID="2" hue="-1" id="0" lockedInTime="false" looped="false" name="522222__nox-sound__car-passby-exterior" offline="false" select="false" sourceInPoint="254516" sourceOutPoint="527888" startPoint="0" zOrder="1">
           <component componentGuid="ef9400e9-218c-4e05-b044-087378e9628a" componentID="Audition.Fader" id="clipGain" name="volume" powered="true">
             <parameter index="0" name="volume" parameterValue="1"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
-          <component componentGuid="03c4f4d5-59e8-4718-b34a-49ed9d52850e" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+          <component componentGuid="5b5bc611-4c10-4a80-9e1c-ab62eee4cb42" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
             <parameter index="1" name="mute" parameterValue="0"/>
           </component>
@@ -279,7 +279,7 @@
           <trackOutput outputID="10007" type="trackID"/>
           <trackInput inputID="1"/>
           <component componentGuid="c4b2ff14-7fce-42db-ac71-a34a4e0314e7" componentID="Audition.Fader" id="trackFader" name="volume" powered="true">
-            <parameter index="0" name="volume" parameterValue="1"/>
+            <parameter index="0" name="volume" parameterValue="0.562341272830963134765625"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
           <component componentGuid="9fd0a2d9-e123-423b-aef6-8daa9615644c" componentID="Audition.Mute" id="trackMute" name="Mute" powered="true">
@@ -338,12 +338,12 @@
           </component>
         </trackAudioParameters>
         <editParameter parameterIndex="0" slotIndex="4294967280"/>
-        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="719872" fileID="1" hue="-1" id="0" lockedInTime="false" looped="false" name="317533__2hear__car-horns 48000 1" offline="false" select="false" sourceInPoint="0" sourceOutPoint="623872" startPoint="96000" zOrder="0">
+        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="719872" fileID="3" hue="-1" id="0" lockedInTime="false" looped="false" name="317533__2hear__car-horns 48000 1" offline="false" select="false" sourceInPoint="0" sourceOutPoint="623872" startPoint="96000" zOrder="0">
           <component componentGuid="4b78a18c-ff48-4eb2-be7d-c59b8e3f109a" componentID="Audition.Fader" id="clipGain" name="volume" powered="true">
             <parameter index="0" name="volume" parameterValue="1"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
-          <component componentGuid="f88925a9-2e36-4b45-948b-dd6bd97573e7" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+          <component componentGuid="77e965a3-4a3e-47bf-9547-e01d5e3d78fc" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
             <parameter index="1" name="mute" parameterValue="0"/>
           </component>
@@ -663,17 +663,22 @@
             <parameter index="0" parameterValue="1"/>
             <parameter index="1" parameterValue="0"/>
           </component>
-          <slot powered="true" slotIndex="0">
-            <component componentGuid="b2081c2c-0f85-4ab7-b0ed-963122bb7619" componentID="3:586d7250 566f6963 6546584e 6f697365" editorHeight="210" editorLeft="1049" editorTop="615" editorWidth="463" name="VoiceFX" presetName="(Custom)">
+          <slot powered="false" slotIndex="0">
+            <component componentGuid="b2081c2c-0f85-4ab7-b0ed-963122bb7619" componentID="3:586d7250 566f6963 6546584e 6f697365" editorHeight="210" editorLeft="1049" editorTop="615" editorWidth="463" name="VoiceFX (Demo)" presetName="(Custom)">
               <busConfig><![CDATA[{"in":[{"layout":[100,101],"name":"In","type":0}],"out":[{"layout":[100,101],"name":"Out","type":0}]}]]></busConfig>
+            </component>
+          </slot>
+          <slot powered="false" slotIndex="1">
+            <component componentGuid="e92225db-04fb-4e46-afb0-e5df8c9d69fa" componentID="2:1482049112 VoiceFX" editorHeight="210" editorLeft="762" editorTop="604" editorVisible="true" editorWidth="463" name="VoiceFX" presetName="(Default)">
+              <busConfig><![CDATA[{"in":[{"layout":[100,101],"name":"Stereo In","type":0}],"out":[{"layout":[100,101],"name":"Stereo Out","type":0}]}]]></busConfig>
             </component>
           </slot>
         </effectsRack>
         <editParameter parameterIndex="0" slotIndex="4294967280"/>
       </masterTrack>
     </tracks>
-    <sessionState ctiPosition="571866" smpteStart="0">
-      <selectionState selectionDuration="0" selectionStart="571866"/>
+    <sessionState ctiPosition="521837" smpteStart="0">
+      <selectionState selectionDuration="0" selectionStart="521837"/>
       <viewState horizontalViewDuration="1120071" horizontalViewStart="0" trackControlsWidth="224" verticalScrollOffset="0"/>
       <timeFormatState beatsPerBar="4" beatsPerMinute="120" customFrameRate="12" linkToDefaultTimeSettings="true" noteLength="4" subdivisions="16" timeCodeDropFrame="false" timeCodeFrameRate="30" timeCodeNTSC="false" timeFormat="timeFormatDecimal"/>
       <mixingOptionState defaultPanModeLogarithmic="false" panPower="-3" playOverlappingClips="false"/>
@@ -689,9 +694,9 @@
             xmlns:xmpDM="http://ns.adobe.com/xmp/1.0/DynamicMedia/">
          <xmp:CreatorTool>Adobe Audition 22.2 (Windows)</xmp:CreatorTool>
          <xmp:CreateDate>2022-04-05T00:45:18+02:00</xmp:CreateDate>
-         <xmp:MetadataDate>2022-04-05T00:53:43+02:00</xmp:MetadataDate>
-         <xmp:ModifyDate>2022-04-05T00:53:43+02:00</xmp:ModifyDate>
-         <xmpMM:InstanceID>xmp.iid:65f2ef99-290d-de46-a2b9-a52b677ea216</xmpMM:InstanceID>
+         <xmp:MetadataDate>2022-04-05T03:27:02+02:00</xmp:MetadataDate>
+         <xmp:ModifyDate>2022-04-05T03:27:02+02:00</xmp:ModifyDate>
+         <xmpMM:InstanceID>xmp.iid:53b41c17-25c4-6040-94a7-c1ad7a1665d5</xmpMM:InstanceID>
          <xmpMM:DocumentID>xmp.did:4e23e336-adee-9440-8241-284e08a66ce8</xmpMM:DocumentID>
          <xmpMM:OriginalDocumentID>xmp.did:4e23e336-adee-9440-8241-284e08a66ce8</xmpMM:OriginalDocumentID>
          <xmpMM:History>
@@ -728,6 +733,48 @@
                   <stEvt:action>saved</stEvt:action>
                   <stEvt:instanceID>xmp.iid:65f2ef99-290d-de46-a2b9-a52b677ea216</stEvt:instanceID>
                   <stEvt:when>2022-04-05T00:53:43+02:00</stEvt:when>
+                  <stEvt:softwareAgent>Adobe Audition 22.2 (Windows)</stEvt:softwareAgent>
+                  <stEvt:changed>/</stEvt:changed>
+               </rdf:li>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>saved</stEvt:action>
+                  <stEvt:instanceID>xmp.iid:881a3961-7cca-6f46-93b5-bc49d9ba9a48</stEvt:instanceID>
+                  <stEvt:when>2022-04-05T03:04:26+02:00</stEvt:when>
+                  <stEvt:softwareAgent>Adobe Audition 22.2 (Windows)</stEvt:softwareAgent>
+                  <stEvt:changed>/metadata</stEvt:changed>
+               </rdf:li>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>saved</stEvt:action>
+                  <stEvt:instanceID>xmp.iid:23391e10-dca8-0442-a24e-03173d3751eb</stEvt:instanceID>
+                  <stEvt:when>2022-04-05T03:04:26+02:00</stEvt:when>
+                  <stEvt:softwareAgent>Adobe Audition 22.2 (Windows)</stEvt:softwareAgent>
+                  <stEvt:changed>/</stEvt:changed>
+               </rdf:li>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>saved</stEvt:action>
+                  <stEvt:instanceID>xmp.iid:98712c2b-a0d1-404e-9a11-8ed657c43752</stEvt:instanceID>
+                  <stEvt:when>2022-04-05T03:11:20+02:00</stEvt:when>
+                  <stEvt:softwareAgent>Adobe Audition 22.2 (Windows)</stEvt:softwareAgent>
+                  <stEvt:changed>/metadata</stEvt:changed>
+               </rdf:li>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>saved</stEvt:action>
+                  <stEvt:instanceID>xmp.iid:111d7ec2-64a2-8942-b041-bc7a40e0dda8</stEvt:instanceID>
+                  <stEvt:when>2022-04-05T03:11:20+02:00</stEvt:when>
+                  <stEvt:softwareAgent>Adobe Audition 22.2 (Windows)</stEvt:softwareAgent>
+                  <stEvt:changed>/</stEvt:changed>
+               </rdf:li>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>saved</stEvt:action>
+                  <stEvt:instanceID>xmp.iid:070ed2c8-6231-2548-83ef-bc7cab9e277f</stEvt:instanceID>
+                  <stEvt:when>2022-04-05T03:27:02+02:00</stEvt:when>
+                  <stEvt:softwareAgent>Adobe Audition 22.2 (Windows)</stEvt:softwareAgent>
+                  <stEvt:changed>/metadata</stEvt:changed>
+               </rdf:li>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>saved</stEvt:action>
+                  <stEvt:instanceID>xmp.iid:53b41c17-25c4-6040-94a7-c1ad7a1665d5</stEvt:instanceID>
+                  <stEvt:when>2022-04-05T03:27:02+02:00</stEvt:when>
                   <stEvt:softwareAgent>Adobe Audition 22.2 (Windows)</stEvt:softwareAgent>
                   <stEvt:changed>/</stEvt:changed>
                </rdf:li>
@@ -855,10 +902,10 @@
   </session>
 
   <files>
-    <file absolutePath="E:\Xaymar\vst-voicefx\extra\tests\Male Speaker - Semi-Busy Background\Male Speaker - Semi-Busy Background_Recorded\Track 1_001.wav" id="0" mediaHandler="AmioWav" relativePath="Male Speaker - Semi-Busy Background_Recorded/Track 1_001.wav"/>
-    <file absolutePath="E:\Xaymar\vst-voicefx\extra\tests\Male Speaker - Semi-Busy Background\Conformed Files\317533__2hear__car-horns 48000 1.wav" id="1" mediaHandler="AmioWav" relativePath="Conformed Files/317533__2hear__car-horns 48000 1.wav"/>
-    <file absolutePath="E:\Xaymar\vst-voicefx\extra\tests\Male Speaker - Semi-Busy Background\Imported Files\277755__alexkandrell__train-int-moving-swedish-train-passenger-talking-useng.wav" id="2" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:20;" mediaHandler="AmioWav" relativePath="Imported Files/277755__alexkandrell__train-int-moving-swedish-train-passenger-talking-useng.wav"/>
-    <file absolutePath="E:\Xaymar\vst-voicefx\extra\tests\Male Speaker - Semi-Busy Background\Imported Files\522222__nox-sound__car-passby-exterior.wav" id="3" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:20;" mediaHandler="AmioWav" relativePath="Imported Files/522222__nox-sound__car-passby-exterior.wav"/>
+    <file absolutePath="E:\Xaymar\vst-voicefx\extra\tests\Male Speaker - Semi-Busy Background\Male Speaker - Semi-Busy Background_Recorded\Track 1_001.wav" id="0" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:1;" mediaHandler="AmioWav" relativePath="Male Speaker - Semi-Busy Background_Recorded/Track 1_001.wav"/>
+    <file absolutePath="E:\Xaymar\vst-voicefx\extra\tests\Male Speaker - Semi-Busy Background\Imported Files\277755__alexkandrell__train-int-moving-swedish-train-passenger-talking-useng.wav" id="1" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:20;" mediaHandler="AmioWav" relativePath="Imported Files/277755__alexkandrell__train-int-moving-swedish-train-passenger-talking-useng.wav"/>
+    <file absolutePath="E:\Xaymar\vst-voicefx\extra\tests\Male Speaker - Semi-Busy Background\Imported Files\522222__nox-sound__car-passby-exterior.wav" id="2" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:20;" mediaHandler="AmioWav" relativePath="Imported Files/522222__nox-sound__car-passby-exterior.wav"/>
+    <file absolutePath="E:\Xaymar\vst-voicefx\extra\tests\Male Speaker - Semi-Busy Background\Conformed Files\317533__2hear__car-horns 48000 1.wav" id="3" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:40;" mediaHandler="AmioWav" relativePath="Conformed Files/317533__2hear__car-horns 48000 1.wav"/>
   </files>
 
   <audioDevice inputID="22222222-2222-2222-2222-22222222" outputID="11111111-1111-1111-1111-11111111">
