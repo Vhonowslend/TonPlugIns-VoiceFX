@@ -33,10 +33,16 @@
 
 BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:info@xaymar.com")
 
+#ifdef ENABLE_FULL_VERSION
+#define VST_NAME "VoiceFX"
+#else
+#define VST_NAME "VoiceFX (Demo)"
+#endif
+
 DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::effect::processor_uid),
 		   PClassInfo::kManyInstances,     // Allow many instances
 		   kVstAudioEffectClass,           // Type
-		   "VoiceFX",                      // Name
+		   VST_NAME,                       // Name
 		   Vst::kDistributable,            // Allow cross-computer usage.
 		   Vst::PlugType::kFxRestoration,  // Categories (separate with |)
 		   VERSION_STRING,                 // Version
@@ -46,7 +52,7 @@ DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::effect::processor_uid),
 DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::effect::controller_uid),
 		   PClassInfo::kManyInstances,      // Allow many instances
 		   kVstComponentControllerClass,    // Type
-		   "VoiceFX Controller",            // Name
+		   VST_NAME " Controller",          // Name
 		   0,                               // Unused
 		   "",                              // Unused
 		   VERSION_STRING,                  // Version
@@ -66,6 +72,9 @@ bool InitModule()
 		return true;
 	} catch (std::exception const& ex) {
 		voicefx::log("Exception: %s", ex.what());
+		return false;
+	} catch (...) {
+		voicefx::log("Unknown Exception.");
 		return false;
 	}
 }
