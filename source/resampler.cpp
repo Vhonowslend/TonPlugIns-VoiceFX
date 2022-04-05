@@ -61,12 +61,12 @@ void voicefx::resampler::ratio(uint32_t in_samplerate, uint32_t out_samplerate)
 	_ratio = static_cast<float>(in_samplerate) / static_cast<float>(out_samplerate);
 }
 
-uint32_t voicefx::resampler::channels()
+size_t voicefx::resampler::channels()
 {
 	return _channels;
 }
 
-void voicefx::resampler::channels(uint32_t channels)
+void voicefx::resampler::channels(size_t channels)
 {
 	if (_channels != channels) {
 		_channels = channels;
@@ -141,7 +141,7 @@ void voicefx::resampler::process(const float* in_buffer[], size_t in_samples, si
 	}
 }
 
-uint32_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_samplerate)
+size_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_samplerate)
 {
 	int  error    = 0;
 	auto instance = src_new(SRC_SINC_BEST_QUALITY, 1, &error);
@@ -170,7 +170,7 @@ uint32_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t ou
 	data.src_ratio         = sr_ratio;
 
 	// Calculate the delay
-	for (uint32_t delay = 0; delay < in_samplerate; delay++) {
+	for (size_t delay = 0; delay < in_samplerate; delay++) {
 		if (int error = src_process(instance, &data); error != 0) {
 			throw std::runtime_error(src_strerror(error));
 		}

@@ -30,9 +30,9 @@ namespace voicefx {
 	class resampler {
 		std::vector<std::shared_ptr<void>> _instance;
 
-		uint32_t _channels;
-		float    _ratio;
-		bool     _dirty;
+		size_t _channels;
+		float  _ratio;
+		bool   _dirty;
 
 		public:
 		~resampler();
@@ -54,8 +54,8 @@ namespace voicefx {
 		float ratio();
 		void  ratio(uint32_t in_samplerate, uint32_t out_samplerate);
 
-		uint32_t channels();
-		void     channels(uint32_t channels);
+		size_t channels();
+		void   channels(size_t channels);
 
 		/** Load the resampler.
 		 *
@@ -82,6 +82,6 @@ namespace voicefx {
 					 size_t out_samples, size_t& out_samples_generated);
 
 		public:
-		static uint32_t calculate_delay(uint32_t in_samplerate, uint32_t out_samplerate);
+		static size_t calculate_delay(uint32_t in_samplerate, uint32_t out_samplerate);
 	};
 } // namespace voicefx
