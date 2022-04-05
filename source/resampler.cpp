@@ -68,6 +68,9 @@ size_t voicefx::resampler::channels()
 
 void voicefx::resampler::channels(size_t channels)
 {
+	if (_channels > std::numeric_limits<int32_t>::max()) {
+		throw std::runtime_error("Channel limit exceeded.");
+	}
 	if (_channels != channels) {
 		_channels = channels;
 		_dirty    = true;
@@ -88,8 +91,9 @@ void voicefx::resampler::load()
 			src_reset(reinterpret_cast<SRC_STATE*>(instance.get()));
 		} else {
 			int error = 0;
-			instance = std::shared_ptr<void>(reinterpret_cast<void*>(src_new(SRC_SINC_BEST_QUALITY, _channels, &error)),
-											 [](void* v) { src_delete(reinterpret_cast<SRC_STATE*>(v)); });
+			instance  = std::shared_ptr<void>(
+                reinterpret_cast<void*>(src_new(SRC_SINC_BEST_QUALITY, static_cast<int>(_channels), &error)),
+                [](void* v) { src_delete(reinterpret_cast<SRC_STATE*>(v)); });
 			if (error != 0) {
 				throw std::runtime_error(src_strerror(error));
 			}
