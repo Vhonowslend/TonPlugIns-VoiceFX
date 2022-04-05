@@ -63,8 +63,8 @@ namespace vst3::effect {
 		std::shared_ptr<::voicefx::resampler>  _out_resampler;
 		std::vector<channel_buffers>           _channels;
 
-		uint32_t _delay;
-		int64_t  _local_delay;
+		int64_t _delay;
+		int64_t _local_delay;
 
 		public:
 		static FUnknown* create(void* data);

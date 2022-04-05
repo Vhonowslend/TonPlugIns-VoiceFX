@@ -422,9 +422,9 @@ try {
 		} else {
 			// In all other cases, return nothing.
 			for (size_t idx = 0; idx < _channels.size(); idx++) {
-				auto& channel = _channels[idx];
 				memset(data.outputs[0].channelBuffers32[idx], 0, data.numSamples * sizeof(float));
 #ifdef DEBUG_BUFFERS
+				auto& channel = _channels[idx];
 				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
 					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
 					  _local_delay);
@@ -502,7 +502,7 @@ void vst3::effect::processor::reset()
 	_delay = ::nvidia::afx::effect::delay();
 	_delay += ::nvidia::afx::effect::blocksize();
 	if (processSetup.sampleRate != ::nvidia::afx::effect::samplerate()) {
-		_delay /= _in_resampler->ratio();
+		_delay = std::llround(_delay / _in_resampler->ratio());
 		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 	}
