@@ -43,7 +43,7 @@ namespace voicefx {
 
 		public:
 		// Copy Operator & Constructor
-		resampler(const resampler&) = delete;
+		resampler(const resampler&)            = delete;
 		resampler& operator=(const resampler&) = delete;
 
 		// Move Operator & Constructor

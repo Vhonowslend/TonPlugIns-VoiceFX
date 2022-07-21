@@ -55,7 +55,6 @@ nvidia::afx::effect::~effect()
 		_fx.clear();
 	}
 	if (_nvafx) {
-		_nvafx->cuda_context()->synchronize();
 		_nvafx.reset();
 	}
 }

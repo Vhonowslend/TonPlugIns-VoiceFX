@@ -22,44 +22,25 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
-#include <filesystem>
-#include <memory>
-#include "nvidia-cuda-context.hpp"
 #include "nvidia-cuda.hpp"
 #include "util-library.hpp"
 
-#ifdef WIN32
-#include "win-d3d-context.hpp"
-#endif
+namespace voicefx {
+	namespace windows {
+		namespace d3d {
+			class context {
+				std::shared_ptr<::voicefx::util::library> _dxgi_library;
+				void*                                     _dxgi_factory;
+				void*                                     _dxgi_adapter;
 
-namespace nvidia::afx {
-	class afx {
-		std::filesystem::path                     _redist_path;
-		std::shared_ptr<::voicefx::util::library> _library;
-		std::shared_ptr<::nvidia::cuda::cuda>     _cuda;
-		std::shared_ptr<::nvidia::cuda::context>  _cuda_context;
+				std::shared_ptr<::voicefx::util::library> _d3d11_library;
+				void*                                     _d3d11_device;
+				void*                                     _d3d11_context;
 
-#ifdef WIN32
-		std::shared_ptr<::voicefx::windows::d3d::context> _d3d;
-		std::wstring                                      _dll_search_path;
-		void*                                             _dll_cookie;
-#endif
-
-		private:
-		afx();
-
-		public:
-		~afx();
-
-		std::filesystem::path redistributable_path();
-
-		std::shared_ptr<::nvidia::cuda::context> cuda_context();
-
-#ifdef WIN32
-		void windows_fix_dll_search_paths();
-#endif
-
-		public /* Singleton */:
-		static std::shared_ptr<::nvidia::afx::afx> instance();
-	};
-} // namespace nvidia::afx
+				public:
+				~context();
+				context(::nvidia::cuda::luid_t luid);
+			};
+		} // namespace d3d
+	}     // namespace windows
+} // namespace voicefx

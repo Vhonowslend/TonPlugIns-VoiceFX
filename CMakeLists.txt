@@ -401,6 +401,13 @@ if(WIN32)
 			"${PROJECT_BINARY_DIR}/generated/${PROJECT_NAME}.manifest"
 		)		
 	endif()
+	
+	# Windows-specific code and stuff
+	list(APPEND PROJECT_SOURCE
+		"source/win-d3d-context.hpp"
+		"source/win-d3d-context.cpp"
+		"${PROJECT_BINARY_DIR}/generated/${PROJECT_NAME}.manifest"
+	)
 endif()
 
 # Create Library

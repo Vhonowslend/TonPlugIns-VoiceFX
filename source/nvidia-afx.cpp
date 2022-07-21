@@ -62,8 +62,14 @@ static std::filesystem::path find_nvafx_redistributable()
 	}
 }
 
-nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable())
+nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library(), _cuda(), _cuda_context()
 {
+#ifdef WIN32
+	_d3d.reset();
+	_dll_search_path.clear();
+	_dll_cookie = nullptr;
+#endif
+
 	{ // Log where we found the redistributable at.
 		std::string _loc = _redist_path.string();
 		D_LOG("Found Redistributable at: %s", _loc.c_str());
@@ -73,6 +79,7 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable())
 		_cuda = ::nvidia::cuda::cuda::get();
 
 		::nvidia::cuda::device_t dev;
+		::nvidia::cuda::luid_t   luid;
 		{ // Enumerate and pick a default device.
 			int32_t num_devices;
 			if (auto v = _cuda->cuDeviceGetCount(&num_devices); v != ::nvidia::cuda::result::SUCCESS) {
@@ -86,9 +93,8 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable())
 				}
 
 				// Print some information about the device.
-				std::vector<char>      name(256, 0);
-				::nvidia::cuda::luid_t luid;
-				uint32_t               devicenodemask;
+				std::vector<char> name(256, 0);
+				uint32_t          devicenodemask;
 				_cuda->cuDeviceGetName(name.data(), static_cast<int32_t>(name.size() - 1), dev);
 				_cuda->cuDeviceGetLuid(&luid, &devicenodemask, dev);
 
@@ -98,6 +104,11 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable())
 					  luid.bytes[5], luid.bytes[6], luid.bytes[7]);
 			}
 		}
+
+#ifdef WIN32
+		// Intialize a dummy D3D11 context to perhaps fool some functionality into working.
+		_d3d = std::make_shared<::voicefx::windows::d3d::context>(luid);
+#endif
 
 		_cuda_context = std::make_shared<::nvidia::cuda::context>(dev);
 	} catch (...) {
