@@ -386,6 +386,21 @@ if(WIN32)
 	list(APPEND PROJECT_SOURCE
 		"${PROJECT_BINARY_DIR}/generated/version.rc"
 	)
+
+	if(ON) # Windows Manifest Definition
+		set(MANIFEST_ARCH "amd64")
+		if("${BITS}" STREQUAL "32")
+			set(MANIFEST_ARCH "x86")
+		endif()
+		configure_file(
+			"cmake/templates/win.manifest.in"
+			"${PROJECT_BINARY_DIR}/generated/${PROJECT_NAME}.manifest"
+			@ONLY
+		)
+		list(APPEND PROJECT_SOURCE
+			"${PROJECT_BINARY_DIR}/generated/${PROJECT_NAME}.manifest"
+		)		
+	endif()
 endif()
 
 # Create Library
