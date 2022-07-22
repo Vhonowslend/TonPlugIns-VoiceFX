@@ -1,6 +1,12 @@
 [submodule "cmake/clang"]
-	path = cmake/clang
+	path = cmake/modules/clang
 	url = https://github.com/Xaymar/cmake-clang.git
+[submodule "cmake/codesign"]
+	path = cmake/modules/codesign
+	url = https://github.com/xaymar/cmake-codesign.git
+[submodule "cmake/version"]
+	path = cmake/modules/version
+	url = https://github.com/xaymar/cmake-version.git
 [submodule "third-party/vst2sdk"]
 	path = third-party/vst2sdk
 	url = https://github.com/Xaymar/vst2sdk.git
