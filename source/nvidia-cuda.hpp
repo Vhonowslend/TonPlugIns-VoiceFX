@@ -81,6 +81,10 @@ namespace nvidia::cuda {
 	};
 
 	enum class device_attribute : uint32_t {
+		KILOHERTZ                = 13,
+		MULTIPROCESSORS          = 16,
+		INTEGRATED               = 18,
+		ASYNC_ENGINES            = 40,
 		COMPUTE_CAPABILITY_MAJOR = 75,
 		COMPUTE_CAPABILITY_MINOR = 76,
 	};
