@@ -161,11 +161,29 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 #endif
 	}
 
+	{ // Load all functions.
+#define P_AFX_LOAD_SYMBOL(V) V = reinterpret_cast<decltype(V)>(_library->load_symbol("NvAFX_" #V));
+		P_AFX_LOAD_SYMBOL(GetEffectList);
+		P_AFX_LOAD_SYMBOL(CreateEffect);
+		P_AFX_LOAD_SYMBOL(DestroyEffect);
+		P_AFX_LOAD_SYMBOL(SetU32);
+		P_AFX_LOAD_SYMBOL(SetString);
+		P_AFX_LOAD_SYMBOL(SetFloat);
+		P_AFX_LOAD_SYMBOL(GetU32);
+		P_AFX_LOAD_SYMBOL(GetString);
+		P_AFX_LOAD_SYMBOL(GetFloat);
+		P_AFX_LOAD_SYMBOL(Load);
+		P_AFX_LOAD_SYMBOL(GetSupportedDevices);
+		P_AFX_LOAD_SYMBOL(Run);
+		P_AFX_LOAD_SYMBOL(Reset);
+#undef P_AFX_LOAD_SYMBOL
+	}
+
 	D_LOG("Loaded NVIDIA Audio Effects library, these effects are available:");
 	{
 		int                   num = 0;
 		NvAFX_EffectSelector* effects;
-		NvAFX_GetEffectList(&num, &effects);
+		GetEffectList(&num, &effects);
 		for (size_t idx = 0; idx < num; idx++) {
 			D_LOG("  %s", effects[idx]);
 		}

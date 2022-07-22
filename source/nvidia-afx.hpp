@@ -24,6 +24,7 @@
 #pragma once
 #include <filesystem>
 #include <memory>
+#include <nvAudioEffects.h>
 #include "nvidia-cuda-context.hpp"
 #include "nvidia-cuda.hpp"
 #include "util-library.hpp"
@@ -31,6 +32,13 @@
 #ifdef WIN32
 #include "win-d3d-context.hpp"
 #endif
+
+#define P_AFX_DEFINE_FUNCTION(name, ...)          \
+	private:                                      \
+	typedef NvAFX_Status (*t##name)(__VA_ARGS__); \
+                                                  \
+	public:                                       \
+	t##name name = nullptr;
 
 namespace nvidia::afx {
 	class afx {
@@ -58,6 +66,21 @@ namespace nvidia::afx {
 #ifdef WIN32
 		void windows_fix_dll_search_paths();
 #endif
+
+		public:
+		decltype(NvAFX_GetEffectList)*       GetEffectList;
+		decltype(NvAFX_CreateEffect)*        CreateEffect;
+		decltype(NvAFX_DestroyEffect)*       DestroyEffect;
+		decltype(NvAFX_SetU32)*              SetU32;
+		decltype(NvAFX_SetString)*           SetString;
+		decltype(NvAFX_SetFloat)*            SetFloat;
+		decltype(NvAFX_GetU32)*              GetU32;
+		decltype(NvAFX_GetString)*           GetString;
+		decltype(NvAFX_GetFloat)*            GetFloat;
+		decltype(NvAFX_Load)*                Load;
+		decltype(NvAFX_GetSupportedDevices)* GetSupportedDevices;
+		decltype(NvAFX_Run)*                 Run;
+		decltype(NvAFX_Reset)*               Reset;
 
 		public /* Singleton */:
 		static std::shared_ptr<::nvidia::afx::afx> instance();

@@ -121,14 +121,14 @@ find_package_handle_standard_args(NVAFX
 
 if(NVAFX_FOUND)
 	if(NOT TARGET NVIDIA::AudioEffects)
-		add_library(NVIDIA::AudioEffects SHARED IMPORTED)
+		add_library(NVIDIA::AudioEffects INTERFACE IMPORTED)
 		set_target_properties(NVIDIA::AudioEffects
 			PROPERTIES
 				PUBLIC_HEADER "${NVAFX_INCLUDE_DIRS}/nvAudioEffects.h"
 				INTERFACE_INCLUDE_DIRECTORIES ${NVAFX_INCLUDE_DIRS}
-				IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-				IMPORTED_LOCATION ${NVAFX_BINARIES}
-				IMPORTED_IMPLIB ${NVAFX_LIBRARIES}
+#				IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+#				IMPORTED_LOCATION ${NVAFX_BINARIES}
+#				IMPORTED_IMPLIB ${NVAFX_LIBRARIES}
 		)
 		target_include_directories(NVIDIA::AudioEffects
 			INTERFACE
@@ -136,7 +136,7 @@ if(NVAFX_FOUND)
 		)
 		target_link_libraries(NVIDIA::AudioEffects
 			INTERFACE
-				${NVAFX_LIBRARIES}
+#				${NVAFX_LIBRARIES}
 		)
 	endif()
 endif()
