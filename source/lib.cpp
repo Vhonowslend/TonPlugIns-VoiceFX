@@ -91,25 +91,28 @@ void voicefx::initialize()
 
 	// Try and open a log file
 	{
+		// Create the directory for log files if it happens to be missing.
 		std::filesystem::path log_path = std::filesystem::path(_local_data) / "logs";
 		std::filesystem::create_directories(log_path);
-		log_path.append(formatted_time(true) + ".log");
-		_log_stream = std::ofstream(log_path, std::ios::trunc | std::ios::out);
 
-		{ // Delete all log files older than 1 month.
-			std::vector<std::filesystem::directory_entry> _logs;
-			try {
-				for (auto& entry : std::filesystem::directory_iterator(log_path)) {
+		// Create the log file itself.
+		std::filesystem::path log_file = std::filesystem::path(log_path).append(formatted_time(true) + ".log");
+		_log_stream                    = std::ofstream(log_file, std::ios::trunc | std::ios::out);
+
+		// Clean up old files.
+		try { // Delete all log files older than 1 month.
+			for (auto& entry : std::filesystem::directory_iterator(log_path)) {
+				try {
 					auto wt = entry.last_write_time();
 					if ((decltype(wt)::clock::now() - wt) > std::chrono::hours(24 * 14)) {
 						std::filesystem::remove(entry);
-					} else {
-						_logs.push_back(entry);
 					}
+				} catch (std::exception const& ex) {
+					voicefx::log("Failed to delete old log file '%s'.", entry.path().c_str());
 				}
-			} catch (std::exception const& ex) {
-				voicefx::log("Failed to clean up log file(s): %s", ex.what());
 			}
+		} catch (std::exception const& ex) {
+			voicefx::log("Failed to clean up log file(s): %s", ex.what());
 		}
 	}
 
