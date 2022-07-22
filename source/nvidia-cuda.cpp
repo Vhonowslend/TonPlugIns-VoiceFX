@@ -111,6 +111,7 @@ nvidia::cuda::cuda::cuda() : _library()
 		P_CUDA_LOAD_SYMBOL(cuDeviceGetName);
 		P_CUDA_LOAD_SYMBOL(cuDeviceGetLuid);
 		P_CUDA_LOAD_SYMBOL(cuDeviceGetUuid);
+		P_CUDA_LOAD_SYMBOL(cuDeviceGetAttribute);
 
 		// Primary Context Management
 		P_CUDA_LOAD_SYMBOL(cuDevicePrimaryCtxRetain);

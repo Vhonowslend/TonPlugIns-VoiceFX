@@ -80,6 +80,11 @@ namespace nvidia::cuda {
 		LOCAL_MEMORY_RESIZE_TO_MAXIMUM = 0x10,
 	};
 
+	enum class device_attribute : uint32_t {
+		COMPUTE_CAPABILITY_MAJOR = 75,
+		COMPUTE_CAPABILITY_MINOR = 76,
+	};
+
 	enum class external_memory_handle_type : uint32_t {
 		INVALID                      = 0,
 		FILE_DESCRIPTOR              = 1,
@@ -217,6 +222,7 @@ namespace nvidia::cuda {
 		P_CUDA_DEFINE_FUNCTION(cuDeviceGetName, char* name, int32_t length, device_t device);
 		P_CUDA_DEFINE_FUNCTION(cuDeviceGetLuid, luid_t* luid, uint32_t* device_node_mask, device_t device);
 		P_CUDA_DEFINE_FUNCTION(cuDeviceGetUuid, uuid_t* uuid, device_t device);
+		P_CUDA_DEFINE_FUNCTION(cuDeviceGetAttribute, int32_t* value, device_attribute attribute, device_t device);
 
 		// Primary Context Management
 		P_CUDA_DEFINE_FUNCTION(cuDevicePrimaryCtxRetain, context_t* ctx, device_t dev);
