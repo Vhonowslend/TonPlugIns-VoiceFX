@@ -175,8 +175,8 @@ endif()
 ################################################################################
 
 # Version handling
-set(PROJECT_VERSION_GIT_BASE "0.3.3") # For automatic versioning, which version is the "root" of the current changes?
-set(PROJECT_VERSION "0.3.3") # What is our version goal?
+set(PROJECT_VERSION_GIT_BASE "0.3.4") # For automatic versioning, which version is the "root" of the current changes?
+set(PROJECT_VERSION "0.3.4") # What is our version goal?
 version(PARSE PROJECT_VERSION "${PROJECT_VERSION}" REQUIRE PATCH;TWEAK)
 
 # - If possible, automatically generate versions from git.
