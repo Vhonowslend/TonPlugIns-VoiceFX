@@ -59,7 +59,13 @@ namespace nvidia::afx {
 		public:
 		~afx();
 
+		private:
+		std::vector<int32_t> enumerate_devices();
+
+		public:
 		std::filesystem::path redistributable_path();
+
+		std::filesystem::path model_path(NvAFX_EffectSelector effect);
 
 		std::shared_ptr<::nvidia::cuda::context> cuda_context();
 

@@ -75,72 +75,6 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 		D_LOG("Found Redistributable at: %s", _loc.c_str());
 	}
 
-	try { // Find the CUDA device with the highest CUDA compatibility.
-		_cuda = ::nvidia::cuda::cuda::get();
-
-		::nvidia::cuda::device_t    best_device = -1;
-		::nvidia::cuda::luid_t      best_luid;
-		std::pair<int32_t, int32_t> best_cuda_version = {6, 0};
-		{ // Enumerate and pick a default device.
-			int32_t num_devices;
-			if (auto v = _cuda->cuDeviceGetCount(&num_devices); v != ::nvidia::cuda::result::SUCCESS) {
-				throw ::nvidia::cuda::exception(v);
-			}
-			D_LOG("Found %" PRId32 " CUDA capable devices:", num_devices);
-			for (int32_t idx = static_cast<int32_t>(static_cast<int64_t>(num_devices) - 1); idx >= 0; idx--) {
-				::nvidia::cuda::device_t    cur_device;
-				std::vector<char>           cur_name(256, 0);
-				uint32_t                    cur_node_mask;
-				::nvidia::cuda::luid_t      cur_luid;
-				std::pair<int32_t, int32_t> cur_cuda_version;
-
-				// Get a reference to the device itself, if at all possible.
-				if (auto v = _cuda->cuDeviceGet(&cur_device, idx); v != ::nvidia::cuda::result::SUCCESS) {
-					continue;
-				}
-
-				// Query some device information.
-				_cuda->cuDeviceGetName(cur_name.data(), static_cast<int32_t>(cur_name.size() - 1), cur_device);
-				_cuda->cuDeviceGetLuid(&cur_luid, &cur_node_mask, cur_device);
-				_cuda->cuDeviceGetAttribute(&cur_cuda_version.first,
-											::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MAJOR, cur_device);
-				_cuda->cuDeviceGetAttribute(&cur_cuda_version.second,
-											::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MINOR, cur_device);
-
-				// If this is the highest CUDA compatibility level so far, use this device.
-				if ((cur_cuda_version.first > best_cuda_version.first)
-					|| ((cur_cuda_version.first == best_cuda_version.first)
-						&& (cur_cuda_version.second > best_cuda_version.second))
-					|| ((cur_cuda_version.first == best_cuda_version.first)
-						&& (cur_cuda_version.second >= best_cuda_version.second) && (best_device == -1))) {
-					best_cuda_version = cur_cuda_version;
-					best_device       = cur_device;
-					best_luid         = cur_luid;
-				}
-
-				D_LOG("%4" PRId32 ": %s (%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8
-					  ":%02" PRIx8 "%02" PRIx8 ")",
-					  idx, cur_name.data(), cur_luid.bytes[0], cur_luid.bytes[1], cur_luid.bytes[2], cur_luid.bytes[3],
-					  cur_luid.bytes[4], cur_luid.bytes[5], cur_luid.bytes[6], cur_luid.bytes[7]);
-			}
-		}
-
-#ifdef WIN32
-		// Initialize a dummy D3D11 context to perhaps fool some functionality into working.
-		_d3d = std::make_shared<::voicefx::windows::d3d::context>(best_luid);
-#endif
-
-		_cuda_context = std::make_shared<::nvidia::cuda::context>(best_device);
-	} catch (...) {
-		D_LOG("CUDA not available, some features may not work.");
-	}
-
-	// Enter the primary CUDA context, if available.
-	std::shared_ptr<::nvidia::cuda::context_stack> ctx_stack;
-	if (_cuda_context) {
-		ctx_stack = _cuda_context->enter();
-	}
-
 	{ // Load the actual NVIDIA Audio Effects library.
 #ifdef WIN32
 
@@ -179,8 +113,8 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 #undef P_AFX_LOAD_SYMBOL
 	}
 
-	D_LOG("Loaded NVIDIA Audio Effects library, these effects are available:");
-	{
+	{ // Log all available effects.
+		D_LOG("Loaded NVIDIA Audio Effects library, these effects are available:");
 		int                   num = 0;
 		NvAFX_EffectSelector* effects;
 		GetEffectList(&num, &effects);
@@ -188,6 +122,85 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 			D_LOG("  %s", effects[idx]);
 		}
 	}
+
+	try { // Figure out the ideal device to run the effects on.
+		auto devices = enumerate_devices();
+		struct {
+			::nvidia::cuda::device_t device;
+			::nvidia::cuda::luid_t   luid;
+			float                    score;
+		} ideal = {0, 0, 0};
+
+		_cuda = ::nvidia::cuda::cuda::get();
+
+		// ToDo: Find the device with the highest "score".
+		D_LOG("Detected %zu compatible acceleration devices:", devices.size());
+		for (size_t idx = 0; idx < devices.size(); idx++) {
+			const int32_t&           device_idx = devices.at(idx);
+			::nvidia::cuda::device_t device;
+			if (auto v = _cuda->cuDeviceGet(&device, device_idx); v != ::nvidia::cuda::result::SUCCESS) {
+				continue;
+			}
+
+			::nvidia::cuda::luid_t luid;
+			uint32_t               nodes;
+			_cuda->cuDeviceGetLuid(&luid, &nodes, device);
+
+			// FixMe: Temporarily picking the most preferred device for show.
+			if (idx == 0) {
+				ideal.device = device;
+				ideal.luid   = luid;
+			}
+
+			std::vector<char> name(256, 0);
+			_cuda->cuDeviceGetName(name.data(), static_cast<int32_t>(name.size() - 1), device);
+
+			int32_t is_integrated;
+			_cuda->cuDeviceGetAttribute(&is_integrated, ::nvidia::cuda::device_attribute::INTEGRATED, device);
+
+			std::pair<int32_t, int32_t> compute_capability;
+			_cuda->cuDeviceGetAttribute(&compute_capability.first,
+										::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MAJOR, device);
+			_cuda->cuDeviceGetAttribute(&compute_capability.second,
+										::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MINOR, device);
+
+			int32_t multiprocessors;
+			_cuda->cuDeviceGetAttribute(&multiprocessors, ::nvidia::cuda::device_attribute::MULTIPROCESSORS, device);
+
+			int32_t async_engines;
+			_cuda->cuDeviceGetAttribute(&async_engines, ::nvidia::cuda::device_attribute::ASYNC_ENGINES, device);
+
+			int32_t hertz;
+			_cuda->cuDeviceGetAttribute(&hertz, ::nvidia::cuda::device_attribute::KILOHERTZ, device);
+
+			D_LOG("\t[%4zu] %s (%s, Compute Compatibility %" PRId32 ".%" PRId32 ", %" PRId32
+				  " Multiprocessors, %" PRId32 " Asynchronous Engines, %" PRId32 " kHz) [%02" PRIx8 "%02" PRIx8
+				  ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 "]",
+				  idx, name.data(), is_integrated ? "Integrated" : "Dedicated", // Intentional
+				  compute_capability.first, compute_capability.second, multiprocessors, async_engines, hertz, //
+				  luid.bytes[0], luid.bytes[1], luid.bytes[2], luid.bytes[3], // Intentional
+				  luid.bytes[4], luid.bytes[5], luid.bytes[6], luid.bytes[7]);
+		}
+		D_LOG("Picked acceleration device [%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8
+			  ":%02" PRIx8 "%02" PRIx8 "]",
+			  ideal.luid.bytes[0], ideal.luid.bytes[1], ideal.luid.bytes[2], ideal.luid.bytes[3], // Intentional
+			  ideal.luid.bytes[4], ideal.luid.bytes[5], ideal.luid.bytes[6], ideal.luid.bytes[7]);
+
+#ifdef WIN32
+		// Initialize a dummy D3D11 context to perhaps fool some functionality into working.
+		_d3d = std::make_shared<::voicefx::windows::d3d::context>(ideal.luid);
+#endif
+
+		_cuda_context = std::make_shared<::nvidia::cuda::context>(ideal.device);
+	} catch (...) {
+		D_LOG("Failed to identify ideal acceleration devices.");
+	}
+
+	// Enter the primary CUDA context, if available.
+	//std::shared_ptr<::nvidia::cuda::context_stack> ctx_stack;
+	//if (_cuda_context) {
+	//	ctx_stack = _cuda_context->enter();
+	//}
 }
 
 nvidia::afx::afx::~afx()
@@ -197,9 +210,68 @@ nvidia::afx::afx::~afx()
 #endif
 }
 
+std::vector<int32_t> nvidia::afx::afx::enumerate_devices()
+{
+	NvAFX_Handle         effect      = nullptr;
+	int32_t              num_devices = 0;
+	std::vector<int32_t> devices;
+
+	try {
+		auto path     = model_path(NVAFX_EFFECT_DENOISER);
+		auto path_str = voicefx::util::platform::native_to_utf8(path).u8string();
+
+		if (auto ret = CreateEffect(NVAFX_EFFECT_DENOISER, &effect); ret != NVAFX_STATUS_SUCCESS) {
+			throw std::runtime_error("Failed to create temporary effect.");
+		}
+
+		if (auto ret = SetString(effect, NVAFX_PARAM_MODEL_PATH, path_str.c_str()); ret != NVAFX_STATUS_SUCCESS) {
+			throw std::runtime_error("Failed to set model paths");
+		}
+
+		if (auto ret = GetSupportedDevices(effect, &num_devices, nullptr);
+			ret != NVAFX_STATUS_OUTPUT_BUFFER_TOO_SMALL) {
+			throw std::runtime_error("Failed to enumerate devices.");
+		}
+
+		devices.resize(num_devices);
+		if (auto ret = GetSupportedDevices(effect, &num_devices, devices.data()); ret != NVAFX_STATUS_SUCCESS) {
+			throw std::runtime_error("Failed to enumerate device identifiers.");
+		}
+
+		DestroyEffect(effect);
+
+		return devices;
+	} catch (...) {
+		// Clean-up as we don't have a finally.
+		if (effect) {
+			DestroyEffect(effect);
+		}
+		throw;
+	}
+
+	return devices;
+}
+
 std::filesystem::path nvidia::afx::afx::redistributable_path()
 {
 	return _redist_path;
+}
+
+std::filesystem::path nvidia::afx::afx::model_path(NvAFX_EffectSelector effect)
+{
+	std::filesystem::path path = redistributable_path();
+	path /= "models";
+	if (std::string_view(NVAFX_EFFECT_DENOISER) == effect) {
+		path /= "denoiser_48k.trtpkg";
+	} else if (std::string_view(NVAFX_EFFECT_DEREVERB) == effect) {
+		path /= "dereverb_48k.trtpkg";
+	} else if (std::string_view(NVAFX_EFFECT_DEREVERB_DENOISER) == effect) {
+		path /= "dereverb_denoiser_48k.trtpkg";
+	} else {
+	}
+	path = std::filesystem::absolute(path);
+	path.make_preferred();
+	return path;
 }
 
 std::shared_ptr<::nvidia::afx::afx> nvidia::afx::afx::instance()
