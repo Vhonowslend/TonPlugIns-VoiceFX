@@ -116,6 +116,9 @@ voicefx::vst2::effect::effect(vst_host_callback cb)
 			// Update our VST.
 			_vsteffect.num_inputs = _vsteffect.num_outputs = _input_arrangement.channels;
 		}
+
+		// Set default sample rate.
+		_sample_rate = 44100;
 	}
 
 	// Allocate the necessary resources.
@@ -154,7 +157,8 @@ void voicefx::vst2::effect::reset()
 		_delay += ::voicefx::resampler::calculate_delay(_sample_rate, ::nvidia::afx::effect::samplerate());
 		_delay += ::voicefx::resampler::calculate_delay(_sample_rate, ::nvidia::afx::effect::samplerate());
 	}
-	_local_delay = ::nvidia::afx::effect::blocksize();
+	_local_delay           = ::nvidia::afx::effect::blocksize();
+	this->_vsteffect.delay = _delay;
 	D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRIu32 " samples.", &this->_vsteffect, _delay);
 
 	// Update channel buffers.
@@ -296,6 +300,7 @@ intptr_t voicefx::vst2::effect::vst2_get_effect_category() const
 
 intptr_t voicefx::vst2::effect::vst2_create()
 {
+	_sample_rate = 44100;
 	// Equivalent of setupPRocessing() in VST3.x.
 	reset();
 	return 0;
