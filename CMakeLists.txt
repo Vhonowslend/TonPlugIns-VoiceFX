@@ -177,7 +177,7 @@ endif()
 # Version handling
 set(PROJECT_VERSION_GIT_BASE "0.3.2") # For automatic versioning, which version is the "root" of the current changes?
 set(PROJECT_VERSION "0.3.2") # What is our version goal?
-version(PARSE PROJECT_VERSION "${PROJECT_VERSION}")
+version(PARSE PROJECT_VERSION "${PROJECT_VERSION}" REQUIRE PATCH;TWEAK)
 
 # - If possible, automatically generate versions from git.
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
@@ -211,8 +211,9 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
 			version(MODIFY PROJECT_VERSION "${PROJECT_VERSION}" COMPRESS
 				TWEAK "${PROJECT_VERSION_GIT_TWEAK}"
 				BUILD "${PROJECT_VERSION_GIT_BUILD}"
+				REQUIRE PATCH;TWEAK
 			)
-			version(PARSE PROJECT_VERSION "${PROJECT_VERSION}")
+			version(PARSE PROJECT_VERSION "${PROJECT_VERSION}" REQUIRE PATCH;TWEAK)
 		else()
 			message(WARNING "${LOGPREFIX}Unable to detect Tweak and Build component with 'git'.")
 		endif()
@@ -233,7 +234,7 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
 			string(REGEX REPLACE "[\r\n]+.*" "" PROJECT_VERSION_TAG "${PROJECT_VERSION_TAG}")
 
 			# Parse as SemVer 2.0.0
-			version(PARSE PROJECT_VERSION_TAG "${PROJECT_VERSION_TAG}")
+			version(PARSE PROJECT_VERSION_TAG "${PROJECT_VERSION_TAG}" REQUIRE PATCH;TWEAK)
 			if(PROJECT_VERSION_TAG_PRERELEASE)
 				string(SUBSTRING "${PROJECT_VERSION_TAG_PRERELEASE}" 1 -1 PROJECT_VERSION_TAG_TWEAK)
 				string(SUBSTRING "${PROJECT_VERSION_TAG_PRERELEASE}" 0 1 PROJECT_VERSION_TAG_PRERELEASE)
@@ -252,7 +253,7 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
 				PRERELEASE "${PROJECT_VERSION_TAG_PRERELEASE}"
 				BUILD "${PROJECT_VERSION_BUILD}"
 			)
-			version(PARSE PROJECT_VERSION "${PROJECT_VERSION}")
+			version(PARSE PROJECT_VERSION "${PROJECT_VERSION}" REQUIRE PATCH;TWEAK)
 		endif()
 	else()
 		message(STATUS "${LOGPREFIX}'git' not found, automatic version detection disabled.")
