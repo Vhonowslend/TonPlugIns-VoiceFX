@@ -75,11 +75,12 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 		D_LOG("Found Redistributable at: %s", _loc.c_str());
 	}
 
-	try {
+	try { // Find the CUDA device with the highest CUDA compatibility.
 		_cuda = ::nvidia::cuda::cuda::get();
 
-		::nvidia::cuda::device_t dev;
-		::nvidia::cuda::luid_t   luid;
+		::nvidia::cuda::device_t    best_device = -1;
+		::nvidia::cuda::luid_t      best_luid;
+		std::pair<int32_t, int32_t> best_cuda_version = {6, 0};
 		{ // Enumerate and pick a default device.
 			int32_t num_devices;
 			if (auto v = _cuda->cuDeviceGetCount(&num_devices); v != ::nvidia::cuda::result::SUCCESS) {
@@ -87,30 +88,49 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 			}
 			D_LOG("Found %" PRId32 " CUDA capable devices:", num_devices);
 			for (int32_t idx = static_cast<int32_t>(static_cast<int64_t>(num_devices) - 1); idx >= 0; idx--) {
-				// Retrieve the device itself.
-				if (auto v = _cuda->cuDeviceGet(&dev, idx); v != ::nvidia::cuda::result::SUCCESS) {
+				::nvidia::cuda::device_t    cur_device;
+				std::vector<char>           cur_name(256, 0);
+				uint32_t                    cur_node_mask;
+				::nvidia::cuda::luid_t      cur_luid;
+				std::pair<int32_t, int32_t> cur_cuda_version;
+
+				// Get a reference to the device itself, if at all possible.
+				if (auto v = _cuda->cuDeviceGet(&cur_device, idx); v != ::nvidia::cuda::result::SUCCESS) {
 					continue;
 				}
 
-				// Print some information about the device.
-				std::vector<char> name(256, 0);
-				uint32_t          devicenodemask;
-				_cuda->cuDeviceGetName(name.data(), static_cast<int32_t>(name.size() - 1), dev);
-				_cuda->cuDeviceGetLuid(&luid, &devicenodemask, dev);
+				// Query some device information.
+				_cuda->cuDeviceGetName(cur_name.data(), static_cast<int32_t>(cur_name.size() - 1), cur_device);
+				_cuda->cuDeviceGetLuid(&cur_luid, &cur_node_mask, cur_device);
+				_cuda->cuDeviceGetAttribute(&cur_cuda_version.first,
+											::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MAJOR, cur_device);
+				_cuda->cuDeviceGetAttribute(&cur_cuda_version.second,
+											::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MINOR, cur_device);
+
+				// If this is the highest CUDA compatibility level so far, use this device.
+				if ((cur_cuda_version.first > best_cuda_version.first)
+					|| ((cur_cuda_version.first == best_cuda_version.first)
+						&& (cur_cuda_version.second > best_cuda_version.second))
+					|| ((cur_cuda_version.first == best_cuda_version.first)
+						&& (cur_cuda_version.second >= best_cuda_version.second) && (best_device == -1))) {
+					best_cuda_version = cur_cuda_version;
+					best_device       = cur_device;
+					best_luid         = cur_luid;
+				}
 
 				D_LOG("%4" PRId32 ": %s (%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8
 					  ":%02" PRIx8 "%02" PRIx8 ")",
-					  idx, name.data(), luid.bytes[0], luid.bytes[1], luid.bytes[2], luid.bytes[3], luid.bytes[4],
-					  luid.bytes[5], luid.bytes[6], luid.bytes[7]);
+					  idx, cur_name.data(), cur_luid.bytes[0], cur_luid.bytes[1], cur_luid.bytes[2], cur_luid.bytes[3],
+					  cur_luid.bytes[4], cur_luid.bytes[5], cur_luid.bytes[6], cur_luid.bytes[7]);
 			}
 		}
 
 #ifdef WIN32
-		// Intialize a dummy D3D11 context to perhaps fool some functionality into working.
-		_d3d = std::make_shared<::voicefx::windows::d3d::context>(luid);
+		// Initialize a dummy D3D11 context to perhaps fool some functionality into working.
+		_d3d = std::make_shared<::voicefx::windows::d3d::context>(best_luid);
 #endif
 
-		_cuda_context = std::make_shared<::nvidia::cuda::context>(dev);
+		_cuda_context = std::make_shared<::nvidia::cuda::context>(best_device);
 	} catch (...) {
 		D_LOG("CUDA not available, some features may not work.");
 	}
