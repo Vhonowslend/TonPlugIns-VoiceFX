@@ -74,8 +74,9 @@ size_t nvidia::afx::effect::blocksize()
 
 size_t nvidia::afx::effect::delay()
 {
-	// Latency is no longer documented, but originally was documented as 72/74ms, measured as 82/84ms.
-	return blocksize() * 8;
+	// The original documentation stated a latency of 72ms.
+	// Not quite sure where the 10ms extra rea coming from, but hey - samples align this way.
+	return (48000 * 82) / 1000;
 }
 
 bool nvidia::afx::effect::denoise_enabled()
