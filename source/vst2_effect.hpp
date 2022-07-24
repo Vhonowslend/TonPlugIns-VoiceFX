@@ -98,8 +98,15 @@ namespace voicefx {
 
 			intptr_t vst2_suspend_resume(bool should_resume);
 
+#ifdef ENABLE_FULL_VERSION
+			void  vst2_get_parameter_properties(uint32_t index, vst_parameter_properties* parameter);
+			void  vst2_get_parameter_label(uint32_t index, char text[VST_BUFFER_8]);
+			void  vst2_get_parameter_name(uint32_t index, char text[VST_BUFFER_8]);
+			void  vst2_get_parameter_value(uint32_t index, char text[VST_BUFFER_8]);
+			bool  vst2_is_parameter_automatable(uint32_t index);
 			void  vst2_set_parameter(uint32_t index, float value);
 			float vst2_get_parameter(uint32_t index) const;
+#endif
 
 			void vst2_process_float(const float* const* inputs, float** outputs, int32_t samples);
 		};

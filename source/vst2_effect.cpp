@@ -41,9 +41,13 @@ voicefx::vst2::effect::effect(vst_host_callback cb)
 
 	{ // Set-up the initial VST2.x structure for processing.
 
-		_vsteffect.magic_number      = 'VstP';
-		_vsteffect.num_programs      = 0;
-		_vsteffect.num_params        = 0;
+		_vsteffect.magic_number = 'VstP';
+		_vsteffect.num_programs = 0;
+#ifdef ENABLE_FULL_VERSION
+		_vsteffect.num_params = 2;
+#else
+		_vsteffect.num_params = 0;
+#endif
 		_vsteffect.flags             = 0b00010000;
 		_vsteffect.delay             = 441;
 		_vsteffect._unknown_float_00 = 1.0;
@@ -64,6 +68,7 @@ voicefx::vst2::effect::effect(vst_host_callback cb)
 			return intptr_t();
 		};
 		_vsteffect.set_parameter = [](vst_effect* pthis, uint32_t index, float value) {
+#ifdef ENABLE_FULL_VERSION
 			try {
 				static_cast<voicefx::vst2::effect*>(pthis->effect_internal)->vst2_set_parameter(index, value);
 			} catch (std::exception const& ex) {
@@ -71,8 +76,10 @@ voicefx::vst2::effect::effect(vst_host_callback cb)
 			} catch (...) {
 				D_LOG("(0x%08" PRIxPTR ") Unknown exception in set_parameter.", pthis);
 			}
+#endif
 		};
 		_vsteffect.get_parameter = [](vst_effect* pthis, uint32_t index) {
+#ifdef ENABLE_FULL_VERSION
 			try {
 				return static_cast<voicefx::vst2::effect*>(pthis->effect_internal)->vst2_get_parameter(index);
 			} catch (std::exception const& ex) {
@@ -80,6 +87,7 @@ voicefx::vst2::effect::effect(vst_host_callback cb)
 			} catch (...) {
 				D_LOG("(0x%08" PRIxPTR ") Unknown exception in get_parameter.", pthis);
 			}
+#endif
 			return float();
 		};
 		_vsteffect.process = [](vst_effect* pthis, const float* const* inputs, float** outputs, int32_t samples) {
@@ -234,8 +242,8 @@ try {
 		return vst2_set_speaker_arrangement(reinterpret_cast<vst_speaker_arrangement*>(p2),
 											reinterpret_cast<vst_speaker_arrangement*>(p3));
 
-	// -------------------------------------------------------------------------- //
-	// Processing
+		// -------------------------------------------------------------------------- //
+		// Processing
 	case VST_EFFECT_OPCODE_SUSPEND:
 		return vst2_suspend_resume(p2 != 0);
 	case VST_EFFECT_OPCODE_PROCESS_BEGIN:
@@ -244,12 +252,33 @@ try {
 	case VST_EFFECT_OPCODE_PROCESS_END:
 		return 0;
 
+#ifdef ENABLE_FULL_VERSION
 		// -------------------------------------------------------------------------- //
 		// User Interface (Not Implemented)
 	case VST_EFFECT_OPCODE_WINDOW_CREATE:
 	case VST_EFFECT_OPCODE_WINDOW_DESTROY:
 	case VST_EFFECT_OPCODE_WINDOW_GETRECT:
 		return 1;
+#endif
+
+#ifdef ENABLE_FULL_VERSION
+		// -------------------------------------------------------------------------- //
+		// Parameters
+	case VST_EFFECT_OPCODE_GET_PARAMETER_PROPERTIES:
+		vst2_get_parameter_properties(p1, reinterpret_cast<vst_parameter_properties*>(p3));
+		return 1;
+	case VST_EFFECT_OPCODE_PARAM_GETLABEL:
+		vst2_get_parameter_label(p1, reinterpret_cast<char*>(p3));
+		return 0;
+	case VST_EFFECT_OPCODE_PARAM_GETNAME:
+		vst2_get_parameter_name(p1, reinterpret_cast<char*>(p3));
+		return 0;
+	case VST_EFFECT_OPCODE_PARAM_GETVALUE:
+		vst2_get_parameter_value(p1, reinterpret_cast<char*>(p3));
+		return 0;
+	case VST_EFFECT_OPCODE_PARAM_ISAUTOMATABLE:
+		return vst2_is_parameter_automatable(p1) ? 1 : 0;
+#endif
 	}
 
 	D_LOG("(0x%08" PRIxPTR ") Unhandled: %04" PRIx32 " %04 " PRIx32 " %016 " PRIxPTR " %016 " PRIxPTR " %f",
@@ -385,12 +414,168 @@ intptr_t voicefx::vst2::effect::vst2_suspend_resume(bool should_resume)
 	return 0;
 }
 
-void voicefx::vst2::effect::vst2_set_parameter(uint32_t index, float value) {}
+#ifdef ENABLE_FULL_VERSION
+
+void voicefx::vst2::effect::vst2_get_parameter_label(uint32_t index, char text[VST_BUFFER_8])
+{
+	static std::string_view lbl_mode      = "Removal";
+	static std::string_view lbl_intensity = "%";
+	memset(text, 0, sizeof(text));
+	switch (index) {
+	case 0:
+		strncpy(text, lbl_mode.data(), std::min(sizeof(text), lbl_mode.size()));
+		break;
+	case 1:
+		strncpy(text, lbl_intensity.data(), std::min(sizeof(text), lbl_intensity.size()));
+		break;
+	}
+}
+
+void voicefx::vst2::effect::vst2_get_parameter_name(uint32_t index, char text[VST_BUFFER_8])
+{
+	static std::string_view name_mode      = "Mode";
+	static std::string_view name_intensity = "Intens.";
+	memset(text, 0, sizeof(text));
+	switch (index) {
+	case 0:
+		strncpy(text, name_mode.data(), std::min(sizeof(text) - 1, name_mode.size()));
+		break;
+	case 1:
+		strncpy(text, name_intensity.data(), std::min(sizeof(text) - 1, name_intensity.size()));
+		break;
+	}
+}
+
+void voicefx::vst2::effect::vst2_get_parameter_value(uint32_t index, char text[VST_BUFFER_8])
+{
+	static std::string_view name_mode_noise_echo = "Both";
+	static std::string_view name_mode_noise      = "Noise";
+	static std::string_view name_mode_echo       = "Echo";
+	memset(text, 0, sizeof(text));
+	switch (index) {
+	case 0: {
+		bool noise = _fx->denoise_enabled();
+		bool echo  = _fx->dereverb_enabled();
+		if (noise && echo) {
+			strncpy(text, name_mode_noise_echo.data(), std::min(sizeof(text) - 1, name_mode_noise_echo.size()));
+		} else if (echo) {
+			strncpy(text, name_mode_echo.data(), std::min(sizeof(text) - 1, name_mode_echo.size()));
+		} else {
+			strncpy(text, name_mode_noise.data(), std::min(sizeof(text) - 1, name_mode_noise.size()));
+		}
+		break;
+	}
+	case 1:
+		snprintf(text, sizeof(text) - 1, "%7.2f\0", _fx->intensity() * 100);
+		break;
+	}
+}
+
+bool voicefx::vst2::effect::vst2_is_parameter_automatable(uint32_t index)
+{
+	switch (index) {
+	case 0:
+		return false;
+	case 1:
+		return true;
+	}
+	return false;
+}
+
+void voicefx::vst2::effect::vst2_set_parameter(uint32_t index, float value)
+{
+	switch (index) {
+	case 0: {
+		uint32_t mode = std::llroundf(value * 2.f);
+		switch (mode) {
+		case 0:
+			_fx->enable_denoise(true);
+			_fx->enable_dereverb(false);
+			break;
+		case 1:
+			_fx->enable_denoise(false);
+			_fx->enable_dereverb(true);
+			break;
+		case 2:
+			_fx->enable_denoise(true);
+			_fx->enable_dereverb(true);
+			break;
+		}
+		break;
+	}
+	case 1: {
+		_fx->intensity(value);
+		break;
+	}
+	}
+}
+
+void voicefx::vst2::effect::vst2_get_parameter_properties(uint32_t index, vst_parameter_properties* parameter)
+{
+	static std::string_view name_mode       = "Mode";
+	static std::string_view label_mode      = "Removal";
+	static std::string_view name_intensity  = "Intensity";
+	static std::string_view label_intensity = "%";
+	memset(parameter, 0, sizeof(parameter));
+	switch (index) {
+	case 0: {
+		parameter->flags = VST_PARAMETER_FLAGS_STEP_INT | VST_PARAMETER_FLAGS_INTEGER_LIMITS;
+
+		memset(parameter->name, 0, sizeof(parameter->name));
+		strncpy(parameter->name, name_mode.data(), std::min(name_mode.length(), sizeof(parameter->name) - 1));
+
+		memset(parameter->label, 0, sizeof(parameter->label));
+		strncpy(parameter->label, label_mode.data(), std::min(label_mode.length(), sizeof(parameter->label) - 1));
+
+		parameter->min_value_i32  = 0;
+		parameter->max_value_i32  = 2;
+		parameter->step_i32       = 1;
+		parameter->step_f32       = 1;
+		parameter->step_small_f32 = 1;
+		parameter->step_large_f32 = 1;
+		break;
+	}
+	case 1: {
+		parameter->flags = VST_PARAMETER_FLAGS_STEP_FLOAT | VST_PARAMETER_FLAGS_INTEGER_LIMITS;
+
+		memset(parameter->name, 0, sizeof(parameter->name));
+		strncpy(parameter->name, name_intensity.data(), std::min(name_intensity.length(), sizeof(parameter->name) - 1));
+
+		memset(parameter->label, 0, sizeof(parameter->label));
+		strncpy(parameter->label, label_intensity.data(),
+				std::min(label_intensity.length(), sizeof(parameter->label) - 1));
+
+		parameter->min_value_i32  = 0;
+		parameter->max_value_i32  = 1;
+		parameter->step_f32       = 0.1;
+		parameter->step_small_f32 = 0.01;
+		parameter->step_large_f32 = 1.0;
+		break;
+	}
+	}
+}
 
 float voicefx::vst2::effect::vst2_get_parameter(uint32_t index) const
 {
-	return 0.0F;
+	switch (index) {
+	case 0: {
+		bool noise = _fx->denoise_enabled();
+		bool echo  = _fx->dereverb_enabled();
+		if (noise && echo) {
+			return 1.0;
+		} else if (echo) {
+			return .5;
+		} else {
+			return 0.;
+		}
+	}
+	case 1: {
+		return _fx->intensity();
+	}
+	}
+	return 0.;
 }
+#endif
 
 void voicefx::vst2::effect::vst2_process_float(const float* const* inputs, float** outputs, int32_t samples)
 try {
