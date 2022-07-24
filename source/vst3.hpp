@@ -27,6 +27,9 @@
 #define FOURCC_CREATOR_PROCESSOR FOURCC('X', 'm', 'r', 'P')
 #define FOURCC_CREATOR_CONTROLLER FOURCC('X', 'm', 'r', 'C')
 
+#define PARAMETER_MODE FOURCC('M', 'o', 'd', 'e')
+#define PARAMETER_INTENSITY FOURCC('I', 'n', 't', 's')
+
 extern void* moduleHandle;
 #ifdef WIN32
 #include <Windows.h>

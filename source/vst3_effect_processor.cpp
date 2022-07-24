@@ -235,6 +235,36 @@ try {
 			data.numSamples, _delay);
 	}
 
+// If there were any parameter changes, handle them.
+#ifdef ENABLE_FULL_VERSION
+	if (data.inputParameterChanges) {
+		for (Steinberg::int32 idx = 0, edx = (data.inputParameterChanges->getParameterCount() > 0); idx < edx; ++idx) {
+			auto param = data.inputParameterChanges->getParameterData(idx);
+			if (param) {
+				Steinberg::Vst::ParamValue value;
+				Steinberg::int32           sample_offset;
+				if (Steinberg::int32 points = param->getPointCount(); points > 0) {
+					switch (param->getParameterId()) {
+					case PARAMETER_MODE:
+						if (param->getPoint(points - 1, sample_offset, value) == kResultTrue) {
+							// Normalized -> Discrete
+							uint32_t mode = std::llroundf(std::floor(std::min(2., value * 3.)));
+							_fx->enable_denoise(mode == 2 || mode == 0);
+							_fx->enable_dereverb(mode == 2 || mode == 1);
+						}
+						break;
+					case PARAMETER_INTENSITY:
+						if (param->getPoint(points - 1, sample_offset, value) == kResultTrue) {
+							_fx->intensity(value);
+						}
+						break;
+					}
+				}
+			}
+		}
+	}
+#endif
+
 	{ // Processing begins from here on out.
 		bool                      resample = processSetup.sampleRate != ::nvidia::afx::effect::samplerate();
 		std::vector<const float*> in_buffers(_channels.size(), nullptr);
@@ -457,6 +487,25 @@ try {
 		return kResultFalse;
 	}
 
+	IBStreamer streamer(state, kLittleEndian);
+#ifdef ENABLE_FULL_VERSION
+	if (bool value = 0; streamer.readBool(value) == true) {
+		_fx->enable_denoise(value);
+	} else {
+		return kResultFalse;
+	}
+	if (bool value = 0; streamer.readBool(value) == true) {
+		_fx->enable_dereverb(value);
+	} else {
+		return kResultFalse;
+	}
+	if (float value = 0; streamer.readFloat(value) == true) {
+		_fx->intensity(value);
+	} else {
+		return kResultFalse;
+	}
+#endif
+
 	return kResultOk;
 } catch (std::exception const& ex) {
 	D_LOG("(0x%08" PRIxPTR ") Exception in setState: %s", this, ex.what());
@@ -471,6 +520,13 @@ try {
 	if (state == nullptr) {
 		return kResultFalse;
 	}
+
+	IBStreamer streamer(state, kLittleEndian);
+#ifdef ENABLE_FULL_VERSION
+	streamer.writeBool(_fx->denoise_enabled());
+	streamer.writeBool(_fx->dereverb_enabled());
+	streamer.writeFloat(_fx->intensity());
+#endif
 
 	return kResultOk;
 } catch (std::exception const& ex) {

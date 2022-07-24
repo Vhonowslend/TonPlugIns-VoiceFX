@@ -29,6 +29,22 @@
 vst3::effect::controller::controller()
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
+
+#ifdef ENABLE_FULL_VERSION
+	{
+		auto p = new Steinberg::Vst::StringListParameter(STR("Mode"), PARAMETER_MODE, STR("Removal"));
+		p->appendString(STR("Noise"));
+		p->appendString(STR("Echo"));
+		p->appendString(STR("Both"));
+		parameters.addParameter(p);
+	}
+	{
+		auto p = new Steinberg::Vst::RangeParameter(STR("Intensity"), PARAMETER_INTENSITY, STR("%"), 0.0, 100.0, 100.0,
+													0, Steinberg::Vst::ParameterInfo::ParameterFlags::kCanAutomate);
+		//p->setPrecision(2);
+		parameters.addParameter(p);
+	}
+#endif
 }
 
 vst3::effect::controller::~controller() {}
@@ -51,7 +67,25 @@ tresult PLUGIN_API vst3::effect::controller::setComponentState(IBStream* state)
 		return kResultFalse;
 	}
 
-	IBStreamer streamer(state, kBigEndian);
+	IBStreamer streamer(state, kLittleEndian);
+#ifdef ENABLE_FULL_VERSION
+	if (bool echo, reverb; streamer.readBool(echo) && streamer.readBool(reverb) == true) {
+		if (echo && reverb) {
+			setParamNormalized(PARAMETER_MODE, 1.);
+		} else if (reverb) {
+			setParamNormalized(PARAMETER_MODE, 0.5);
+		} else {
+			setParamNormalized(PARAMETER_MODE, 0.);
+		}
+	} else {
+		return kResultFalse;
+	}
+	if (float value = 0; streamer.readFloat(value) == true) {
+		setParamNormalized(PARAMETER_INTENSITY, value);
+	} else {
+		return kResultFalse;
+	}
+#endif
 
 	return kResultOk;
 }
