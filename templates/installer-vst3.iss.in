@@ -3,7 +3,7 @@
 
 #define MyAppName "@PROJECT_TITLE@ (VST3.x)"
 #define MyAppVersion "@PROJECT_VERSION_CMAKE@"
-#define MyAppVersionText "@PROJECT_VERSION_STRING@"
+#define MyAppVersionText "@_VERSION_THIN@"
 #define MyAppPublisher "@PROJECT_AUTHORS@"
 #define MyAppURL "@PROJECT_HOMEPAGE_URL@"
 #define MyAppCopyright "@PROJECT_COPYRIGHT@"

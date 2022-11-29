@@ -176,12 +176,14 @@ endif()
 # Version
 ################################################################################
 
-# Version handling
-set(PROJECT_VERSION_GIT_BASE "0.4.0") # For automatic versioning, which version is the "root" of the current changes?
-set(PROJECT_VERSION "0.4.0") # What is our version goal?
-version(PARSE PROJECT_VERSION "${PROJECT_VERSION}" REQUIRE PATCH;TWEAK)
+# For automatic versioning, which version is the "root" of the current changes?
+set(_VERSION_GIT_BASE "0.4.0")
 
-# - If possible, automatically generate versions from git.
+# What is our version goal?
+set(_VERSION "0.5.0")
+version(PARSE _VERSION "${_VERSION}")
+
+# If possible, automatically generate versions from git.
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
 	find_program(GIT
 		NAMES
@@ -192,10 +194,10 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
 	if(EXISTS "${GIT}")
 		# Calculate the Tweak version component from the given base version.
 		execute_process(
-			COMMAND "${GIT}" describe --tags --long --match "${PROJECT_VERSION_GIT_BASE}" --abbrev=8 HEAD
+			COMMAND "${GIT}" describe --tags --long --match "${_VERSION_GIT_BASE}" --abbrev=8 HEAD
 			WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
 			RESULT_VARIABLE GIT_RESULT
-			OUTPUT_VARIABLE PROJECT_VERSION_GIT
+			OUTPUT_VARIABLE _VERSION_GIT
 			ERROR_VARIABLE GIT_ERROR
 			OUTPUT_STRIP_TRAILING_WHITESPACE
 			ERROR_STRIP_TRAILING_WHITESPACE
@@ -203,19 +205,20 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
 		)
 		if(GIT_RESULT EQUAL 0)
 			# Some minor string editing so the output conforms to SemVer 2.0.0.
-			string(REPLACE "-" ";" PROJECT_VERSION_GIT "${PROJECT_VERSION_GIT}")
+			string(REPLACE "-" ";" _VERSION_GIT "${_VERSION_GIT}")
 
 			# Parse as SemVer 2.0.0
-			list(GET PROJECT_VERSION_GIT 1 PROJECT_VERSION_GIT_TWEAK)
-			list(GET PROJECT_VERSION_GIT 2 PROJECT_VERSION_GIT_BUILD)
+			list(GET _VERSION_GIT 1 _VERSION_GIT_TWEAK)
+			list(GET _VERSION_GIT 2 _VERSION_GIT_BUILD)
 
 			# Update our global version.
-			version(MODIFY PROJECT_VERSION "${PROJECT_VERSION}" COMPRESS
-				TWEAK "${PROJECT_VERSION_GIT_TWEAK}"
-				BUILD "${PROJECT_VERSION_GIT_BUILD}"
-				REQUIRE PATCH;TWEAK
+			version(MODIFY _VERSION "${_VERSION}" COMPRESS
+				TWEAK "${_VERSION_GIT_TWEAK}"
+				BUILD "${_VERSION_GIT_BUILD}"
+				PRERELEASE "a"
+				REQUIRE PATCH TWEAK
 			)
-			version(PARSE PROJECT_VERSION "${PROJECT_VERSION}" REQUIRE PATCH;TWEAK)
+			version(PARSE _VERSION "${_VERSION}" REQUIRE PATCH TWEAK)
 		else()
 			message(WARNING "${LOGPREFIX}Unable to detect Tweak and Build component with 'git'.")
 		endif()
@@ -225,37 +228,38 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.git")
 			COMMAND "${GIT}" tag "--sort=-v:refname" "--points-at" HEAD
 			WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
 			RESULT_VARIABLE GIT_RESULT
-			OUTPUT_VARIABLE PROJECT_VERSION_TAG
+			OUTPUT_VARIABLE _VERSION_TAG
 			ERROR_VARIABLE GIT_ERROR
 			OUTPUT_STRIP_TRAILING_WHITESPACE
 			ERROR_STRIP_TRAILING_WHITESPACE
 			ERROR_QUIET
 		)
-		if((GIT_RESULT EQUAL 0) AND (NOT "${PROJECT_VERSION_TAG}" STREQUAL ""))
+		if((GIT_RESULT EQUAL 0) AND (NOT "${_VERSION_TAG}" STREQUAL ""))
 			# Some minor string editing so the output conforms to SemVer 2.0.0.
-			string(REGEX REPLACE "[\r\n]+.*" "" PROJECT_VERSION_TAG "${PROJECT_VERSION_TAG}")
+			string(REGEX REPLACE "[\r\n]+.*" "" _VERSION_TAG "${_VERSION_TAG}")
 
 			# Parse as SemVer 2.0.0
-			version(PARSE PROJECT_VERSION_TAG "${PROJECT_VERSION_TAG}" REQUIRE PATCH;TWEAK)
-			if(PROJECT_VERSION_TAG_PRERELEASE)
-				string(SUBSTRING "${PROJECT_VERSION_TAG_PRERELEASE}" 1 -1 PROJECT_VERSION_TAG_TWEAK)
-				string(SUBSTRING "${PROJECT_VERSION_TAG_PRERELEASE}" 0 1 PROJECT_VERSION_TAG_PRERELEASE)
+			version(PARSE _VERSION_TAG "${_VERSION_TAG}" REQUIRE PATCH TWEAK)
+			if(_VERSION_TAG_PRERELEASE)
+				string(SUBSTRING "${_VERSION_TAG_PRERELEASE}" 1 -1 _VERSION_TAG_TWEAK)
+				string(SUBSTRING "${_VERSION_TAG_PRERELEASE}" 0 1 _VERSION_TAG_PRERELEASE)
 
-				if(NOT PROJECT_VERSION_TAG_TWEAK STREQUAL PROJECT_VERSION_GIT_TWEAK)
-					message(WARNING "${LOGPREFIX}'git' tag mismatches detected version: '${PROJECT_VERSION_TAG_TWEAK}' != '${PROJECT_VERSION_GIT_TWEAK}'.")
+				if(NOT _VERSION_TAG_TWEAK STREQUAL _VERSION_GIT_TWEAK)
+					message(WARNING "${LOGPREFIX}'git' tag mismatches detected version: '${_VERSION_TAG_TWEAK}' != '${_VERSION_GIT_TWEAK}'.")
 				endif()
 			endif()
 
 			# Update our global version.
-			version(GENERATE PROJECT_VERSION COMPRESS
-				MAJOR "${PROJECT_VERSION_TAG_MAJOR}"
-				MINOR "${PROJECT_VERSION_TAG_MINOR}"
-				PATCH "${PROJECT_VERSION_TAG_PATCH}"
-				TWEAK "${PROJECT_VERSION_TAG_TWEAK}"
-				PRERELEASE "${PROJECT_VERSION_TAG_PRERELEASE}"
-				BUILD "${PROJECT_VERSION_BUILD}"
+			version(GENERATE _VERSION COMPRESS
+				MAJOR "${_VERSION_TAG_MAJOR}"
+				MINOR "${_VERSION_TAG_MINOR}"
+				PATCH "${_VERSION_TAG_PATCH}"
+				TWEAK "${_VERSION_TAG_TWEAK}"
+				PRERELEASE "${_VERSION_TAG_PRERELEASE}"
+				BUILD "${_VERSION_BUILD}"
+				REQUIRE PATCH TWEAK
 			)
-			version(PARSE PROJECT_VERSION "${PROJECT_VERSION}" REQUIRE PATCH;TWEAK)
+			version(PARSE _VERSION "${_VERSION}" REQUIRE PATCH TWEAK)
 		endif()
 	else()
 		message(STATUS "${LOGPREFIX}'git' not found, automatic version detection disabled.")
@@ -264,41 +268,52 @@ else()
 	message(STATUS "${LOGPREFIX}Not a git repository, automatic version detection disabled.")
 endif()
 
-# - If the user specified an override, use it instead of ours.
+# Allow manual overrides of the detected version.
+set(${PREFIX}VERSION "" CACHE STRING "Override detected or pre-configured version with this string. Accepts strings in CMake and SemVer 2.0.0 format.")
 if(NOT ("${${PREFIX}VERSION}" STREQUAL ""))
-	version(PARSE PROJECT_VERSION_CFG "${${PREFIX}VERSION}")
-	if("${PROJECT_VERSION_CFG_BUILD}" STREQUAL "")
-		set(PROJECT_VERSION_CFG_BUILD "${PROJECT_VERSION_BUILD}")
+	version(PARSE _VERSION_CFG "${${PREFIX}VERSION}" REQUIRE PATCH TWEAK)
+	if("${_VERSION_CFG_BUILD}" STREQUAL "")
+		set(_VERSION_CFG_BUILD "${_VERSION_BUILD}")
 	endif()
-	version(GENERATE PROJECT_VERSION COMPRESS
-		MAJOR "${PROJECT_VERSION_CFG_MAJOR}"
-		MINOR "${PROJECT_VERSION_CFG_MINOR}"
-		PATCH "${PROJECT_VERSION_CFG_PATCH}"
-		TWEAK "${PROJECT_VERSION_CFG_TWEAK}"
-		PRERELEASE "${PROJECT_VERSION_CFG_PRERELEASE}"
-		BUILD "${PROJECT_VERSION_CFG_BUILD}"
+	version(GENERATE _VERSION COMPRESS
+		MAJOR "${_VERSION_CFG_MAJOR}"
+		MINOR "${_VERSION_CFG_MINOR}"
+		PATCH "${_VERSION_CFG_PATCH}"
+		TWEAK "${_VERSION_CFG_TWEAK}"
+		PRERELEASE "${_VERSION_CFG_PRERELEASE}"
+		BUILD "${_VERSION_CFG_BUILD}"
 	)
 endif()
-message(STATUS "${LOGPREFIX}Version ${PROJECT_VERSION}")
-set(PROJECT_VERSION_STRING "${PROJECT_VERSION}")
+
+set(_VERSION_THIN "${_VERSION_MAJOR}.${_VERSION_MINOR}.${_VERSION_PATCH}")
+if(NOT (_VERSION_PRERELEASE STREQUAL ""))
+	set(_VERSION_THIN "${_VERSION_THIN}${_VERSION_PRERELEASE}${_VERSION_TWEAK}")
+endif()
+if(NOT (VERSION_COMMIT STREQUAL ""))
+	set(_VERSION_THIN "${_VERSION_THIN}-${_VERSION_BUILD}")
+endif()
+
+# Parse & Log the detected version.
+message(STATUS "${LOGPREFIX}Version ${_VERSION}")
 
 ################################################################################
 # Project
 ################################################################################
 
 # - Generate a version number compatible with CMake
-version(GENERATE PROJECT_VERSION_CMAKE
-	MAJOR "${PROJECT_VERSION_MAJOR}"
-	MINOR "${PROJECT_VERSION_MINOR}"
-	PATCH "${PROJECT_VERSION_PATCH}"
-	TWEAK "${PROJECT_VERSION_TWEAK}"
+version(GENERATE PROJECT_VERSION
+	MAJOR "${_VERSION_MAJOR}"
+	MINOR "${_VERSION_MINOR}"
+	PATCH "${_VERSION_PATCH}"
+	TWEAK "${_VERSION_TWEAK}"
+	REQUIRE PATCH TWEAK
 )
 
 # Project and Metadata
 project(
 	VoiceFX
 	LANGUAGES CXX;C
-	VERSION "${PROJECT_VERSION_CMAKE}"
+	VERSION "${PROJECT_VERSION}"
 	DESCRIPTION "VoiceFX is a VST plug-in to clean up noise from any recording."
 	HOMEPAGE_URL "https://www.xaymar.com/projects/voicefx/"
 )
@@ -840,7 +855,7 @@ endif()
 ################################################################################
 
 if("${${PREFIX}PACKAGE_SUFFIX}" STREQUAL "")
-	set(_PACKAGE_SUFFIX "${PROJECT_VERSION_STRING}")
+	set(_PACKAGE_SUFFIX "${_VERSION_THIN}")
 else()
 	set(_PACKAGE_SUFFIX "${${PREFIX}PACKAGE_SUFFIX}")
 endif()
