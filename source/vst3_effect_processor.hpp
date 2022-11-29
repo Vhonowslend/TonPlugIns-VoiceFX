@@ -29,7 +29,10 @@
 #include "audiobuffer.hpp"
 #include "nvidia-afx-effect.hpp"
 #include "nvidia-afx.hpp"
+
+#ifdef ENABLE_RESAMPLER
 #include "resampler.hpp"
+#endif
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -47,24 +50,24 @@ namespace vst3::effect {
 		bool _dirty;
 
 		struct channel_buffers {
-			// Raw -> Buffer
-			// Buffer -> (Resampled) FX
-			// (Resampled) FX -> Buffer
-			// Buffer -> Raw
-
-			voicefx::audiobuffer in_buffer;
-			voicefx::audiobuffer in_fx;
-			voicefx::audiobuffer out_fx;
-			voicefx::audiobuffer out_buffer;
+			voicefx::audiobuffer input_resampled;
+			voicefx::audiobuffer output_resampled;
+#ifdef ENABLE_RESAMPLING
+			voicefx::audiobuffer input_unresampled;
+			voicefx::audiobuffer output_unresampled;
+#endif
 		};
 
-		std::shared_ptr<::voicefx::resampler>  _in_resampler;
 		std::shared_ptr<::nvidia::afx::effect> _fx;
-		std::shared_ptr<::voicefx::resampler>  _out_resampler;
 		std::vector<channel_buffers>           _channels;
 
 		int64_t _delay;
 		int64_t _local_delay;
+
+#ifdef ENABLE_RESAMPLER
+		std::shared_ptr<::voicefx::resampler> _in_resampler;
+		std::shared_ptr<::voicefx::resampler> _out_resampler;
+#endif
 
 		public:
 		static FUnknown* create(void* data);

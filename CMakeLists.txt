@@ -155,6 +155,8 @@ set(${PREFIX}ENABLE_FULL_VERSION ON CACHE BOOL "Enable the full feature set? (Do
 set(${PREFIX}ENABLE_STEINBERG_VST3 ON CACHE BOOL "Enable Steinberg VST3.x support?")
 set(${PREFIX}ENABLE_STEINBERG_VST2 OFF CACHE BOOL "Enable Steinberg VST2.x support?")
 
+set(${PREFIX}ENABLE_RESAMPLING OFF CACHE BOOL "Enable support for resampling?")
+
 set(${PREFIX}ENABLE_LTO ON CACHE BOOL "Enable Link-Time Optimizations?")
 set(${PREFIX}ENABLE_CLANG ON CACHE BOOL "Enable Clang?")
 set(${PREFIX}ENABLE_CODESIGN ON CACHE BOOL "Enable code signing?")
@@ -548,8 +550,6 @@ list(APPEND PROJECT_SOURCE
 	"source/nvidia-afx.cpp"
 	"source/nvidia-afx-effect.hpp"
 	"source/nvidia-afx-effect.cpp"
-	"source/resampler.hpp"
-	"source/resampler.cpp"
 	"source/util-bitmask.hpp"
 	"source/util-library.hpp"
 	"source/util-library.cpp"
@@ -572,6 +572,16 @@ list(APPEND PROJECT_INCLUDES
 if(${PREFIX}ENABLE_FULL_VERSION)
 	list(APPEND PROJECT_DEFINITIONS
 		${PREFIX}ENABLE_FULL_VERSION
+	)
+endif()
+
+if(${PREFIX}ENABLE_RESAMPLING)
+	list(APPEND PROJECT_DEFINITIONS
+		ENABLE_RESAMPLING
+	)
+	list(APPEND PROJECT_SOURCE
+		"source/resampler.hpp"
+		"source/resampler.cpp"
 	)
 endif()
 
@@ -638,10 +648,12 @@ else()
 endif()
 
 # Resampler (Secret Rabbit Code)
-add_subdirectory(third-party/secret-rabbit-code)
-list(APPEND PROJECT_LIBRARIES
-	secret-rabbit-code
-)
+if(${PREFIX}ENABLE_RESAMPLING)
+	add_subdirectory(third-party/secret-rabbit-code)
+	list(APPEND PROJECT_LIBRARIES
+		secret-rabbit-code
+	)
+endif()
 
 # API SDK: Steinberg VST3
 if(${PREFIX}ENABLE_STEINBERG_VST3)

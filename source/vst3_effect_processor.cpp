@@ -43,8 +43,7 @@ try {
 	return nullptr;
 }
 
-vst3::effect::processor::processor()
-	: _dirty(true), _in_resampler(), _fx(), _out_resampler(), _channels(), _delay(0), _local_delay(0)
+vst3::effect::processor::processor() : _dirty(true), _fx(), _channels(), _delay(0), _local_delay(0)
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
@@ -56,9 +55,11 @@ vst3::effect::processor::processor()
 	processContextRequirements.needSamplesToNextClock();
 
 	// Allocate the necessary resources.
+	_fx = std::make_shared<::nvidia::afx::effect>();
+#ifdef ENABLE_RESAMPLER
 	_in_resampler  = std::make_shared<::voicefx::resampler>();
 	_out_resampler = std::make_shared<::voicefx::resampler>();
-	_fx            = std::make_shared<::nvidia::afx::effect>();
+#endif
 }
 
 vst3::effect::processor::~processor() {}
@@ -266,44 +267,50 @@ try {
 #endif
 
 	{ // Processing begins from here on out.
-		bool                      resample = processSetup.sampleRate != ::nvidia::afx::effect::samplerate();
+#ifdef ENABLE_RESAMPLING
+		bool resample = processSetup.sampleRate != ::nvidia::afx::effect::samplerate();
+#endif
 		std::vector<const float*> in_buffers(_channels.size(), nullptr);
 		std::vector<float*>       out_buffers(_channels.size(), nullptr);
 
 		// Push data into the (unresampled) input buffers.
 		for (size_t idx = 0; idx < _channels.size(); idx++) {
 			auto& channel = _channels[idx];
+#ifdef ENABLE_RESAMPLING
 			if (resample) {
-				channel.in_buffer.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
-				in_buffers[idx] = channel.in_buffer.peek(0);
+				channel.input_unresampled.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
+				in_buffers[idx] = channel.input_unresampled.peek(0);
 #ifdef DEBUG_BUFFERS
 				D_LOG("{%02" PRIuMAX "} Pushed %" PRId32 " samples to input resample buffer.", idx, data.numSamples);
 #endif
-			} else {
-				channel.in_fx.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
-				in_buffers[idx] = channel.in_fx.peek(0);
+			} else
+#endif
+			{
+				channel.input_resampled.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
+				in_buffers[idx] = channel.input_resampled.peek(0);
 #ifdef DEBUG_BUFFERS
 				D_LOG("{%02" PRIuMAX "} Pushed %" PRId32 " samples to effect input buffer.", idx, data.numSamples);
 #endif
 			}
 #ifdef DEBUG_BUFFERS
 			D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
-				  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
-				  _local_delay);
+				  channel.input_unresampled.size(), channel.input_resampled.size(), channel.output_unresampled.size(),
+				  channel.output_resampled.size(), _local_delay);
 #endif
 		}
 
+#ifdef ENABLE_RESAMPLING
 		// Resample the input data to match the effect sample rate.
 		if (resample) {
 			// Update the output buffer pointers.
 			for (size_t idx = 0; idx < _channels.size(); idx++) {
 				auto& channel    = _channels[idx];
-				out_buffers[idx] = channel.in_fx.back();
+				out_buffers[idx] = channel.input_resampled.back();
 			}
 
 			// Resample the given audio
-			size_t in_samples  = _channels[0].in_buffer.size();
-			size_t out_samples = _channels[0].in_fx.avail();
+			size_t in_samples  = _channels[0].input_unresampled.size();
+			size_t out_samples = _channels[0].input_resampled.avail();
 			_in_resampler->process(in_buffers.data(), in_samples, in_samples, out_buffers.data(), out_samples,
 								   out_samples);
 
@@ -312,37 +319,41 @@ try {
 				auto& channel = _channels[idx];
 
 				// Pop the used samples from the input buffer.
-				channel.in_buffer.pop(in_samples);
+				channel.input_unresampled.pop(in_samples);
 
 				// Push the generated samples into the output buffer.
-				channel.in_fx.reserve(out_samples);
+				channel.input_resampled.reserve(out_samples);
 
 				// Update input buffer for next effect.
-				in_buffers[idx] = channel.in_fx.peek(0);
+				in_buffers[idx] = channel.input_resampled.peek(0);
 
 #ifdef DEBUG_BUFFERS
 				D_LOG("{%02" PRIuMAX "} Resampled % " PRIuMAX " samples to %" PRIuMAX " samples.", idx, in_samples,
 					  out_samples);
 				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
-					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
-					  _local_delay);
+					  channel.input_unresampled.size(), channel.input_resampled.size(),
+					  channel.output_unresampled.size(), channel.output_resampled.size(), _local_delay);
 #endif
 			}
 		}
+#endif
 
 		// Process as much data as possible.
-		if (_channels[0].in_fx.avail() > ::nvidia::afx::effect::blocksize()) {
+		if (_channels[0].input_resampled.avail() > ::nvidia::afx::effect::blocksize()) {
 			// Calculate the total number of chunks that can be processed.
-			size_t chunks =
-				_channels[0].in_fx.size() - (_channels[0].in_fx.size() % ::nvidia::afx::effect::blocksize());
+			size_t chunks = _channels[0].input_resampled.size()
+							- (_channels[0].input_resampled.size() % ::nvidia::afx::effect::blocksize());
 
 			// Update the output buffer pointers.
 			for (size_t idx = 0; idx < _channels.size(); idx++) {
 				auto& channel = _channels[idx];
+#ifdef ENABLE_RESAMPLING
 				if (resample) {
-					out_buffers[idx] = channel.out_fx.back();
-				} else {
-					out_buffers[idx] = channel.out_buffer.back();
+					out_buffers[idx] = channel.output_unresampled.back();
+				} else
+#endif
+				{
+					out_buffers[idx] = channel.output_resampled.back();
 				}
 			}
 
@@ -358,36 +369,40 @@ try {
 				auto& channel = _channels[idx];
 
 				// Pop the used samples from the input buffer.
-				channel.in_fx.pop(chunks);
+				channel.input_resampled.pop(chunks);
 
-				// Push the generated samples into the output buffer.
+// Push the generated samples into the output buffer.
+#ifdef ENABLE_RESAMPLING
 				if (resample) {
-					channel.out_fx.reserve(chunks);
-					in_buffers[idx] = channel.out_fx.peek(0);
-				} else {
-					channel.out_buffer.reserve(chunks);
-					in_buffers[idx] = channel.out_buffer.peek(0);
+					channel.output_unresampled.reserve(chunks);
+					in_buffers[idx] = channel.output_unresampled.peek(0);
+				} else
+#endif
+				{
+					channel.output_resampled.reserve(chunks);
+					in_buffers[idx] = channel.output_resampled.peek(0);
 				}
 
 #ifdef DEBUG_BUFFERS
 				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
-					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
-					  _local_delay);
+					  channel.input_unresampled.size(), channel.input_resampled.size(),
+					  channel.output_unresampled.size(), channel.output_resampled.size(), _local_delay);
 #endif
 			}
 		}
 
+#ifdef ENABLE_RESAMPLING
 		// Resample the input data to match the effect sample rate.
 		if (resample) {
 			// Update the output buffer pointers.
 			for (size_t idx = 0; idx < _channels.size(); idx++) {
 				auto& channel    = _channels[idx];
-				out_buffers[idx] = channel.out_buffer.back();
+				out_buffers[idx] = channel.output_resampled.back();
 			}
 
 			// Resample the given audio
-			size_t in_samples  = _channels[0].out_fx.size();
-			size_t out_samples = _channels[0].out_buffer.avail();
+			size_t in_samples  = _channels[0].output_unresampled.size();
+			size_t out_samples = _channels[0].output_resampled.avail();
 			_out_resampler->process(in_buffers.data(), in_samples, in_samples, out_buffers.data(), out_samples,
 									out_samples);
 
@@ -396,26 +411,27 @@ try {
 				auto& channel = _channels[idx];
 
 				// Pop the used samples from the input buffer.
-				channel.out_fx.pop(in_samples);
+				channel.output_unresampled.pop(in_samples);
 
 				// Push the generated samples into the output buffer.
-				channel.out_buffer.reserve(out_samples);
+				channel.output_resampled.reserve(out_samples);
 
 				// Update input buffer for next effect.
-				in_buffers[idx] = channel.out_buffer.peek(0);
+				in_buffers[idx] = channel.output_resampled.peek(0);
 
 #ifdef DEBUG_BUFFERS
 				D_LOG("{%02" PRIuMAX "} Resampled % " PRIuMAX " samples to %" PRIuMAX " samples.", idx, in_samples,
 					  out_samples);
 				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
-					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
-					  _local_delay);
+					  channel.input_unresampled.size(), channel.input_resampled.size(),
+					  channel.output_unresampled.size(), channel.output_resampled.size(), _local_delay);
 #endif
 			}
 		}
+#endif
 
 		// Output data.
-		int64_t delay_adjustment = _channels[0].out_buffer.size();
+		int64_t delay_adjustment = _channels[0].output_resampled.size();
 		if ((_local_delay < data.numSamples) || (_local_delay == 0)) {
 			// Return full or partial data.
 			size_t offset = _local_delay;
@@ -426,9 +442,9 @@ try {
 				if (offset > 0) {
 					memset(data.outputs[0].channelBuffers32[idx], 0, offset * sizeof(float));
 				}
-				memcpy(data.outputs[0].channelBuffers32[idx] + offset, channel.out_buffer.front(),
+				memcpy(data.outputs[0].channelBuffers32[idx] + offset, channel.output_resampled.front(),
 					   length * sizeof(float));
-				channel.out_buffer.pop(length);
+				channel.output_resampled.pop(length);
 
 #ifdef DEBUG_BUFFER_CONTENT
 				for (size_t ndx = 0; ndx < data.numSamples; ndx += 8) {
@@ -445,8 +461,8 @@ try {
 				D_LOG("{%02" PRIuMAX "} Output % " PRIuMAX " samples at %" PRIuMAX " sample offset.", idx, length,
 					  offset);
 				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
-					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
-					  _local_delay);
+					  channel.input_unresampled.size(), channel.input_resampled.size(),
+					  channel.output_unresampled.size(), channel.output_resampled.size(), _local_delay);
 #endif
 			}
 		} else {
@@ -456,8 +472,8 @@ try {
 #ifdef DEBUG_BUFFERS
 				auto& channel = _channels[idx];
 				D_LOG("{%02" PRIuMAX "} %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRIuMAX " %8" PRId64, idx,
-					  channel.in_buffer.size(), channel.in_fx.size(), channel.out_fx.size(), channel.out_buffer.size(),
-					  _local_delay);
+					  channel.input_unresampled.size(), channel.input_resampled.size(),
+					  channel.output_unresampled.size(), channel.output_resampled.size(), _local_delay);
 #endif
 			}
 		}
@@ -546,6 +562,7 @@ void vst3::effect::processor::reset()
 
 	D_LOG("(0x%08" PRIxPTR ") Resetting...", this);
 
+#ifdef ENABLE_RESAMPLING
 	// Update resamplers
 	_in_resampler->ratio(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 	_in_resampler->clear();
@@ -553,24 +570,29 @@ void vst3::effect::processor::reset()
 	_out_resampler->ratio(::nvidia::afx::effect::samplerate(), processSetup.sampleRate);
 	_out_resampler->clear();
 	_out_resampler->load();
+#endif
 
 	// Calculate absolute effect delay
 	_delay = ::nvidia::afx::effect::delay();
 	_delay += ::nvidia::afx::effect::blocksize();
+#ifdef ENABLE_RESAMPLING
 	if (processSetup.sampleRate != ::nvidia::afx::effect::samplerate()) {
 		_delay = std::llround(_delay / _in_resampler->ratio());
 		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 	}
+#endif
 	_local_delay = ::nvidia::afx::effect::blocksize();
 	D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRIu32 " samples.", this, _delay);
 
 	// Update channel buffers.
 	for (auto& channel : _channels) {
-		channel.in_buffer.resize(processSetup.sampleRate);
-		channel.in_fx.resize(::nvidia::afx::effect::samplerate());
-		channel.out_fx.resize(::nvidia::afx::effect::samplerate());
-		channel.out_buffer.resize(processSetup.sampleRate);
+		channel.input_resampled.resize(::nvidia::afx::effect::samplerate());
+		channel.output_resampled.resize(processSetup.sampleRate);
+#ifdef ENABLE_RESAMPLING
+		channel.input_unresampled.resize(processSetup.sampleRate);
+		channel.output_unresampled.resize(::nvidia::afx::effect::samplerate());
+#endif
 	}
 
 	// Load the effect itself.
@@ -585,12 +607,13 @@ void vst3::effect::processor::set_channel_count(size_t num)
 
 	if (num != _channels.size()) {
 		_dirty = true;
-
-		_in_resampler->channels(num);
-		_out_resampler->channels(num);
 		_fx->channels(num);
-
 		_channels.resize(num);
 		_channels.shrink_to_fit();
+
+#ifdef ENABLE_RESAMPLING
+		_in_resampler->channels(num);
+		_out_resampler->channels(num);
+#endif
 	}
 }
