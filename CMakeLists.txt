@@ -172,6 +172,10 @@ if(NOT MSVC)
 	set(${PREFIX}TARGET_NATIVE OFF CACHE BOOL "Target the native CPU architecture. Enable it for development or personal builds, but disable it for distribution.")
 endif()
 
+if(MSVC)
+	set(${PREFIX}ENABLE_STATIC_CRT OFF CACHE BOOL "Build with static CRT? (May improve stability)")
+endif()
+
 ################################################################################
 # Version
 ################################################################################
@@ -368,15 +372,25 @@ endif()
 if(D_PLATFORM_WINDOWS AND ((CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
 	# MSVC/ClangCL
 	message(STATUS "${LOGPREFIX}Applying custom flags for MSVC style build.")
-
-	# - Dynamically link Microsoft C/C++ Redistributable.
-	target_compile_options(${PROJECT_NAME} PRIVATE
-		$<$<CONFIG:>:/MD>
-		$<$<CONFIG:Debug>:/MDd>
-		$<$<CONFIG:Release>:/MD>
-		$<$<CONFIG:RelWithDebInfo>:/MD>
-		$<$<CONFIG:MinSizeRel>:/MD>
-	)
+	
+	# - Embed Microsoft C/C++ Runtime?
+	if (${PREFIX}ENABLE_STATIC_CRT)
+		target_compile_options(${PROJECT_NAME} PRIVATE
+			$<$<CONFIG:>:/MT>
+			$<$<CONFIG:Debug>:/MTd>
+			$<$<CONFIG:Release>:/MT>
+			$<$<CONFIG:RelWithDebInfo>:/MT>
+			$<$<CONFIG:MinSizeRel>:/MT>
+		)
+	else()
+		target_compile_options(${PROJECT_NAME} PRIVATE
+			$<$<CONFIG:>:/MD>
+			$<$<CONFIG:Debug>:/MDd>
+			$<$<CONFIG:Release>:/MD>
+			$<$<CONFIG:RelWithDebInfo>:/MD>
+			$<$<CONFIG:MinSizeRel>:/MD>
+		)
+	endif()
 
 	# - Enable most useful warnings.
 	set(DISABLED_WARNINGS
@@ -674,6 +688,27 @@ endif()
 if(${PREFIX}ENABLE_STEINBERG_VST3)
 	set(VSTSDK_DIR "${PROJECT_SOURCE_DIR}/third-party/vst3sdk")
 	find_package(VSTSDK REQUIRED)
+
+	if(MSVC)
+		# - Embed Microsoft C/C++ Runtime?
+		if (${PREFIX}ENABLE_STATIC_CRT)
+			target_compile_options(VSTSDK_VST3 PRIVATE
+				$<$<CONFIG:>:/MT>
+				$<$<CONFIG:Debug>:/MTd>
+				$<$<CONFIG:Release>:/MT>
+				$<$<CONFIG:RelWithDebInfo>:/MT>
+				$<$<CONFIG:MinSizeRel>:/MT>
+			)
+		else()
+			target_compile_options(VSTSDK_VST3 PRIVATE
+				$<$<CONFIG:>:/MD>
+				$<$<CONFIG:Debug>:/MDd>
+				$<$<CONFIG:Release>:/MD>
+				$<$<CONFIG:RelWithDebInfo>:/MD>
+				$<$<CONFIG:MinSizeRel>:/MD>
+			)
+		endif()
+	endif()
 
 	list(APPEND PROJECT_SOURCE
 		"source/vst3.hpp"
