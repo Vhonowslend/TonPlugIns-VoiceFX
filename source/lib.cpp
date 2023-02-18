@@ -222,6 +222,6 @@ void voicefx::log(const char* format, ...)
 #if !defined(ENABLE_VST3)
 DWORD DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID)
 {
-	return ERROR_SUCCESS;
+	return TRUE;
 }
 #endif
