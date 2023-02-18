@@ -29,7 +29,7 @@ EXIT /B 0
 
 :COMPILE_VST2
 	CALL :CMAKE "vst2" -DENABLE_FULL_VERSION=ON -DENABLE_STEINBERG_VST3=OFF -DENABLE_STEINBERG_VST2=ON -DPACKAGE_PREFIX="../build/release/"
-	"%ProgramFiles(x86)%\Inno Setup 6\ISCC" ../build/release/vst2/installer-vst2.iss"	
+	"%ProgramFiles(x86)%\Inno Setup 6\ISCC" "../build/release/vst2/installer-vst2.iss"
 	if ERRORLEVEL 1 (
 		PAUSE
 	)
@@ -37,7 +37,7 @@ EXIT /B 0
 
 :COMPILE_VST2_DEMO
 	CALL :CMAKE "vst2d" -DENABLE_FULL_VERSION=OFF -DENABLE_STEINBERG_VST3=OFF -DENABLE_STEINBERG_VST2=ON -DPACKAGE_PREFIX="../build/release/"
-	"%ProgramFiles(x86)%\Inno Setup 6\ISCC" "../build/release/vst2d/installer-vst2.iss"	
+	"%ProgramFiles(x86)%\Inno Setup 6\ISCC" "../build/release/vst2d/installer-vst2.iss"
 	if ERRORLEVEL 1 (
 		PAUSE
 	)
