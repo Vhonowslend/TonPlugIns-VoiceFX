@@ -669,12 +669,6 @@ find_package(NVAFX REQUIRED)
 list(APPEND PROJECT_LIBRARIES
 	NVIDIA::AudioEffects
 )
-if(D_PLATFORM_WINDOWS)
-	## Require delay loaded NVAudioEffects.dll
-	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/DELAYLOAD:NVAudioEffects.dll")
-else()
-	# Can this be done on Linux too?
-endif()
 
 # Resampler (Secret Rabbit Code)
 if(${PREFIX}ENABLE_RESAMPLING)
