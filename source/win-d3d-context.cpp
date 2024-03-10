@@ -46,24 +46,20 @@ voicefx::windows::d3d::context::~context()
 	}
 }
 
-voicefx::windows::d3d::context::context(::nvidia::cuda::luid_t luid)
-	: _dxgi_library(), _dxgi_factory(nullptr), _dxgi_adapter(nullptr), _d3d11_library(), _d3d11_device(nullptr),
-	  _d3d11_context(nullptr)
+voicefx::windows::d3d::context::context(::nvidia::cuda::luid_t luid) : _dxgi_library(), _dxgi_factory(nullptr), _dxgi_adapter(nullptr), _d3d11_library(), _d3d11_device(nullptr), _d3d11_context(nullptr)
 {
 	char message_buffer[1024];
 
 	// Attempt to load DXGI.
-	_dxgi_library = ::voicefx::util::library::load(std::string_view("dxgi.dll"));
-	decltype(CreateDXGIFactory1)* lCreateDXGIFactory1 =
-		reinterpret_cast<decltype(CreateDXGIFactory1)*>(_dxgi_library->load_symbol("CreateDXGIFactory1"));
+	_dxgi_library                                     = ::voicefx::util::library::load(std::string_view("dxgi.dll"));
+	decltype(CreateDXGIFactory1)* lCreateDXGIFactory1 = reinterpret_cast<decltype(CreateDXGIFactory1)*>(_dxgi_library->load_symbol("CreateDXGIFactory1"));
 	if (!lCreateDXGIFactory1) {
 		throw std::runtime_error("Failed to find CreateDXGIFactory1 in 'dxgi.dll'.");
 	}
 
 	// Attempt to load D3D11.
-	_d3d11_library = ::voicefx::util::library::load(std::string_view("d3d11.dll"));
-	decltype(D3D11CreateDevice)* lD3D11CreateDevice =
-		reinterpret_cast<decltype(D3D11CreateDevice)*>(_d3d11_library->load_symbol("D3D11CreateDevice"));
+	_d3d11_library                                  = ::voicefx::util::library::load(std::string_view("d3d11.dll"));
+	decltype(D3D11CreateDevice)* lD3D11CreateDevice = reinterpret_cast<decltype(D3D11CreateDevice)*>(_d3d11_library->load_symbol("D3D11CreateDevice"));
 	if (!lD3D11CreateDevice) {
 		throw std::runtime_error("Failed to find D3D11CreateDevice in 'd3d11.dll'.");
 	}
@@ -102,11 +98,7 @@ voicefx::windows::d3d::context::context(::nvidia::cuda::luid_t luid)
 		D3D_FEATURE_LEVEL_11_0,
 	};
 	D3D_FEATURE_LEVEL level;
-	if (auto res = lD3D11CreateDevice(reinterpret_cast<IDXGIAdapter1*>(_dxgi_adapter), D3D_DRIVER_TYPE_UNKNOWN, NULL,
-									  D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels.data(), levels.size(), D3D11_SDK_VERSION,
-									  reinterpret_cast<ID3D11Device**>(_d3d11_device), &level,
-									  reinterpret_cast<ID3D11DeviceContext**>(_d3d11_context));
-		(res != S_OK) && (res != S_FALSE)) {
+	if (auto res = lD3D11CreateDevice(reinterpret_cast<IDXGIAdapter1*>(_dxgi_adapter), D3D_DRIVER_TYPE_UNKNOWN, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels.data(), levels.size(), D3D11_SDK_VERSION, reinterpret_cast<ID3D11Device**>(_d3d11_device), &level, reinterpret_cast<ID3D11DeviceContext**>(_d3d11_context)); (res != S_OK) && (res != S_FALSE)) {
 		snprintf(message_buffer, sizeof(message_buffer), "Failed to create D3D11Device. (Code %08" PRIX32 ")\0", res);
 		throw std::runtime_error(message_buffer);
 	}

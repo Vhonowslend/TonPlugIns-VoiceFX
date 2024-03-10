@@ -54,8 +54,7 @@ voicefx::util::library::library(std::filesystem::path file) : _library(nullptr)
 		if (error != ERROR_PROC_NOT_FOUND) {
 			PSTR        message = NULL;
 			std::string ex      = "Failed to load library.";
-			FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-						   NULL, error, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), (LPSTR)&message, 0, NULL);
+			FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER, NULL, error, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), (LPSTR)&message, 0, NULL);
 			if (message) {
 				ex = message;
 				LocalFree(message);
@@ -97,7 +96,7 @@ static std::unordered_map<std::string, std::weak_ptr<::voicefx::util::library>> 
 
 std::shared_ptr<::voicefx::util::library> voicefx::util::library::load(std::filesystem::path file)
 {
-	auto kv = libraries.find(file.u8string());
+	auto kv = libraries.find(file.generic_string());
 	if (kv != libraries.end()) {
 		if (auto ptr = kv->second.lock(); ptr)
 			return ptr;
@@ -105,12 +104,12 @@ std::shared_ptr<::voicefx::util::library> voicefx::util::library::load(std::file
 	}
 
 	auto ptr = std::make_shared<::voicefx::util::library>(file);
-	libraries.emplace(file.u8string(), ptr);
+	libraries.emplace(file.generic_string(), ptr);
 
 	return ptr;
 }
 
 std::shared_ptr<::voicefx::util::library> voicefx::util::library::load(std::string_view name)
 {
-	return load(std::filesystem::u8path(name));
+	return load(std::filesystem::path(name));
 }

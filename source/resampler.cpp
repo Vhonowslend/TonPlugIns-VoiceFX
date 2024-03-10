@@ -91,9 +91,7 @@ void voicefx::resampler::load()
 			src_reset(reinterpret_cast<SRC_STATE*>(instance.get()));
 		} else {
 			int error = 0;
-			instance  = std::shared_ptr<void>(
-                reinterpret_cast<void*>(src_new(SRC_SINC_BEST_QUALITY, static_cast<int>(_channels), &error)),
-                [](void* v) { src_delete(reinterpret_cast<SRC_STATE*>(v)); });
+			instance  = std::shared_ptr<void>(reinterpret_cast<void*>(src_new(SRC_SINC_BEST_QUALITY, static_cast<int>(_channels), &error)), [](void* v) { src_delete(reinterpret_cast<SRC_STATE*>(v)); });
 			if (error != 0) {
 				throw std::runtime_error(src_strerror(error));
 			}
@@ -112,8 +110,7 @@ void voicefx::resampler::clear()
 	}
 }
 
-void voicefx::resampler::process(const float* in_buffer[], size_t in_samples, size_t& in_samples_used,
-								 float* out_buffer[], size_t out_samples, size_t& out_samples_generated)
+void voicefx::resampler::process(const float* in_buffer[], size_t in_samples, size_t& in_samples_used, float* out_buffer[], size_t out_samples, size_t& out_samples_generated)
 {
 	// Ensure we have a resampler
 	if (_dirty) {

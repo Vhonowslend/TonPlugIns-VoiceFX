@@ -44,7 +44,7 @@ static std::filesystem::path find_nvafx_redistributable()
 		if (res != 0) {
 			buffer.resize(static_cast<size_t>(res) + 1);
 			GetEnvironmentVariableW(L"NVAFX_SDK_DIR", buffer.data(), static_cast<DWORD>(buffer.size()));
-			return std::filesystem::u8path(voicefx::util::platform::native_to_utf8(std::wstring(buffer.data())));
+			return std::filesystem::path(voicefx::util::platform::native_to_utf8(std::wstring(buffer.data())));
 		}
 #else
 		throw std::runtime_error("This platform is currently not supported.");
@@ -54,8 +54,7 @@ static std::filesystem::path find_nvafx_redistributable()
 	{ // 2. If that failed, assume default path for the platform of choice.
 #ifdef WIN32
 		// TODO: Make this use KnownFolders instead.
-		return std::filesystem::u8path(voicefx::util::platform::native_to_utf8(
-			std::wstring(L"C:\\Program Files\\NVIDIA Corporation\\NVIDIA Audio Effects SDK")));
+		return std::filesystem::path(voicefx::util::platform::native_to_utf8(std::wstring(L"C:\\Program Files\\NVIDIA Corporation\\NVIDIA Audio Effects SDK")));
 #else
 		throw std::runtime_error("This platform is currently not supported.");
 #endif
@@ -159,10 +158,8 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 			_cuda->cuDeviceGetAttribute(&is_integrated, ::nvidia::cuda::device_attribute::INTEGRATED, device);
 
 			std::pair<int32_t, int32_t> compute_capability;
-			_cuda->cuDeviceGetAttribute(&compute_capability.first,
-										::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MAJOR, device);
-			_cuda->cuDeviceGetAttribute(&compute_capability.second,
-										::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MINOR, device);
+			_cuda->cuDeviceGetAttribute(&compute_capability.first, ::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MAJOR, device);
+			_cuda->cuDeviceGetAttribute(&compute_capability.second, ::nvidia::cuda::device_attribute::COMPUTE_CAPABILITY_MINOR, device);
 
 			int32_t multiprocessors;
 			_cuda->cuDeviceGetAttribute(&multiprocessors, ::nvidia::cuda::device_attribute::MULTIPROCESSORS, device);
@@ -173,17 +170,12 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 			int32_t hertz;
 			_cuda->cuDeviceGetAttribute(&hertz, ::nvidia::cuda::device_attribute::KILOHERTZ, device);
 
-			D_LOG("\t[%4zu] %s (%s, Compute Compatibility %" PRId32 ".%" PRId32 ", %" PRId32
-				  " Multiprocessors, %" PRId32 " Asynchronous Engines, %" PRId32 " kHz) [%02" PRIx8 "%02" PRIx8
-				  ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 "]",
-				  idx, name.data(), is_integrated ? "Integrated" : "Dedicated", // Intentional
+			D_LOG("\t[%4zu] %s (%s, Compute Compatibility %" PRId32 ".%" PRId32 ", %" PRId32 " Multiprocessors, %" PRId32 " Asynchronous Engines, %" PRId32 " kHz) [%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 "]", idx, name.data(), is_integrated ? "Integrated" : "Dedicated", // Intentional
 				  compute_capability.first, compute_capability.second, multiprocessors, async_engines, hertz, //
 				  luid.bytes[0], luid.bytes[1], luid.bytes[2], luid.bytes[3], // Intentional
 				  luid.bytes[4], luid.bytes[5], luid.bytes[6], luid.bytes[7]);
 		}
-		D_LOG("Picked acceleration device [%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8
-			  ":%02" PRIx8 "%02" PRIx8 "]",
-			  ideal.luid.bytes[0], ideal.luid.bytes[1], ideal.luid.bytes[2], ideal.luid.bytes[3], // Intentional
+		D_LOG("Picked acceleration device [%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 ":%02" PRIx8 "%02" PRIx8 "]", ideal.luid.bytes[0], ideal.luid.bytes[1], ideal.luid.bytes[2], ideal.luid.bytes[3], // Intentional
 			  ideal.luid.bytes[4], ideal.luid.bytes[5], ideal.luid.bytes[6], ideal.luid.bytes[7]);
 
 #ifdef WIN32
@@ -218,7 +210,7 @@ std::vector<int32_t> nvidia::afx::afx::enumerate_devices()
 
 	try {
 		auto path     = model_path(NVAFX_EFFECT_DENOISER);
-		auto path_str = voicefx::util::platform::native_to_utf8(path).u8string();
+		auto path_str = path.generic_string();
 
 		if (auto ret = CreateEffect(NVAFX_EFFECT_DENOISER, &effect); ret != NVAFX_STATUS_SUCCESS) {
 			throw std::runtime_error("Failed to create temporary effect.");
@@ -228,8 +220,7 @@ std::vector<int32_t> nvidia::afx::afx::enumerate_devices()
 			throw std::runtime_error("Failed to set model paths");
 		}
 
-		if (auto ret = GetSupportedDevices(effect, &num_devices, nullptr);
-			ret != NVAFX_STATUS_OUTPUT_BUFFER_TOO_SMALL) {
+		if (auto ret = GetSupportedDevices(effect, &num_devices, nullptr); ret != NVAFX_STATUS_OUTPUT_BUFFER_TOO_SMALL) {
 			throw std::runtime_error("Failed to enumerate devices.");
 		}
 

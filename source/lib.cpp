@@ -71,8 +71,7 @@ std::string formatted_time(bool file_safe = false)
 	auto      mis     = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
 
 	// Store the time according to the requested format.
-	snprintf(time_buffer.data(), time_buffer.size(), local_format.data(), tstruct.tm_year + 1900, tstruct.tm_mon + 1,
-			 tstruct.tm_mday, tstruct.tm_hour, tstruct.tm_min, tstruct.tm_sec, mis.count() % 1000000);
+	snprintf(time_buffer.data(), time_buffer.size(), local_format.data(), tstruct.tm_year + 1900, tstruct.tm_mon + 1, tstruct.tm_mday, tstruct.tm_hour, tstruct.tm_min, tstruct.tm_sec, mis.count() % 1000000);
 
 	return std::string(time_buffer.data());
 }
@@ -127,12 +126,10 @@ void voicefx::initialize()
 			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
 				file_name_w.resize(file_name_w.size() * 2);
 			}
-			file_name_len = static_cast<DWORD>(
-				GetModuleFileNameW(NULL, file_name_w.data(), static_cast<DWORD>(file_name_w.size())));
+			file_name_len = static_cast<DWORD>(GetModuleFileNameW(NULL, file_name_w.data(), static_cast<DWORD>(file_name_w.size())));
 		} while (GetLastError() == ERROR_INSUFFICIENT_BUFFER);
 
-		std::string file_name =
-			util::platform::native_to_utf8(std::wstring(file_name_w.data(), file_name_w.data() + file_name_len));
+		std::string file_name = util::platform::native_to_utf8(std::wstring(file_name_w.data(), file_name_w.data() + file_name_len));
 		voicefx::log("Host Process: %s (0x%08" PRIx32 ")", file_name.c_str(), GetCurrentProcessId());
 	}
 #endif
@@ -207,13 +204,9 @@ void voicefx::log(const char* format, ...)
 
 		// MSVC: Print to debug console
 		std::vector<wchar_t> wstring_buffer(converted.size(), 0);
-		size_t               len =
-			static_cast<size_t>(MultiByteToWideChar(CP_UTF8, 0, string_buffer.data(),
-													static_cast<int>(string_buffer.size()), wstring_buffer.data(), 0))
-			+ 1;
+		size_t               len = static_cast<size_t>(MultiByteToWideChar(CP_UTF8, 0, string_buffer.data(), static_cast<int>(string_buffer.size()), wstring_buffer.data(), 0)) + 1;
 		wstring_buffer.resize(len);
-		MultiByteToWideChar(CP_UTF8, 0, string_buffer.data(), static_cast<int>(string_buffer.size()),
-							wstring_buffer.data(), static_cast<int>(wstring_buffer.size()));
+		MultiByteToWideChar(CP_UTF8, 0, string_buffer.data(), static_cast<int>(string_buffer.size()), wstring_buffer.data(), static_cast<int>(wstring_buffer.size()));
 		OutputDebugStringW(wstring_buffer.data());
 #endif
 	}
