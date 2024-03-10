@@ -22,8 +22,8 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "lib.hpp"
+#include "version.hpp"
 #include "util-platform.hpp"
-#include "version.h"
 
 #include <chrono>
 #include <cstdarg>
@@ -115,7 +115,7 @@ void voicefx::initialize()
 		}
 	}
 
-	voicefx::log("Loaded v" VERSION_STRING ".");
+	voicefx::log("Loaded v" TONPLUGINS_VERSION ".");
 
 #ifdef WIN32
 	// Log information about the Host process.
