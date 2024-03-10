@@ -5,7 +5,7 @@
 ################################################################################
 cmake_minimum_required(VERSION 3.26)
 
-project(VoiceFX.vst2)
+#project(VoiceFX.vst2)
 define_interface_vst2(${PROJECT_NAME})
 
 # Search Paths
@@ -17,9 +17,9 @@ list(APPEND CMAKE_MODULE_PATH
 ################################################################################
 # Dependencies
 ################################################################################
-target_link_libraries(${PROJECT_NAME} PUBLIC VoiceFX)
+target_link_libraries(${INTERFACE_NAME} PUBLIC VoiceFX)
 
 ################################################################################
 # Finish
 ################################################################################
-setup_target(${PROJECT_NAME})
+setup_target(${INTERFACE_NAME})
