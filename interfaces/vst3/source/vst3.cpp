@@ -45,7 +45,7 @@ DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::effect::processor_uid),
 		   VST_NAME, // Name
 		   Vst::kDistributable, // Allow cross-computer usage.
 		   Vst::PlugType::kFxRestoration, // Categories (separate with |)
-		   TONPLUGINS_VERSION_SEMVER, // Version
+		   TONPLUGINS_VERSION, // Version
 		   kVstVersionString, // VST SDK Version
 		   vst3::effect::processor::create // Function to create the instance.
 )
@@ -55,7 +55,7 @@ DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::effect::controller_uid),
 		   VST_NAME " Controller", // Name
 		   0, // Unused
 		   "", // Unused
-		   TONPLUGINS_VERSION_SEMVER, // Version
+		   TONPLUGINS_VERSION, // Version
 		   kVstVersionString, // VST SDK Version
 		   vst3::effect::controller::create // Function to create the instance.
 )
