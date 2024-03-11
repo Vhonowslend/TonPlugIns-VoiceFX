@@ -51,24 +51,6 @@ void voicefx::initialize()
 		return;
 	}
 
-	core = tonplugins::core::instance(std::string{voicefx::product_name});
-
-#ifdef WIN32
-	// Log information about the Host process.
-	{
-		std::vector<wchar_t> file_name_w(256, 0);
-		size_t               file_name_len = 0;
-		do {
-			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-				file_name_w.resize(file_name_w.size() * 2);
-			}
-			file_name_len = static_cast<DWORD>(GetModuleFileNameW(NULL, file_name_w.data(), static_cast<DWORD>(file_name_w.size())));
-		} while (GetLastError() == ERROR_INSUFFICIENT_BUFFER);
-
-		std::string file_name = std::filesystem::path(std::wstring(file_name_w.data(), file_name_w.data() + file_name_len)).generic_string();
-		core->log("Host Process: %s (0x%08" PRIx32 ")", file_name.c_str(), GetCurrentProcessId());
-	}
-#endif
-
+	core         = tonplugins::core::instance(std::string{voicefx::product_name});
 	_initialized = true;
 }
