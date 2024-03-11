@@ -134,3 +134,11 @@ target_include_directories(${PROJECT_NAME}
 		${PROJECT_SOURCE_DIR}/include
 		${PROJECT_BINARY_DIR}
 )
+target_compile_options(${PROJECT_NAME} PRIVATE
+	# Use static CRT
+	$<$<CONFIG:>:/MT>
+	$<$<CONFIG:Debug>:/MTd>
+	$<$<CONFIG:Release>:/MT>
+	$<$<CONFIG:RelWithDebInfo>:/MT>
+	$<$<CONFIG:MinSizeRel>:/MT>
+)
