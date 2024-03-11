@@ -21,31 +21,12 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <vst.h>
+#include "public.sdk/source/vst/vst2wrapper/vst2wrapper.sdk.cpp"
+#include "vst3/vst3_effect_processor.hpp"
 
-#include "version.hpp"
-#include "lib.hpp"
-#include "vst2.hpp"
-#include "vst2_effect.hpp"
-
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<VST2> " MESSAGE, __VA_ARGS__)
-
-// Entry Points for different platforms.
-extern "C" __declspec(dllexport) VST_ENTRYPOINT
+::AudioEffect* createEffectInstance(audioMasterCallback audioMaster)
 {
-	try {
-		// Initialize VoiceFX library.
-		voicefx::initialize();
+	voicefx::initialize();
 
-		// Create an instance of the VST2.x effect, and return its internal structure.
-		return (new voicefx::vst2::effect(callback))->get_effect_structure();
-	} catch (std::exception const& ex) {
-		voicefx::core->log("Exception: %s", ex.what());
-		return nullptr;
-	} catch (...) {
-		voicefx::core->log("Unknown Exception.");
-		return nullptr;
-	}
+	return Steinberg::Vst::Vst2Wrapper::create(GetPluginFactory(), vst3::effect::processor_uid, FOURCC('X', 'V', 'F', 'X'), audioMaster);
 }
-extern "C" __declspec(dllexport) VST_ENTRYPOINT_WINDOWS;
-extern "C" __declspec(dllexport) VST_ENTRYPOINT_MACOS;

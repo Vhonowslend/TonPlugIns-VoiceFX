@@ -54,3 +54,15 @@ void voicefx::initialize()
 	core         = tonplugins::core::instance(std::string{voicefx::product_name});
 	_initialized = true;
 }
+
+extern "C" {
+[[export]] bool InitDll()
+{
+	return true;
+}
+
+[[export]] bool ExitDll()
+{
+	return true;
+}
+}

@@ -29,19 +29,16 @@
 #include "resampler.hpp"
 #include "vst3.hpp"
 
-using namespace Steinberg;
-using namespace Steinberg::Vst;
-
 // Several assumptions just failed:
 // - We can't tell the application that uses us which samplerate we need.
 // - We can't tell the application that uses us how many samples per call we can process.
 // - We can't tell the application anything. Who designed this?
 
 namespace vst3::effect {
-	static const FUID processor_uid(FOURCC_CREATOR_PROCESSOR, // Creator, Type
-									FOURCC('V', 'o', 'i', 'c'), FOURCC('e', 'F', 'X', 'N'), FOURCC('o', 'i', 's', 'e'));
+	static const Steinberg::FUID processor_uid(FOURCC_CREATOR_PROCESSOR, // Creator, Type
+											   FOURCC('V', 'o', 'i', 'c'), FOURCC('e', 'F', 'X', 'N'), FOURCC('o', 'i', 's', 'e'));
 
-	class processor : AudioEffect {
+	class processor : Steinberg::Vst::AudioEffect {
 		bool _dirty;
 
 		struct channel_buffers {
@@ -67,20 +64,20 @@ namespace vst3::effect {
 		processor();
 		virtual ~processor();
 
-		tresult PLUGIN_API initialize(FUnknown* context) override;
+		Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) override;
 
-		tresult PLUGIN_API canProcessSampleSize(int32 symbolicSampleSize) override;
+		Steinberg::tresult PLUGIN_API canProcessSampleSize(Steinberg::int32 symbolicSampleSize) override;
 
-		tresult PLUGIN_API setBusArrangements(SpeakerArrangement* inputs, int32 numIns, SpeakerArrangement* outputs, int32 numOuts) override;
-		uint32 PLUGIN_API  getLatencySamples() override;
-		uint32 PLUGIN_API  getTailSamples() override;
+		Steinberg::tresult PLUGIN_API setBusArrangements(Steinberg::Vst::SpeakerArrangement* inputs, Steinberg::int32 numIns, Steinberg::Vst::SpeakerArrangement* outputs, Steinberg::int32 numOuts) override;
+		Steinberg::uint32 PLUGIN_API  getLatencySamples() override;
+		Steinberg::uint32 PLUGIN_API  getTailSamples() override;
 
-		tresult PLUGIN_API setupProcessing(ProcessSetup& setup) override;
-		tresult PLUGIN_API setProcessing(TBool state) override;
-		tresult PLUGIN_API process(ProcessData& data) override;
+		Steinberg::tresult PLUGIN_API setupProcessing(Steinberg::Vst::ProcessSetup& setup) override;
+		Steinberg::tresult PLUGIN_API setProcessing(Steinberg::TBool state) override;
+		Steinberg::tresult PLUGIN_API process(Steinberg::Vst::ProcessData& data) override;
 
-		tresult PLUGIN_API setState(IBStream* state) override;
-		tresult PLUGIN_API getState(IBStream* state) override;
+		Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* state) override;
+		Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) override;
 
 		private:
 		void reset();
