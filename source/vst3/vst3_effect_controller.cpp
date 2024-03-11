@@ -24,6 +24,11 @@
 #include "vst3_effect_controller.hpp"
 #include <base/source/fstreamer.h>
 
+#include <warning-disable.hpp>
+#include <base/source/fstreamer.h>
+#include <vstgui/plugin-bindings/vst3editor.h>
+#include <warning-enable.hpp>
+
 #define D_LOG(MESSAGE, ...) voicefx::core->log("<vst3::effect::controller> " MESSAGE, __VA_ARGS__)
 
 vst3::effect::controller::controller()
@@ -65,22 +70,15 @@ tresult PLUGIN_API vst3::effect::controller::setComponentState(IBStream* state)
 		return kResultFalse;
 	}
 
-	IBStreamer streamer(state, kLittleEndian);
+	Steinberg::IBStreamer streamer(state, kLittleEndian);
 #ifndef TONPLUGINS_DEMO
-	if (bool echo, reverb; streamer.readBool(echo) && streamer.readBool(reverb) == true) {
-		if (echo && reverb) {
-			setParamNormalized(PARAMETER_MODE, 1.);
-		} else if (reverb) {
-			setParamNormalized(PARAMETER_MODE, 0.5);
-		} else {
-			setParamNormalized(PARAMETER_MODE, 0.);
-		}
-	} else {
+	if (!streamer.readBool(_enable_echo_removal)) {
 		return kResultFalse;
 	}
-	if (float value = 0; streamer.readFloat(value) == true) {
-		setParamNormalized(PARAMETER_INTENSITY, value);
-	} else {
+	if (!streamer.readBool(_enable_reverb_removal)) {
+		return kResultFalse;
+	}
+	if (!streamer.readFloat(_intensity)) {
 		return kResultFalse;
 	}
 #endif
@@ -96,4 +94,12 @@ tresult PLUGIN_API vst3::effect::controller::setChannelContextInfos(IAttributeLi
 FUnknown* vst3::effect::controller::create(void* data)
 {
 	return static_cast<IEditController*>(new controller());
+}
+
+Steinberg::IPlugView* PLUGIN_API vst3::effect::controller::createView(Steinberg::FIDString name)
+{
+	if (strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0) {
+		return new VSTGUI::VST3Editor(this, "view", "myEditor.uidesc");
+	}
+	return 0;
 }

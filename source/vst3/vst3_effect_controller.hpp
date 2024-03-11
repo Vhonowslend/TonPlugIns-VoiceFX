@@ -41,6 +41,10 @@ namespace vst3::effect {
 	};
 
 	class controller : public EditControllerEx1, public ChannelContext::IInfoListener {
+		bool  _enable_echo_removal;
+		bool  _enable_reverb_removal;
+		float _intensity;
+
 		public:
 		controller();
 		virtual ~controller();
@@ -51,6 +55,9 @@ namespace vst3::effect {
 		tresult PLUGIN_API setComponentState(IBStream* state) override;
 
 		tresult PLUGIN_API setChannelContextInfos(IAttributeList* list) override;
+
+		public /* IEditController */:
+		Steinberg::IPlugView* PLUGIN_API createView(Steinberg::FIDString name) override;
 
 		public:
 		OBJ_METHODS(controller, EditControllerEx1)

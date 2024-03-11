@@ -264,16 +264,13 @@ try {
 #endif
 
 	{ // Processing begins from here on out.
-#ifdef ENABLE_RESAMPLING
 		bool resample = processSetup.sampleRate != ::nvidia::afx::effect::samplerate();
-#endif
 		std::vector<const float*> in_buffers(_channels.size(), nullptr);
 		std::vector<float*>       out_buffers(_channels.size(), nullptr);
 
 		// Push data into the (unresampled) input buffers.
 		for (size_t idx = 0; idx < _channels.size(); idx++) {
 			auto& channel = _channels[idx];
-#ifdef ENABLE_RESAMPLING
 			if (resample) {
 				channel.input_unresampled.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
 				in_buffers[idx] = channel.input_unresampled.peek(0);
@@ -281,7 +278,6 @@ try {
 				D_LOG("{%02" PRIuMAX "} Pushed %" PRId32 " samples to input resample buffer.", idx, data.numSamples);
 #endif
 			} else
-#endif
 			{
 				channel.input_resampled.push(data.inputs[0].channelBuffers32[idx], data.numSamples);
 				in_buffers[idx] = channel.input_resampled.peek(0);
@@ -294,7 +290,6 @@ try {
 #endif
 		}
 
-#ifdef ENABLE_RESAMPLING
 		// Resample the input data to match the effect sample rate.
 		if (resample) {
 			// Update the output buffer pointers.
@@ -327,7 +322,6 @@ try {
 #endif
 			}
 		}
-#endif
 
 		// Process as much data as possible.
 		if (_channels[0].input_resampled.avail() > ::nvidia::afx::effect::blocksize()) {
@@ -337,11 +331,9 @@ try {
 			// Update the output buffer pointers.
 			for (size_t idx = 0; idx < _channels.size(); idx++) {
 				auto& channel = _channels[idx];
-#ifdef ENABLE_RESAMPLING
 				if (resample) {
 					out_buffers[idx] = channel.output_unresampled.back();
 				} else
-#endif
 				{
 					out_buffers[idx] = channel.output_resampled.back();
 				}
@@ -361,12 +353,10 @@ try {
 				channel.input_resampled.pop(chunks);
 
 // Push the generated samples into the output buffer.
-#ifdef ENABLE_RESAMPLING
 				if (resample) {
 					channel.output_unresampled.reserve(chunks);
 					in_buffers[idx] = channel.output_unresampled.peek(0);
 				} else
-#endif
 				{
 					channel.output_resampled.reserve(chunks);
 					in_buffers[idx] = channel.output_resampled.peek(0);
@@ -378,7 +368,6 @@ try {
 			}
 		}
 
-#ifdef ENABLE_RESAMPLING
 		// Resample the input data to match the effect sample rate.
 		if (resample) {
 			// Update the output buffer pointers.
@@ -411,7 +400,6 @@ try {
 #endif
 			}
 		}
-#endif
 
 		// Output data.
 		int64_t delay_adjustment = _channels[0].output_resampled.size();
@@ -532,7 +520,6 @@ void vst3::effect::processor::reset()
 
 	D_LOG("(0x%08" PRIxPTR ") Resetting...", this);
 
-#ifdef ENABLE_RESAMPLING
 	// Update resamplers
 	_in_resampler->ratio(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 	_in_resampler->clear();
@@ -540,18 +527,15 @@ void vst3::effect::processor::reset()
 	_out_resampler->ratio(::nvidia::afx::effect::samplerate(), processSetup.sampleRate);
 	_out_resampler->clear();
 	_out_resampler->load();
-#endif
 
 	// Calculate absolute effect delay
 	_delay = ::nvidia::afx::effect::delay();
 	_delay += ::nvidia::afx::effect::blocksize();
-#ifdef ENABLE_RESAMPLING
 	if (processSetup.sampleRate != ::nvidia::afx::effect::samplerate()) {
 		_delay = std::llround(_delay / _in_resampler->ratio());
 		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
 	}
-#endif
 	_local_delay = ::nvidia::afx::effect::blocksize();
 	D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRIu32 " samples.", this, _delay);
 
@@ -559,10 +543,8 @@ void vst3::effect::processor::reset()
 	for (auto& channel : _channels) {
 		channel.input_resampled.resize(::nvidia::afx::effect::samplerate());
 		channel.output_resampled.resize(processSetup.sampleRate);
-#ifdef ENABLE_RESAMPLING
 		channel.input_unresampled.resize(processSetup.sampleRate);
 		channel.output_unresampled.resize(::nvidia::afx::effect::samplerate());
-#endif
 	}
 
 	// Load the effect itself.
@@ -581,9 +563,7 @@ void vst3::effect::processor::set_channel_count(size_t num)
 		_channels.resize(num);
 		_channels.shrink_to_fit();
 
-#ifdef ENABLE_RESAMPLING
 		_in_resampler->channels(num);
 		_out_resampler->channels(num);
-#endif
 	}
 }
