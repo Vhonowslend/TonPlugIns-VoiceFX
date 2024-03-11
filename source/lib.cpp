@@ -52,7 +52,6 @@ void voicefx::initialize()
 	}
 
 	core = tonplugins::core::instance(std::string{voicefx::product_name});
-	core->log("Loaded v" TONPLUGINS_VERSION ".");
 
 #ifdef WIN32
 	// Log information about the Host process.
