@@ -39,9 +39,3 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 # Finish
 ################################################################################
 setup_target(${PROJECT_NAME})
-
-################################################################################
-# Interfaces
-################################################################################
-add_subdirectory(interfaces/vst2)
-add_subdirectory(interfaces/vst3)

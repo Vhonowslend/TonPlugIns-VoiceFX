@@ -23,6 +23,7 @@
 
 #include "vst2_effect.hpp"
 #include <algorithm>
+#include <public.sdk/source/main/pluginfactory.h>
 #include "lib.hpp"
 
 #define D_LOG(MESSAGE, ...) voicefx::log("<vst2::effect> " MESSAGE, __VA_ARGS__)
@@ -32,6 +33,10 @@
 #else
 #define VST_NAME "VoiceFX (Demo)"
 #endif
+
+extern bool                       InitModule();
+extern bool                       DeinitModule();
+extern Steinberg::IPluginFactory* GetPluginFactory();
 
 voicefx::vst2::effect::effect(vst_host_callback cb) : _vsteffect(), _vstcb(cb), _input_arrangement(), _output_arrangement(), _dirty(true), _channels(), _delay(0), _local_delay(0)
 {

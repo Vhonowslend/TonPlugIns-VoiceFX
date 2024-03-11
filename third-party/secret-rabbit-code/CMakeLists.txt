@@ -108,7 +108,7 @@ configure_file(
 	${PROJECT_BINARY_DIR}/config.h
 )
 
-add_library(${PROJECT_NAME} STATIC
+add_library(${PROJECT_NAME} OBJECT
 	include/samplerate.h
 	src/common.h
 	src/fastest_coeffs.h

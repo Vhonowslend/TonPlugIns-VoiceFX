@@ -24,6 +24,7 @@
 #include <cinttypes>
 #include <memory>
 #include <vector>
+#include <vst.h>
 #include "audiobuffer.hpp"
 #include "nvidia-afx-effect.hpp"
 #include "nvidia-afx.hpp"
@@ -31,8 +32,6 @@
 #ifdef ENABLE_RESAMPLER
 #include "resampler.hpp"
 #endif
-
-#include <vst.h>
 
 namespace voicefx {
 	namespace vst2 {

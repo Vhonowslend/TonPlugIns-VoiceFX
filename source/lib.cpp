@@ -211,10 +211,3 @@ void voicefx::log(const char* format, ...)
 #endif
 	}
 }
-
-#if !defined(ENABLE_VST3)
-DWORD DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID)
-{
-	return TRUE;
-}
-#endif
