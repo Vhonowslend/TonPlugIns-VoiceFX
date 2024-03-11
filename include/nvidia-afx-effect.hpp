@@ -45,7 +45,7 @@ namespace nvidia::afx {
 		std::atomic_bool    _cfg_dirty;
 		std::atomic<size_t> _cfg_channels;
 		std::atomic_bool    _cfg_enable_denoise;
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 		std::atomic_bool   _cfg_enable_dereverb;
 		std::atomic<float> _cfg_intensity;
 #endif
@@ -65,7 +65,7 @@ namespace nvidia::afx {
 		bool denoise_enabled();
 		void enable_denoise(bool v);
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 		bool dereverb_enabled();
 		void enable_dereverb(bool v);
 #endif
@@ -73,7 +73,7 @@ namespace nvidia::afx {
 		size_t channels();
 		void   channels(size_t v);
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 		float intensity();
 		void  intensity(float v);
 #endif

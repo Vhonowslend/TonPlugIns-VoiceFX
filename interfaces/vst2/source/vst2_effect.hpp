@@ -99,7 +99,7 @@ namespace voicefx {
 
 			intptr_t vst2_suspend_resume(bool should_resume);
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 			void  vst2_get_parameter_properties(uint32_t index, vst_parameter_properties* parameter);
 			void  vst2_get_parameter_label(uint32_t index, char text[VST_BUFFER_8]);
 			void  vst2_get_parameter_name(uint32_t index, char text[VST_BUFFER_8]);

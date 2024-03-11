@@ -234,7 +234,7 @@ try {
 	}
 
 // If there were any parameter changes, handle them.
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 	if (data.inputParameterChanges) {
 		for (Steinberg::int32 idx = 0, edx = (data.inputParameterChanges->getParameterCount() > 0); idx < edx; ++idx) {
 			auto param = data.inputParameterChanges->getParameterData(idx);
@@ -474,7 +474,7 @@ try {
 	}
 
 	IBStreamer streamer(state, kLittleEndian);
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 	if (bool value = 0; streamer.readBool(value) == true) {
 		_fx->enable_denoise(value);
 	} else {
@@ -508,7 +508,7 @@ try {
 	}
 
 	IBStreamer streamer(state, kLittleEndian);
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 	streamer.writeBool(_fx->denoise_enabled());
 	streamer.writeBool(_fx->dereverb_enabled());
 	streamer.writeFloat(_fx->intensity());

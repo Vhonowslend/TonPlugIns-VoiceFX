@@ -38,7 +38,7 @@ nvidia::afx::effect::effect() : _nvafx(), _lock(), _model_path(), _model_path_st
 	_cfg_enable_denoise = true;
 	_cfg_channels       = true;
 	_cfg_dirty          = true;
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 	_cfg_enable_dereverb = true;
 	_cfg_intensity       = 1.0;
 #endif
@@ -93,7 +93,7 @@ void nvidia::afx::effect::enable_denoise(bool v)
 	}
 }
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 bool nvidia::afx::effect::dereverb_enabled()
 {
 	return _cfg_enable_dereverb;
@@ -127,7 +127,7 @@ void nvidia::afx::effect::channels(size_t v)
 	}
 }
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 float nvidia::afx::effect::intensity()
 {
 	return _cfg_intensity;
@@ -163,7 +163,7 @@ void nvidia::afx::effect::load()
 		// Decide on the effect to load.
 		NvAFX_EffectSelector effect       = NVAFX_EFFECT_DENOISER;
 		std::string          effect_model = "denoiser_48k.trtpkg";
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 		if (_cfg_enable_denoise && _cfg_enable_dereverb) {
 			effect       = NVAFX_EFFECT_DEREVERB_DENOISER;
 			effect_model = "dereverb_denoiser_48k.trtpkg";
@@ -246,7 +246,7 @@ void nvidia::afx::effect::load()
 		auto cstk = _nvafx->cuda_context()->enter();
 
 		for (auto& fx : _fx) {
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 			if (auto error = _nvafx->SetFloat(fx.get(), NVAFX_PARAM_INTENSITY_RATIO, _cfg_intensity); error != NVAFX_STATUS_SUCCESS) {
 				snprintf(message_buffer, sizeof(message_buffer), "Failed to configure intensity. (Code %08" PRIX32 ").\0", error);
 				throw std::runtime_error(message_buffer);

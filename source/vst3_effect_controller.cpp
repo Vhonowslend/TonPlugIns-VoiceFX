@@ -30,7 +30,7 @@ vst3::effect::controller::controller()
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 	{
 		auto p = new Steinberg::Vst::StringListParameter(STR("Mode"), PARAMETER_MODE, STR("Removal"));
 		p->appendString(STR("Noise"));
@@ -66,7 +66,7 @@ tresult PLUGIN_API vst3::effect::controller::setComponentState(IBStream* state)
 	}
 
 	IBStreamer streamer(state, kLittleEndian);
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 	if (bool echo, reverb; streamer.readBool(echo) && streamer.readBool(reverb) == true) {
 		if (echo && reverb) {
 			setParamNormalized(PARAMETER_MODE, 1.);

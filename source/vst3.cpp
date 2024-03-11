@@ -33,7 +33,7 @@
 
 BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:info@xaymar.com")
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 #define VST_NAME "VoiceFX"
 #else
 #define VST_NAME "VoiceFX (Demo)"

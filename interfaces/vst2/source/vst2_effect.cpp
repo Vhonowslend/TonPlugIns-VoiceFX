@@ -27,7 +27,7 @@
 
 #define D_LOG(MESSAGE, ...) voicefx::log("<vst2::effect> " MESSAGE, __VA_ARGS__)
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 #define VST_NAME "VoiceFX"
 #else
 #define VST_NAME "VoiceFX (Demo)"
@@ -41,7 +41,7 @@ voicefx::vst2::effect::effect(vst_host_callback cb) : _vsteffect(), _vstcb(cb), 
 
 		_vsteffect.magic_number = 'VstP';
 		_vsteffect.num_programs = 0;
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 		_vsteffect.num_params = 2;
 #else
 		_vsteffect.num_params = 0;
@@ -64,7 +64,7 @@ voicefx::vst2::effect::effect(vst_host_callback cb) : _vsteffect(), _vstcb(cb), 
 			return intptr_t();
 		};
 		_vsteffect.set_parameter = [](vst_effect* pthis, uint32_t index, float value) {
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 			try {
 				static_cast<voicefx::vst2::effect*>(pthis->effect_internal)->vst2_set_parameter(index, value);
 			} catch (std::exception const& ex) {
@@ -75,7 +75,7 @@ voicefx::vst2::effect::effect(vst_host_callback cb) : _vsteffect(), _vstcb(cb), 
 #endif
 		};
 		_vsteffect.get_parameter = [](vst_effect* pthis, uint32_t index) {
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 			try {
 				return static_cast<voicefx::vst2::effect*>(pthis->effect_internal)->vst2_get_parameter(index);
 			} catch (std::exception const& ex) {
@@ -254,7 +254,7 @@ try {
 	case VST_EFFECT_OPCODE_PROCESS_END:
 		return 0;
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 		// -------------------------------------------------------------------------- //
 		// User Interface (Not Implemented)
 	case VST_EFFECT_OPCODE_WINDOW_CREATE:
@@ -263,7 +263,7 @@ try {
 		return 1;
 #endif
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 		// -------------------------------------------------------------------------- //
 		// Parameters
 	case VST_EFFECT_OPCODE_GET_PARAMETER_PROPERTIES:
@@ -410,7 +410,7 @@ intptr_t voicefx::vst2::effect::vst2_suspend_resume(bool should_resume)
 	return 0;
 }
 
-#ifdef ENABLE_FULL_VERSION
+#ifndef TONPLUGINS_DEMO
 
 void voicefx::vst2::effect::vst2_get_parameter_label(uint32_t index, char text[VST_BUFFER_8])
 {
