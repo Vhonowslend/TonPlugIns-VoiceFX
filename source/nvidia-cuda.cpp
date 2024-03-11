@@ -25,7 +25,7 @@
 #include <mutex>
 #include "lib.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<CUDA> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<CUDA> " MESSAGE, __VA_ARGS__)
 
 #if defined(_WIN32) || defined(_WIN64)
 #define ST_CUDA_NAME "nvcuda.dll"

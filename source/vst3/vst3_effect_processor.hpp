@@ -22,17 +22,12 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
-#include "vst3.hpp"
-
 #include <public.sdk/source/vst/vstaudioeffect.h>
-
 #include "audiobuffer.hpp"
 #include "nvidia-afx-effect.hpp"
 #include "nvidia-afx.hpp"
-
-#ifdef ENABLE_RESAMPLER
 #include "resampler.hpp"
-#endif
+#include "vst3.hpp"
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -52,10 +47,8 @@ namespace vst3::effect {
 		struct channel_buffers {
 			voicefx::audiobuffer input_resampled;
 			voicefx::audiobuffer output_resampled;
-#ifdef ENABLE_RESAMPLING
 			voicefx::audiobuffer input_unresampled;
 			voicefx::audiobuffer output_unresampled;
-#endif
 		};
 
 		std::shared_ptr<::nvidia::afx::effect> _fx;
@@ -64,10 +57,8 @@ namespace vst3::effect {
 		int64_t _delay;
 		int64_t _local_delay;
 
-#ifdef ENABLE_RESAMPLER
 		std::shared_ptr<::voicefx::resampler> _in_resampler;
 		std::shared_ptr<::voicefx::resampler> _out_resampler;
-#endif
 
 		public:
 		static FUnknown* create(void* data);

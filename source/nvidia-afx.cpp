@@ -32,7 +32,7 @@
 #include <Windows.h>
 #endif
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<NVAFX> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<NVAFX> " MESSAGE, __VA_ARGS__)
 
 static std::filesystem::path find_nvafx_redistributable()
 {

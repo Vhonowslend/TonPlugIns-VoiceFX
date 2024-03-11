@@ -29,7 +29,7 @@
 #include "vst3_effect_controller.hpp"
 #include "vst3_effect_processor.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<VST3> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<VST3> " MESSAGE, __VA_ARGS__)
 
 BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:info@xaymar.com")
 
@@ -71,10 +71,10 @@ bool InitModule()
 		// Return true to signal the VST 3 hosts that everything is fine.
 		return true;
 	} catch (std::exception const& ex) {
-		voicefx::log("Exception: %s", ex.what());
+		voicefx::core->log("Exception: %s", ex.what());
 		return false;
 	} catch (...) {
-		voicefx::log("Unknown Exception.");
+		voicefx::core->log("Unknown Exception.");
 		return false;
 	}
 }

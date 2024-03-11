@@ -24,7 +24,7 @@
 #include "vst3_effect_controller.hpp"
 #include <base/source/fstreamer.h>
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<vst3::effect::controller> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<vst3::effect::controller> " MESSAGE, __VA_ARGS__)
 
 vst3::effect::controller::controller()
 {

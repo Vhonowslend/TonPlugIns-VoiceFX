@@ -24,6 +24,7 @@
 #pragma once
 #include "version.hpp"
 #include <cinttypes>
+#include <core.hpp>
 #include <filesystem>
 
 #define FOURCC(a, b, c, d) ((a << 24) | (b << 16) | (c << 8) | d)
@@ -32,10 +33,7 @@ namespace voicefx {
 	static constexpr std::string_view product_name   = "VoiceFX";
 	static constexpr std::string_view product_vendor = "Xaymar";
 
+	extern std::shared_ptr<tonplugins::core> core;
+
 	void initialize();
-
-	std::filesystem::path user_data();
-	std::filesystem::path local_data();
-
-	void log(const char* format, ...);
 } // namespace voicefx

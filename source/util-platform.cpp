@@ -38,7 +38,7 @@
 #include <unistd.h>
 #endif
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<Platform> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<Platform> " MESSAGE, __VA_ARGS__)
 
 #ifdef _WIN32
 std::string voicefx::util::platform::native_to_utf8(std::wstring const& v)

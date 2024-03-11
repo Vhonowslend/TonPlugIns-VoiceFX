@@ -30,7 +30,7 @@
 //#define DEBUG_BUFFERS
 //#define DEBUG_BUFFER_CONTENT
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<vst3::effect::processor> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<vst3::effect::processor> " MESSAGE, __VA_ARGS__)
 
 FUnknown* vst3::effect::processor::create(void* data)
 try {

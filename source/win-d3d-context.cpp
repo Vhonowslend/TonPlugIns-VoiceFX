@@ -28,7 +28,7 @@
 #include <d3d11.h>
 #include <dxgi.h>
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<windows::d3d::context> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<windows::d3d::context> " MESSAGE, __VA_ARGS__)
 
 voicefx::windows::d3d::context::~context()
 {

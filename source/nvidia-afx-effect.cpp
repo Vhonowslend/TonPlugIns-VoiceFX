@@ -27,7 +27,7 @@
 
 #include <nvAudioEffects.h>
 
-#define D_LOG(MESSAGE, ...) ::voicefx::log("<nvidia::afx::effect> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) ::voicefx::core->log("<nvidia::afx::effect> " MESSAGE, __VA_ARGS__)
 
 nvidia::afx::effect::effect() : _nvafx(), _lock(), _model_path(), _model_path_str(), _fx_dirty(), _cfg_dirty(), _cfg_channels(), _cfg_enable_denoise()
 {

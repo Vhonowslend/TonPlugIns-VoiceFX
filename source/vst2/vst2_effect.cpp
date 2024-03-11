@@ -26,7 +26,7 @@
 #include <public.sdk/source/main/pluginfactory.h>
 #include "lib.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::log("<vst2::effect> " MESSAGE, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<vst2::effect> " MESSAGE, __VA_ARGS__)
 
 #ifndef TONPLUGINS_DEMO
 #define VST_NAME "VoiceFX"
