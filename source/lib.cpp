@@ -40,6 +40,15 @@
 #include "Knownfolders.h"
 #endif
 
+#include <public.sdk/source/main/moduleinit.cpp>
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#include <public.sdk/source/main/dllmain.cpp>
+#elif __APPLE__
+#include <public.sdk/source/main/macmain.cpp>
+#else
+#include <public.sdk/source/main/linuxmain.cpp>
+#endif
+
 namespace voicefx {
 	std::shared_ptr<tonplugins::core> core;
 }
@@ -55,14 +64,18 @@ void voicefx::initialize()
 	_initialized = true;
 }
 
-extern "C" {
-[[export]] bool InitDll()
-{
-	return true;
-}
+auto core = Steinberg::ModuleInitializer(
+	[]() {
+		try {
+			// Initialize VoiceFX library.
+			voicefx::initialize();
 
-[[export]] bool ExitDll()
-{
-	return true;
-}
-}
+		} catch (std::exception const& ex) {
+			voicefx::core->log("Exception: %s", ex.what());
+			throw;
+		} catch (...) {
+			voicefx::core->log("Unknown Exception.");
+			throw;
+		}
+	},
+	0);

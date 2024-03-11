@@ -42,25 +42,3 @@ BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:support@xaymar.com")
 DEF_VST3_CLASS("VoiceFX" VST_NAME, Vst::PlugType::kFxRestoration, Vst::kDistributable, TONPLUGINS_VERSION, INLINE_UID_FROM_FUID(vst3::effect::processor_uid), vst3::effect::processor::create, INLINE_UID_FROM_FUID(vst3::effect::controller_uid), vst3::effect::controller::create);
 
 END_FACTORY
-
-bool InitModule()
-{
-	try {
-		// Initialize VoiceFX library.
-		voicefx::initialize();
-
-		// Return true to signal the VST 3 hosts that everything is fine.
-		return true;
-	} catch (std::exception const& ex) {
-		voicefx::core->log("Exception: %s", ex.what());
-		return false;
-	} catch (...) {
-		voicefx::core->log("Unknown Exception.");
-		return false;
-	}
-}
-
-bool DeinitModule()
-{
-	return true;
-}

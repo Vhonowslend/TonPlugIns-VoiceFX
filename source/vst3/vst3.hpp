@@ -29,14 +29,3 @@
 
 #define PARAMETER_MODE FOURCC('M', 'o', 'd', 'e')
 #define PARAMETER_INTENSITY FOURCC('I', 'n', 't', 's')
-
-extern void* moduleHandle;
-#ifdef WIN32
-#include <Windows.h>
-#include <pluginterfaces/base/ftypes.h>
-extern HINSTANCE        ghInst;
-extern Steinberg::tchar gPath[];
-#elif APPLE
-extern CFBundleRef ghInst;
-extern char        gPath[];
-#endif
