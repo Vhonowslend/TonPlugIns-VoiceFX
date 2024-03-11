@@ -22,12 +22,17 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
-#include <public.sdk/source/vst/vstaudioeffect.h>
-#include "audiobuffer.hpp"
+#include <ringbuffer.hpp>
 #include "nvidia-afx-effect.hpp"
 #include "nvidia-afx.hpp"
 #include "resampler.hpp"
 #include "vst3.hpp"
+
+#include "warning-disable.hpp"
+#include <condition_variable>
+#include <mutex>
+#include <public.sdk/source/vst/vstaudioeffect.h>
+#include "warning-enable.hpp"
 
 // Several assumptions just failed:
 // - We can't tell the application that uses us which samplerate we need.
@@ -41,24 +46,31 @@ namespace vst3::effect {
 	class processor : Steinberg::Vst::AudioEffect {
 		bool _dirty;
 
-		struct channel_buffers {
-			voicefx::audiobuffer input_resampled;
-			voicefx::audiobuffer output_resampled;
-			voicefx::audiobuffer input_unresampled;
-			voicefx::audiobuffer output_unresampled;
-		};
-
-		std::shared_ptr<::nvidia::afx::effect> _fx;
-		std::vector<channel_buffers>           _channels;
-
+		size_t  _channels;
 		int64_t _delay;
 		int64_t _local_delay;
 
-		std::shared_ptr<::voicefx::resampler> _in_resampler;
-		std::shared_ptr<::voicefx::resampler> _out_resampler;
+		typedef tonplugins::memory::float_ring_t raw_buffer_t;
+		typedef std::shared_ptr<raw_buffer_t>    buffer_t;
+		typedef std::vector<buffer_t>            buffer_container_t;
 
-		public:
-		static FUnknown* create(void* data);
+		buffer_container_t                    _in_unresampled;
+		std::shared_ptr<::voicefx::resampler> _in_resampler;
+		buffer_container_t                    _in_resampled;
+
+		std::shared_ptr<::nvidia::afx::effect> _fx;
+
+		buffer_container_t                    _out_unresampled;
+		std::shared_ptr<::voicefx::resampler> _out_resampler;
+		buffer_container_t                    _out_resampled;
+
+		std::mutex              _lock;
+		std::thread             _worker;
+		bool                    _worker_quit;
+		std::condition_variable _worker_cv;
+		bool                    _worker_in;
+
+		bool _delay_elapsed;
 
 		public:
 		processor();
@@ -82,5 +94,10 @@ namespace vst3::effect {
 		private:
 		void reset();
 		void set_channel_count(size_t num);
+
+		void worker();
+
+		public:
+		static FUnknown* create(void* data);
 	};
 } // namespace vst3::effect
