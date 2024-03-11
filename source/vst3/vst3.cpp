@@ -31,34 +31,15 @@
 
 #define D_LOG(MESSAGE, ...) voicefx::core->log("<VST3> " MESSAGE, __VA_ARGS__)
 
-BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:info@xaymar.com")
+BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:support@xaymar.com")
 
 #ifndef TONPLUGINS_DEMO
-#define VST_NAME "VoiceFX"
+#define VST_NAME ""
 #else
-#define VST_NAME "VoiceFX (Demo)"
+#define VST_NAME " (Demo)"
 #endif
 
-DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::effect::processor_uid),
-		   PClassInfo::kManyInstances, // Allow many instances
-		   kVstAudioEffectClass, // Type
-		   VST_NAME, // Name
-		   Vst::kDistributable, // Allow cross-computer usage.
-		   Vst::PlugType::kFxRestoration, // Categories (separate with |)
-		   TONPLUGINS_VERSION, // Version
-		   kVstVersionString, // VST SDK Version
-		   vst3::effect::processor::create // Function to create the instance.
-)
-DEF_CLASS2(INLINE_UID_FROM_FUID(vst3::effect::controller_uid),
-		   PClassInfo::kManyInstances, // Allow many instances
-		   kVstComponentControllerClass, // Type
-		   VST_NAME " Controller", // Name
-		   0, // Unused
-		   "", // Unused
-		   TONPLUGINS_VERSION, // Version
-		   kVstVersionString, // VST SDK Version
-		   vst3::effect::controller::create // Function to create the instance.
-)
+DEF_VST3_CLASS("VoiceFX" VST_NAME, Vst::PlugType::kFxRestoration, Vst::kDistributable, TONPLUGINS_VERSION, INLINE_UID_FROM_FUID(vst3::effect::processor_uid), vst3::effect::processor::create, INLINE_UID_FROM_FUID(vst3::effect::controller_uid), vst3::effect::controller::create);
 
 END_FACTORY
 
