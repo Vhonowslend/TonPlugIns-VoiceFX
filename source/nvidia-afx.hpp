@@ -29,6 +29,9 @@
 #include "nvidia-cuda.hpp"
 #include "util-library.hpp"
 
+#define DEFAULT_CONTEXT
+#define PRIMARY_CONTEXT
+
 #ifdef WIN32
 #include "win-d3d-context.hpp"
 #endif

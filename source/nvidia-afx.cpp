@@ -122,6 +122,8 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 		}
 	}
 
+#ifndef DEFAULT_CONTEXT
+#ifndef PRIMARY_CONTEXT
 	try { // Figure out the ideal device to run the effects on.
 		auto devices = enumerate_devices();
 		struct {
@@ -187,12 +189,14 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 	} catch (...) {
 		D_LOG("Failed to identify ideal acceleration devices.");
 	}
-
+#else
 	// Enter the primary CUDA context, if available.
-	//std::shared_ptr<::nvidia::cuda::context_stack> ctx_stack;
-	//if (_cuda_context) {
-	//	ctx_stack = _cuda_context->enter();
-	//}
+	std::shared_ptr<::nvidia::cuda::context_stack> ctx_stack;
+	if (_cuda_context) {
+		ctx_stack = _cuda_context->enter();
+	}
+#endif
+#endif
 }
 
 nvidia::afx::afx::~afx()
