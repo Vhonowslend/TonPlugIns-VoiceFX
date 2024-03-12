@@ -36,7 +36,7 @@
 #include "warning-enable.hpp"
 #endif
 
-vst3::effect::processor::processor() : _dirty(true), _channels(0), _delay(0), _local_delay(0), _in_unresampled(), _in_resampler(), _in_resampled(), _fx(), _out_unresampled(), _out_resampler(), _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
+vst3::effect::processor::processor() : _dirty(true), _channels(0), _samplerate(0), _resample(false), _delay(0), _local_delay(0), _in_lock(), _in_unresampled(), _in_resampler(), _in_resampled(), _fx(), _out_lock(), _out_unresampled(), _out_resampler(), _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
 {
 	D_LOG_LOUD("");
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
@@ -53,6 +53,11 @@ vst3::effect::processor::processor() : _dirty(true), _channels(0), _delay(0), _l
 		_worker_quit   = false;
 		_worker_signal = false;
 		_worker        = std::thread([this]() { this->worker(); });
+	}
+
+	{ // Allocate the necessary resources for starting off.
+		std::unique_lock<std::mutex> lock(_lock);
+		_fx = std::make_shared<::nvidia::afx::effect>();
 	}
 }
 
@@ -74,11 +79,6 @@ tresult PLUGIN_API vst3::effect::processor::initialize(FUnknown* context)
 	if (auto res = AudioEffect::initialize(context); res != kResultOk) {
 		D_LOG("(0x%08" PRIxPTR ") Initialization failed with error code 0x%" PRIx32 ".", this, static_cast<int32_t>(res));
 		return res;
-	}
-
-	{ // Allocate the necessary resources for starting off.
-		std::unique_lock<std::mutex> lock(_lock);
-		_fx = std::make_shared<::nvidia::afx::effect>();
 	}
 
 	// Add audio input and output which default to mono.
@@ -153,6 +153,7 @@ uint32 PLUGIN_API vst3::effect::processor::getTailSamples()
 tresult PLUGIN_API vst3::effect::processor::setupProcessing(ProcessSetup& newSetup)
 {
 	D_LOG_LOUD("");
+
 	// Copy non-important stuff.
 	processSetup.maxSamplesPerBlock = newSetup.maxSamplesPerBlock;
 	processSetup.processMode        = newSetup.processMode;
@@ -167,6 +168,8 @@ tresult PLUGIN_API vst3::effect::processor::setupProcessing(ProcessSetup& newSet
 		processSetup.sampleRate = newSetup.sampleRate;
 		_dirty                  = true;
 	}
+	std::unique_lock<std::mutex> lock(_lock);
+	_samplerate = static_cast<int64_t>(round(processSetup.sampleRate));
 
 	// TODO: Are we able to modify the host here?
 	return kResultOk;
@@ -251,9 +254,7 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 	// Either 2 or 4 threads. 2 seems sane for now, so let's go with that.
 
 	// Push all data into the unresampled buffer.
-	for (size_t idx = 0; idx < _channels; idx++) {
-		_in_unresampled[idx]->write(data.numSamples, data.inputs[0].channelBuffers32[idx]);
-	}
+	step_copy_in((const float**)(float**)data.inputs[0].channelBuffers32, _in_unresampled, data.numSamples);
 
 	// Listen to signal
 	{
@@ -261,28 +262,6 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 		_worker_signal = true;
 		_worker_cv.notify_all();
 	}
-
-	if (_local_delay < data.numSamples) {
-		// Return full or partial data.
-		size_t offset = _local_delay;
-		size_t length = data.numSamples - _local_delay;
-
-		for (size_t idx = 0; idx < _channels; idx++) {
-			if (offset > 0) {
-				memset(data.outputs[0].channelBuffers32[idx], 0, offset * sizeof(float));
-			}
-
-			_out_resampled[idx]->read(length, data.outputs[0].channelBuffers32[idx] + offset);
-		}
-	} else {
-		// Return a blank buffer until enough data is buffered.
-		for (size_t idx = 0; idx < _channels; idx++) {
-			memset(data.outputs[0].channelBuffers32[idx], 0, data.numSamples * sizeof(float));
-		}
-	}
-
-	int64_t delay_adjustment = _out_resampled[0]->used();
-	_local_delay             = std::max<int64_t>(_local_delay - delay_adjustment, 0);
 
 	return kResultOk;
 }
@@ -344,8 +323,7 @@ void vst3::effect::processor::reset()
 	D_LOG("(0x%08" PRIxPTR ") Resetting...", this);
 	std::unique_lock<std::mutex> lock(_lock);
 
-	size_t samplerate = static_cast<size_t>(ceil(processSetup.sampleRate));
-	bool   resample   = (samplerate != ::nvidia::afx::effect::samplerate());
+	_resample = (_samplerate != ::nvidia::afx::effect::samplerate());
 
 	// Allocate Buffers
 	D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and " PRIu64 " samples...", samplerate, ::nvidia::afx::effect::samplerate());
@@ -353,7 +331,7 @@ void vst3::effect::processor::reset()
 	_in_unresampled.shrink_to_fit();
 	_out_resampled.resize(_channels);
 	_out_resampled.shrink_to_fit();
-	if (resample) {
+	if (_resample) {
 		_in_resampled.resize(_channels);
 		_in_resampled.shrink_to_fit();
 		_out_unresampled.resize(_channels);
@@ -363,9 +341,9 @@ void vst3::effect::processor::reset()
 		_out_unresampled.clear();
 	}
 	for (size_t idx = 0; idx < _channels; idx++) {
-		_in_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(samplerate);
-		_out_resampled[idx]  = std::make_shared<tonplugins::memory::float_ring_t>(samplerate);
-		if (resample) {
+		_in_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(_samplerate);
+		_out_resampled[idx]  = std::make_shared<tonplugins::memory::float_ring_t>(_samplerate);
+		if (_resample) {
 			_in_resampled[idx]    = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
 			_out_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
 		}
@@ -373,19 +351,19 @@ void vst3::effect::processor::reset()
 
 	// Reset/Allocate Resamplers
 	D_LOG_LOUD("Resetting resamplers...");
-	if (resample) {
+	if (_resample) {
 		if (!_in_resampler) {
 			_in_resampler = std::make_shared<::voicefx::resampler>();
 		}
 		_in_resampler->channels(_channels);
-		_in_resampler->ratio(samplerate, ::nvidia::afx::effect::samplerate());
+		_in_resampler->ratio(_samplerate, ::nvidia::afx::effect::samplerate());
 		_in_resampler->clear();
 		_in_resampler->load();
 		if (!_out_resampler) {
 			_out_resampler = std::make_shared<::voicefx::resampler>();
 		}
 		_out_resampler->channels(_channels);
-		_out_resampler->ratio(::nvidia::afx::effect::samplerate(), samplerate);
+		_out_resampler->ratio(::nvidia::afx::effect::samplerate(), _samplerate);
 		_out_resampler->clear();
 		_out_resampler->load();
 	} else {
@@ -401,11 +379,12 @@ void vst3::effect::processor::reset()
 	// Calculate absolute effect delay
 	_delay = ::nvidia::afx::effect::delay();
 	_delay += ::nvidia::afx::effect::blocksize();
-	if (resample) {
+	if (_resample) {
 		_delay = std::llround(_delay / _in_resampler->ratio());
-		_delay += ::voicefx::resampler::calculate_delay(samplerate, ::nvidia::afx::effect::samplerate());
-		_delay += ::voicefx::resampler::calculate_delay(samplerate, ::nvidia::afx::effect::samplerate());
+		_delay += ::voicefx::resampler::calculate_delay(_samplerate, ::nvidia::afx::effect::samplerate());
+		_delay += ::voicefx::resampler::calculate_delay(::nvidia::afx::effect::samplerate(), _samplerate);
 	}
+	_delay += ::nvidia::afx::effect::blocksize() * 2; // Threading delay. Annoying, but hey.
 	_local_delay = (int64_t)::nvidia::afx::effect::blocksize();
 	D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRIu32 " samples.", this, _delay);
 
@@ -414,9 +393,8 @@ void vst3::effect::processor::reset()
 
 void vst3::effect::processor::set_channel_count(size_t num)
 {
-	D_LOG_LOUD("");
-	// !FIXME! Don't allocate resources that aren't needed.
 	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %" PRIuPTR "...", this, num);
+
 	std::unique_lock<std::mutex> lock(_lock);
 	_dirty    = true;
 	_channels = num;
@@ -438,32 +416,15 @@ void vst3::effect::processor::worker()
 		while (_worker_signal) {
 			_worker_signal = false; // Set this as early as possible.
 
-			std::vector<float const*>  inptrs  = {_channels, nullptr};
-			std::vector<float*>        outptrs = {_channels, nullptr};
-			decltype(_in_unresampled)& ins     = _in_unresampled;
-			decltype(_in_unresampled)& outs    = _out_resampled;
+			decltype(_in_unresampled)& ins  = _in_unresampled;
+			decltype(_in_unresampled)& outs = _out_resampled;
 
 			// Resample input if necessary.
-			if (_in_resampler) {
+			if (_resample) {
 				ins  = _in_unresampled;
 				outs = _in_resampled;
 
-				// Prepare reads/writes
-				for (size_t idx = 0; idx < _channels; idx++) {
-					inptrs[idx]  = ins[idx]->peek(ins[idx]->used());
-					outptrs[idx] = outs[idx]->poke(outs[idx]->free());
-				}
-
-				// Resample
-				size_t samples_read    = 0;
-				size_t samples_written = 0;
-				_in_resampler->process(inptrs.data(), ins[0]->used(), samples_read, outptrs.data(), outs[0]->free(), samples_written);
-
-				// Confirm reads/writes
-				for (size_t idx = 0; idx < _channels; idx++) {
-					ins[idx]->read(samples_read, nullptr);
-					outs[idx]->write(samples_written, nullptr);
-				}
+				step_resample_in(ins, outs);
 
 				// Swap things so the next step works.
 				ins  = outs;
@@ -473,49 +434,20 @@ void vst3::effect::processor::worker()
 				outs = _out_resampled;
 			}
 
-			if (_fx) {
-				size_t blocksize = ::nvidia::afx::effect::blocksize();
-				size_t samples   = (ins[0]->used() / blocksize) * blocksize; // This should round down.
-
-				if (samples > 0) {
-					// Prepare reads/writes
-					for (size_t idx = 0; idx < _channels; idx++) {
-						inptrs[idx]  = ins[idx]->peek(samples);
-						outptrs[idx] = outs[idx]->poke(samples);
-					}
-
-					// This always processes the exact amount of data provided.
-					_fx->process(inptrs.data(), outptrs.data(), samples);
-
-					// Confirm reads/writes
-					for (size_t idx = 0; idx < _channels; idx++) {
-						ins[idx]->read(samples, nullptr);
-						outs[idx]->write(samples, nullptr);
-					}
-				}
+			if (_resample) {
+				step_process(ins, outs);
+			} else { // Couldn't figure out how to skip this without an if/else duplication. :/
+				std::unique_lock<std::mutex> ilock(_in_lock);
+				std::unique_lock<std::mutex> ulock(_out_lock);
+				step_process(ins, outs);
 			}
 
 			// Resample output if necessary.
-			if (_in_resampler) {
+			if (_resample) {
 				ins  = outs;
 				outs = _out_resampled;
 
-				// Prepare reads/writes
-				for (size_t idx = 0; idx < _channels; idx++) {
-					inptrs[idx]  = ins[idx]->peek(ins[idx]->used());
-					outptrs[idx] = outs[idx]->poke(outs[idx]->free());
-				}
-
-				// Resample
-				size_t samples_read    = 0;
-				size_t samples_written = 0;
-				_in_resampler->process(inptrs.data(), ins[0]->used(), samples_read, outptrs.data(), outs[0]->free(), samples_written);
-
-				// Confirm reads/writes
-				for (size_t idx = 0; idx < _channels; idx++) {
-					ins[idx]->read(samples_read, nullptr);
-					outs[idx]->write(samples_written, nullptr);
-				}
+				step_resample_out(ins, outs);
 			}
 		}
 	} while (!_worker_quit);
@@ -533,4 +465,122 @@ FUnknown* vst3::effect::processor::create(void* data)
 		D_LOG("Unknown exception in create.");
 		return nullptr;
 	}
+}
+
+void vst3::effect::processor::step_copy_in(const float** ins, buffer_container_t& outs, size_t samples)
+{
+	std::unique_lock<std::mutex> lock(_in_lock);
+	for (size_t idx = 0; idx < _channels; idx++) {
+		outs[idx]->write(samples, ins[idx]);
+	}
+}
+
+void vst3::effect::processor::step_resample_in(buffer_container_t& ins, buffer_container_t& outs)
+{
+	std::vector<float const*> inptrs  = {_channels, nullptr};
+	std::vector<float*>       outptrs = {_channels, nullptr};
+
+	// Prepare reads/writes
+	{
+		std::unique_lock<std::mutex> lock(_in_lock);
+		for (size_t idx = 0; idx < _channels; idx++) {
+			inptrs[idx]  = ins[idx]->peek(ins[idx]->used());
+			outptrs[idx] = outs[idx]->poke(outs[idx]->free());
+		}
+	}
+
+	// Resample
+	size_t samples_read    = 0;
+	size_t samples_written = 0;
+	_in_resampler->process(inptrs.data(), ins[0]->used(), samples_read, outptrs.data(), outs[0]->free(), samples_written);
+
+	// Confirm reads/writes
+	for (size_t idx = 0; idx < _channels; idx++) {
+		ins[idx]->read(samples_read, nullptr);
+		outs[idx]->write(samples_written, nullptr);
+	}
+}
+
+void vst3::effect::processor::step_process(buffer_container_t& ins, buffer_container_t& outs)
+{
+	std::vector<float const*> inptrs  = {_channels, nullptr};
+	std::vector<float*>       outptrs = {_channels, nullptr};
+
+	if (_fx) {
+		size_t blocksize = ::nvidia::afx::effect::blocksize();
+		size_t samples   = (ins[0]->used() / blocksize) * blocksize; // This should round down.
+
+		if (samples > 0) {
+			// Prepare reads/writes
+			for (size_t idx = 0; idx < _channels; idx++) {
+				inptrs[idx]  = ins[idx]->peek(samples);
+				outptrs[idx] = outs[idx]->poke(samples);
+			}
+
+			// This always processes the exact amount of data provided.
+			_fx->process(inptrs.data(), outptrs.data(), samples);
+
+			// Confirm reads/writes
+			for (size_t idx = 0; idx < _channels; idx++) {
+				ins[idx]->read(samples, nullptr);
+				outs[idx]->write(samples, nullptr);
+			}
+		}
+	}
+}
+
+void vst3::effect::processor::step_resample_out(buffer_container_t& ins, buffer_container_t& outs)
+{
+	std::vector<float const*> inptrs  = {_channels, nullptr};
+	std::vector<float*>       outptrs = {_channels, nullptr};
+
+	// Prepare reads/writes
+	for (size_t idx = 0; idx < _channels; idx++) {
+		inptrs[idx]  = ins[idx]->peek(ins[idx]->used());
+		outptrs[idx] = outs[idx]->poke(outs[idx]->free());
+	}
+
+	// Resample
+	size_t samples_read    = 0;
+	size_t samples_written = 0;
+	_in_resampler->process(inptrs.data(), ins[0]->used(), samples_read, outptrs.data(), outs[0]->free(), samples_written);
+
+	{ // Confirm reads/writes
+		std::unique_lock<std::mutex> _out_lock;
+		for (size_t idx = 0; idx < _channels; idx++) {
+			ins[idx]->read(samples_read, nullptr);
+			outs[idx]->write(samples_written, nullptr);
+		}
+	}
+}
+
+void vst3::effect::processor::step_copy_out(buffer_container_t& inputs, float** outputs, size_t samples)
+{
+	std::vector<float const*> inptrs  = {_channels, nullptr};
+	std::vector<float*>       outptrs = {_channels, nullptr};
+
+	if (_local_delay < samples) {
+		// Require that the thread is done writing to the output buffers.
+		std::unique_lock lock(_out_lock);
+
+		// Return full or partial data.
+		size_t offset = _local_delay;
+		size_t length = samples - _local_delay;
+
+		for (size_t idx = 0; idx < _channels; idx++) {
+			if (offset > 0) {
+				memset(outputs[idx], 0, offset * sizeof(float));
+			}
+
+			inputs[idx]->read(length, outputs[idx] + offset);
+		}
+	} else {
+		// Return a blank buffer until enough data is buffered.
+		for (size_t idx = 0; idx < _channels; idx++) {
+			memset(outputs[idx], 0, samples * sizeof(float));
+		}
+	}
+	_local_delay = std::max<int64_t>(_local_delay - (int64_t)samples, 0);
+
+	// Due to threading, the above may no longer end up true. We can end up off by quite a lot, with no recovery.
 }

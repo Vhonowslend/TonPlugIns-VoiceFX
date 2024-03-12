@@ -29,6 +29,7 @@
 #include "vst3.hpp"
 
 #include "warning-disable.hpp"
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <public.sdk/source/vst/vstaudioeffect.h>
@@ -47,6 +48,9 @@ namespace vst3::effect {
 		bool _dirty;
 
 		size_t  _channels;
+		int64_t _samplerate;
+		bool    _resample;
+
 		int64_t _delay;
 		int64_t _local_delay;
 
@@ -54,12 +58,14 @@ namespace vst3::effect {
 		typedef std::shared_ptr<raw_buffer_t>    buffer_t;
 		typedef std::vector<buffer_t>            buffer_container_t;
 
+		std::mutex                            _in_lock;
 		buffer_container_t                    _in_unresampled;
 		std::shared_ptr<::voicefx::resampler> _in_resampler;
 		buffer_container_t                    _in_resampled;
 
 		std::shared_ptr<::nvidia::afx::effect> _fx;
 
+		std::mutex                            _out_lock;
 		buffer_container_t                    _out_unresampled;
 		std::shared_ptr<::voicefx::resampler> _out_resampler;
 		buffer_container_t                    _out_resampled;
@@ -92,6 +98,12 @@ namespace vst3::effect {
 		private:
 		void reset();
 		void set_channel_count(size_t num);
+
+		void step_copy_in(const float** ins, buffer_container_t& outs, size_t samples);
+		void step_resample_in(buffer_container_t& ins, buffer_container_t& outs);
+		void step_process(buffer_container_t& ins, buffer_container_t& outs);
+		void step_resample_out(buffer_container_t& ins, buffer_container_t& outs);
+		void step_copy_out(buffer_container_t& ins, float** outs, size_t samples);
 
 		void worker();
 
