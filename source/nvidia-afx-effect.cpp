@@ -27,7 +27,6 @@
 
 #include <nvAudioEffects.h>
 
-
 #define D_LOG(MESSAGE, ...) ::voicefx::core->log("<nvidia::afx::effect> " MESSAGE, __VA_ARGS__)
 
 nvidia::afx::effect::effect() : _nvafx(), _lock(), _model_path(), _model_path_str(), _fx_dirty(), _cfg_dirty(), _cfg_channels(), _cfg_enable_denoise()
@@ -154,7 +153,10 @@ void nvidia::afx::effect::load()
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
 	if (_fx_dirty) {
-		auto cstk = _nvafx->cuda_context()->enter();
+		std::shared_ptr<::nvidia::cuda::context_stack> cstk;
+		if (auto ctx = _nvafx->cuda_context(); ctx) {
+			cstk = ctx->enter();
+		}
 
 #ifdef WIN32
 		// Fix the search paths if some other plugin messed with them.
@@ -290,7 +292,10 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
-	auto cstk = _nvafx->cuda_context()->enter();
+	std::shared_ptr<::nvidia::cuda::context_stack> cstk;
+	if (auto ctx = _nvafx->cuda_context(); ctx) {
+		cstk = ctx->enter();
+	}
 
 	// Process all data passed in.
 	const float* input_ptr;
