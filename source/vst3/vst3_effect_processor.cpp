@@ -41,7 +41,7 @@
 
 #define D_LOG(MESSAGE, ...) voicefx::core->log("<vst3::effect::processor> " MESSAGE, __VA_ARGS__)
 
-vst3::effect::processor::processor() : _dirty(true), _channels(0), _delay(0), _local_delay(0), _fx(), _in_unresampled(), _in_resampler(), _in_resampled(), _out_unresampled(), _out_resampler(), _out_resampled(), _lock(), _worker(), _worker_quit(), _worker_cv(), _worker_in(false)
+vst3::effect::processor::processor() : _dirty(true), _channels(0), _delay(0), _local_delay(0), _fx(), _in_unresampled(), _in_resampler(), _in_resampled(), _out_unresampled(), _out_resampler(), _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
@@ -52,11 +52,11 @@ vst3::effect::processor::processor() : _dirty(true), _channels(0), _delay(0), _l
 	processContextRequirements.needContinousTimeSamples();
 	processContextRequirements.needSamplesToNextClock();
 
-	// Initialize basic things.
-	_worker_quit = false;
-	{
+	{ // Initialize worker thread for audio processing.
 		std::unique_lock<std::mutex> lock(_lock);
-		_worker = std::thread([this]() { this->worker(); });
+		_worker_quit   = false;
+		_worker_signal = false;
+		_worker        = std::thread([this]() { this->worker(); });
 	}
 }
 
@@ -78,9 +78,10 @@ try {
 		return res;
 	}
 
-	// Allocate the necessary resources for starting off.
-	std::unique_lock<std::mutex> lock(_lock);
-	_fx = std::make_shared<::nvidia::afx::effect>();
+	{ // Allocate the necessary resources for starting off.
+		std::unique_lock<std::mutex> lock(_lock);
+		_fx = std::make_shared<::nvidia::afx::effect>();
+	}
 
 	// Add audio input and output which default to mono.
 	addAudioInput(STR16("In"), SpeakerArr::kMono);
@@ -396,7 +397,7 @@ void vst3::effect::processor::reset()
 			ptr->listen([this](raw_buffer_t& ptr) {
 				if (ptr.used() > ::nvidia::afx::effect::blocksize()) {
 					std::unique_lock<std::mutex> lock(_lock);
-					_worker_in = true;
+					_worker_signal = true;
 					_worker_cv.notify_all();
 				}
 			});
@@ -483,8 +484,8 @@ void vst3::effect::processor::worker()
 
 	std::unique_lock<std::mutex> lock(_lock);
 	do {
-		while (_worker_in) {
-			_worker_in = false; // Set this as early as possible.
+		while (_worker_signal) {
+			_worker_signal = false; // Set this as early as possible.
 
 			std::vector<float const*>  inptrs  = {_channels, nullptr};
 			std::vector<float*>        outptrs = {_channels, nullptr};
@@ -567,7 +568,7 @@ void vst3::effect::processor::worker()
 			}
 		}
 
-		_worker_cv.wait(lock, [this] { return _worker_quit || _worker_in; });
+		_worker_cv.wait(lock, [this] { return _worker_quit || _worker_signal; });
 	} while (!_worker_quit);
 }
 

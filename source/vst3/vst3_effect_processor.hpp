@@ -66,11 +66,9 @@ namespace vst3::effect {
 
 		std::mutex              _lock;
 		std::thread             _worker;
-		bool                    _worker_quit;
 		std::condition_variable _worker_cv;
-		bool                    _worker_in;
-
-		bool _delay_elapsed;
+		bool                    _worker_quit;
+		bool                    _worker_signal;
 
 		public:
 		processor();
