@@ -82,11 +82,11 @@ tresult PLUGIN_API vst3::effect::processor::initialize(FUnknown* context)
 	}
 
 	// Add audio input and output which default to mono.
-	addAudioInput(STR16("In"), SpeakerArr::kMono);
-	addAudioOutput(STR16("Out"), SpeakerArr::kMono);
+	addAudioInput(STR16("In"), SpeakerArr::kStereo);
+	addAudioOutput(STR16("Out"), SpeakerArr::kStereo);
 
 	// Reset the channel layout to the defined one.
-	set_channel_count(1);
+	set_channel_count(2);
 
 	D_LOG("(0x%08" PRIxPTR ") Initialized.", this);
 	return kResultOk;
@@ -255,6 +255,13 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 		_in_unresampled[idx]->write(data.numSamples, data.inputs[0].channelBuffers32[idx]);
 	}
 
+	// Listen to signal
+	{
+		std::unique_lock<std::mutex> lock(_lock);
+		_worker_signal = true;
+		_worker_cv.notify_all();
+	}
+
 	if (_local_delay < data.numSamples) {
 		// Return full or partial data.
 		size_t offset = _local_delay;
@@ -391,15 +398,6 @@ void vst3::effect::processor::reset()
 	_fx->channels(_channels);
 	_fx->load();
 
-	// Listen to signal
-	_in_unresampled[0]->listen([this](raw_buffer_t& ptr) {
-		if (ptr.used() > ::nvidia::afx::effect::blocksize()) {
-			std::unique_lock<std::mutex> lock(_lock);
-			_worker_signal = true;
-			_worker_cv.notify_all();
-		}
-	});
-
 	// Calculate absolute effect delay
 	_delay = ::nvidia::afx::effect::delay();
 	_delay += ::nvidia::afx::effect::blocksize();
@@ -482,8 +480,8 @@ void vst3::effect::processor::worker()
 				if (samples > 0) {
 					// Prepare reads/writes
 					for (size_t idx = 0; idx < _channels; idx++) {
-						inptrs[idx]    = ins[idx]->peek(samples);
-						outptrs[idx]   = outs[idx]->poke(samples);
+						inptrs[idx]  = ins[idx]->peek(samples);
+						outptrs[idx] = outs[idx]->poke(samples);
 					}
 
 					// This always processes the exact amount of data provided.
