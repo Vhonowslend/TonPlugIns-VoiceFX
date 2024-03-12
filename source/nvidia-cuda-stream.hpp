@@ -22,8 +22,11 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
-#include <memory>
 #include "nvidia-cuda.hpp"
+
+#include "warning-disable.hpp"
+#include <memory>
+#include "warning-enable.hpp"
 
 namespace nvidia::cuda {
 	class stream {

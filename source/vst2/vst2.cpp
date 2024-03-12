@@ -21,12 +21,15 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "public.sdk/source/vst/vst2wrapper/vst2wrapper.sdk.cpp"
 #include "vst3/vst3_effect_processor.hpp"
-
-::AudioEffect* createEffectInstance(audioMasterCallback audioMaster)
-{
-	voicefx::initialize();
-
-	return Steinberg::Vst::Vst2Wrapper::create(GetPluginFactory(), vst3::effect::processor_uid, FOURCC('X', 'V', 'F', 'X'), audioMaster);
-}
+//
+//#include "warning-disable.hpp"
+//#include "public.sdk/source/vst/vst2wrapper/vst2wrapper.sdk.cpp"
+//#include "warning-enable.hpp"
+//
+//::AudioEffect* createEffectInstance(audioMasterCallback audioMaster)
+//{
+//	voicefx::initialize();
+//
+//	return Steinberg::Vst::Vst2Wrapper::create(GetPluginFactory(), vst3::effect::processor_uid, FOURCC('X', 'V', 'F', 'X'), audioMaster);
+//}

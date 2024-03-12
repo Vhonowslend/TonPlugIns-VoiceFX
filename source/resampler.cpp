@@ -22,10 +22,12 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "resampler.hpp"
-#include <cmath>
-#include <stdexcept>
 
+#include "warning-disable.hpp"
+#include <cmath>
 #include <samplerate.h>
+#include <stdexcept>
+#include "warning-enable.hpp"
 
 voicefx::resampler::~resampler()
 {

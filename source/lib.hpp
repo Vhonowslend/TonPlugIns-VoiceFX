@@ -23,11 +23,47 @@
 
 #pragma once
 #include "version.hpp"
-#include <cinttypes>
 #include <core.hpp>
+
+#include "warning-disable.hpp"
+#include <cinttypes>
 #include <filesystem>
+#include "warning-enable.hpp"
 
 #define FOURCC(a, b, c, d) ((a << 24) | (b << 16) | (c << 8) | d)
+
+/// Currrent function name (as const char*)
+#ifdef _MSC_VER
+// Microsoft Visual Studio
+#define __FUNCTION_SIG__ __FUNCSIG__
+#define __FUNCTION_NAME__ __func__
+#elif defined(__GNUC__) || defined(__MINGW32__)
+// GCC and MinGW
+#define __FUNCTION_SIG__ __PRETTY_FUNCTION__
+#define __FUNCTION_NAME__ __func__
+#else
+// Any other compiler
+#define __FUNCTION_SIG__ __func__
+#define __FUNCTION_NAME__ __func__
+#endif
+
+/// Forceful inlining
+#ifndef FORCE_INLINE
+#ifdef _MSC_VER
+#define FORCE_INLINE __force_inline
+#elif defined(__GNUC__) || defined(__MINGW32__)
+#define FORCE_INLINE __attribute__((always_inline))
+#else
+#define FORCE_INLINE inline
+#endif
+#endif
+
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<%s> " MESSAGE, __FUNCTION_SIG__, __VA_ARGS__)
+#ifdef DEBUG
+#define D_LOG_DEBUG(MESSAGE, ...) D_LOG(MESSAGE, __VA_ARGS__)
+#else
+#define D_LOG_DEBUG(MESSAGE, ...)
+#endif
 
 namespace voicefx {
 	static constexpr std::string_view product_name   = "VoiceFX";

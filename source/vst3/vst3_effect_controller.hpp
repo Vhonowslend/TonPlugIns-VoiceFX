@@ -22,9 +22,12 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
+#include "vst3.hpp"
+
+#include "warning-disable.hpp"
 #include <pluginterfaces/vst/ivstchannelcontextinfo.h>
 #include <public.sdk/source/vst/vsteditcontroller.h>
-#include "vst3.hpp"
+#include "warning-enable.hpp"
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;

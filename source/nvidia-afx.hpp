@@ -22,19 +22,22 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
+#include <platform.hpp>
+#include "nvidia-cuda-context.hpp"
+#include "nvidia-cuda.hpp"
+
+#include "warning-disable.hpp"
 #include <filesystem>
 #include <memory>
 #include <nvAudioEffects.h>
-#include "nvidia-cuda-context.hpp"
-#include "nvidia-cuda.hpp"
-#include "util-library.hpp"
-
-#define DEFAULT_CONTEXT
-#define PRIMARY_CONTEXT
+#include "warning-enable.hpp"
 
 #ifdef WIN32
 #include "win-d3d-context.hpp"
 #endif
+
+#define DEFAULT_CONTEXT
+#define PRIMARY_CONTEXT
 
 #define P_AFX_DEFINE_FUNCTION(name, ...)          \
 	private:                                      \
@@ -45,10 +48,10 @@
 
 namespace nvidia::afx {
 	class afx {
-		std::filesystem::path                     _redist_path;
-		std::shared_ptr<::voicefx::util::library> _library;
-		std::shared_ptr<::nvidia::cuda::cuda>     _cuda;
-		std::shared_ptr<::nvidia::cuda::context>  _cuda_context;
+		std::filesystem::path                            _redist_path;
+		std::shared_ptr<::tonplugins::platform::library> _library;
+		std::shared_ptr<::nvidia::cuda::cuda>            _cuda;
+		std::shared_ptr<::nvidia::cuda::context>         _cuda_context;
 
 #ifdef WIN32
 		std::shared_ptr<::voicefx::windows::d3d::context> _d3d;

@@ -22,7 +22,6 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vst3_effect_controller.hpp"
-#include <base/source/fstreamer.h>
 
 #include <warning-disable.hpp>
 #include <base/source/fstreamer.h>

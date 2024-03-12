@@ -22,9 +22,11 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
+#include "warning-disable.hpp"
 #include <cinttypes>
 #include <memory>
 #include <vector>
+#include "warning-enable.hpp"
 
 namespace voicefx {
 	class resampler {

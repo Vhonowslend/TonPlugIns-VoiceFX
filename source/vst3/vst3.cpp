@@ -21,13 +21,15 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <public.sdk/source/main/pluginfactory.h>
-
+#include "vst3.hpp"
 #include "version.hpp"
 #include "lib.hpp"
-#include "vst3.hpp"
 #include "vst3_effect_controller.hpp"
 #include "vst3_effect_processor.hpp"
+
+#include "warning-disable.hpp"
+#include <public.sdk/source/main/pluginfactory.h>
+#include "warning-enable.hpp"
 
 #define D_LOG(MESSAGE, ...) voicefx::core->log("<VST3> " MESSAGE, __VA_ARGS__)
 

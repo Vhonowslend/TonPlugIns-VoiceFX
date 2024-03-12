@@ -22,8 +22,10 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
+#include "warning-disable.hpp"
 #include <cstddef>
 #include <type_traits>
+#include "warning-enable.hpp"
 
 template<typename Enum>
 struct enable_bitmask_operators {

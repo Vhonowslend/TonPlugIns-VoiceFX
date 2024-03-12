@@ -22,14 +22,19 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "nvidia-afx.hpp"
-#include <mutex>
 #include "lib.hpp"
-#include "util-platform.hpp"
 
+#include "warning-disable.hpp"
+#include <map>
+#include <mutex>
 #include <nvAudioEffects.h>
+#include <string>
+#include "warning-enable.hpp"
 
 #ifdef WIN32
+#include "warning-disable.hpp"
 #include <Windows.h>
+#include "warning-enable.hpp"
 #endif
 
 #define D_LOG(MESSAGE, ...) voicefx::core->log("<NVAFX> " MESSAGE, __VA_ARGS__)
@@ -44,7 +49,7 @@ static std::filesystem::path find_nvafx_redistributable()
 		if (res != 0) {
 			buffer.resize(static_cast<size_t>(res) + 1);
 			GetEnvironmentVariableW(L"NVAFX_SDK_DIR", buffer.data(), static_cast<DWORD>(buffer.size()));
-			return std::filesystem::path(voicefx::util::platform::native_to_utf8(std::wstring(buffer.data())));
+			return std::filesystem::path(std::wstring(buffer.data()));
 		}
 #else
 		throw std::runtime_error("This platform is currently not supported.");
@@ -54,7 +59,7 @@ static std::filesystem::path find_nvafx_redistributable()
 	{ // 2. If that failed, assume default path for the platform of choice.
 #ifdef WIN32
 		// TODO: Make this use KnownFolders instead.
-		return std::filesystem::path(voicefx::util::platform::native_to_utf8(std::wstring(L"C:\\Program Files\\NVIDIA Corporation\\NVIDIA Audio Effects SDK")));
+		return std::filesystem::path(std::wstring(L"C:\\Program Files\\NVIDIA Corporation\\NVIDIA Audio Effects SDK"));
 #else
 		throw std::runtime_error("This platform is currently not supported.");
 #endif
@@ -80,10 +85,10 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 		windows_fix_dll_search_paths();
 
 		try {
-			_library = ::voicefx::util::library::load(std::filesystem::path("NVAudioEffects.dll"));
+			_library = ::tonplugins::platform::library::load(std::filesystem::path("NVAudioEffects.dll"));
 		} catch (...) {
 			try {
-				_library = ::voicefx::util::library::load(std::filesystem::path(_redist_path) / "NVAudioEffects.dll");
+				_library = ::tonplugins::platform::library::load(std::filesystem::path(_redist_path) / "NVAudioEffects.dll");
 			} catch (...) {
 				D_LOG("Failed to load the NVIDIA Audio Effects library, nothing will be available.");
 				throw std::runtime_error("Failed to load NVIDIA Audio Effects library.");
@@ -256,13 +261,16 @@ std::filesystem::path nvidia::afx::afx::model_path(NvAFX_EffectSelector effect)
 {
 	std::filesystem::path path = redistributable_path();
 	path /= "models";
-	if (std::string_view(NVAFX_EFFECT_DENOISER) == effect) {
-		path /= "denoiser_48k.trtpkg";
-	} else if (std::string_view(NVAFX_EFFECT_DEREVERB) == effect) {
-		path /= "dereverb_48k.trtpkg";
-	} else if (std::string_view(NVAFX_EFFECT_DEREVERB_DENOISER) == effect) {
-		path /= "dereverb_denoiser_48k.trtpkg";
-	} else {
+	for (auto& kv : std::map<std::string, std::string>{
+			 {NVAFX_EFFECT_DENOISER, "denoiser_48k.trtpkg"},
+			 {NVAFX_EFFECT_DEREVERB, "dereverb_48k.trtpkg"},
+			 {NVAFX_EFFECT_DEREVERB_DENOISER, "denoiser_48k.trtpkg"},
+			 {NVAFX_EFFECT_AEC, "aec_48k.trtpkg"},
+		 }) {
+		if (kv.first == effect) {
+			path /= kv.second;
+			break;
+		}
 	}
 	path = std::filesystem::absolute(path);
 	path.make_preferred();
@@ -299,9 +307,7 @@ void nvidia::afx::afx::windows_fix_dll_search_paths()
 
 	// Generate the search path for later use.
 	if (_dll_search_path.length() == 0) {
-		auto path = voicefx::util::platform::utf8_to_native(_redist_path);
-		//path += "\\";
-		_dll_search_path = path.wstring();
+		_dll_search_path = _redist_path.make_preferred().wstring();
 	}
 
 	// Specify search paths for LoadLibary.

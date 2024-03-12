@@ -18,10 +18,11 @@
  */
 
 #include "nvidia-cuda-context.hpp"
-#include <stdexcept>
 #include "lib.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<CUDA::Context> " MESSAGE, __VA_ARGS__)
+#include "warning-disable.hpp"
+#include <stdexcept>
+#include "warning-enable.hpp"
 
 nvidia::cuda::context::~context()
 {

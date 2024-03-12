@@ -36,12 +36,7 @@
 #include "warning-enable.hpp"
 #endif
 
-//#define DEBUG_BUFFERS
-//#define DEBUG_BUFFER_CONTENT
-
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<vst3::effect::processor> " MESSAGE, __VA_ARGS__)
-
-vst3::effect::processor::processor() : _dirty(true), _channels(0), _delay(0), _local_delay(0), _fx(), _in_unresampled(), _in_resampler(), _in_resampled(), _out_unresampled(), _out_resampler(), _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
+vst3::effect::processor::processor() : _dirty(true), _channels(0), _delay(0), _local_delay(0), _in_unresampled(), _in_resampler(), _in_resampled(), _fx(), _out_unresampled(), _out_resampler(), _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
 {
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 

@@ -22,10 +22,13 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
+#include <platform.hpp>
+#include "util-bitmask.hpp"
+
+#include "warning-disable.hpp"
 #include <cstddef>
 #include <tuple>
-#include "util-bitmask.hpp"
-#include "util-library.hpp"
+#include "warning-enable.hpp"
 
 #define P_CUDA_DEFINE_FUNCTION(name, ...)                   \
 	private:                                                \
@@ -205,7 +208,7 @@ namespace nvidia::cuda {
 	};
 
 	class cuda {
-		std::shared_ptr<voicefx::util::library> _library;
+		std::shared_ptr<tonplugins::platform::library> _library;
 
 		public:
 		~cuda();

@@ -22,10 +22,12 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "nvidia-cuda.hpp"
-#include <mutex>
+#include <platform.hpp>
 #include "lib.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<CUDA> " MESSAGE, __VA_ARGS__)
+#include "warning-disable.hpp"
+#include <mutex>
+#include "warning-enable.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
 #define ST_CUDA_NAME "nvcuda.dll"
@@ -83,7 +85,7 @@ nvidia::cuda::cuda::cuda() : _library()
 
 	D_LOG("Loading...");
 
-	_library = voicefx::util::library::load(std::string_view(ST_CUDA_NAME));
+	_library = ::tonplugins::platform::library::load(std::string_view(ST_CUDA_NAME));
 
 	{ // 1. Load critical initialization functions.
 		// Initialization

@@ -22,20 +22,20 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
+#include <platform.hpp>
 #include "nvidia-cuda.hpp"
-#include "util-library.hpp"
 
 namespace voicefx {
 	namespace windows {
 		namespace d3d {
 			class context {
-				std::shared_ptr<::voicefx::util::library> _dxgi_library;
-				void*                                     _dxgi_factory;
-				void*                                     _dxgi_adapter;
+				std::shared_ptr<::tonplugins::platform::library> _dxgi_library;
+				void*                                            _dxgi_factory;
+				void*                                            _dxgi_adapter;
 
-				std::shared_ptr<::voicefx::util::library> _d3d11_library;
-				void*                                     _d3d11_device;
-				void*                                     _d3d11_context;
+				std::shared_ptr<::tonplugins::platform::library> _d3d11_library;
+				void*                                            _d3d11_device;
+				void*                                            _d3d11_context;
 
 				public:
 				~context();

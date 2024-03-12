@@ -22,10 +22,11 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "nvidia-cuda-stream.hpp"
-#include <stdexcept>
 #include "lib.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<CUDA::Stream> " MESSAGE, __VA_ARGS__)
+#include "warning-disable.hpp"
+#include <stdexcept>
+#include "warning-enable.hpp"
 
 nvidia::cuda::stream::~stream()
 {

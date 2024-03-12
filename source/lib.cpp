@@ -23,15 +23,19 @@
 
 #include "lib.hpp"
 #include "version.hpp"
-#include <chrono>
 #include <core.hpp>
+
+#include "warning-disable.hpp"
+#include <chrono>
 #include <cstdarg>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <vector>
+#include "warning-enable.hpp"
 
+#include "warning-disable.hpp"
 #if defined(_WIN32)
 #include "Windows.h"
 
@@ -39,7 +43,9 @@
 
 #include "Knownfolders.h"
 #endif
+#include "warning-enable.hpp"
 
+#include "warning-disable.hpp"
 #include <public.sdk/source/main/moduleinit.cpp>
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #include <public.sdk/source/main/dllmain.cpp>
@@ -48,6 +54,7 @@
 #else
 #include <public.sdk/source/main/linuxmain.cpp>
 #endif
+#include "warning-enable.hpp"
 
 namespace voicefx {
 	std::shared_ptr<tonplugins::core> core;
