@@ -38,6 +38,7 @@
 
 vst3::effect::processor::processor() : _dirty(true), _channels(0), _delay(0), _local_delay(0), _in_unresampled(), _in_resampler(), _in_resampled(), _fx(), _out_unresampled(), _out_resampler(), _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
 {
+	D_LOG_LOUD("");
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
 	// Assign the proper controller
@@ -57,6 +58,7 @@ vst3::effect::processor::processor() : _dirty(true), _channels(0), _delay(0), _l
 
 vst3::effect::processor::~processor()
 {
+	D_LOG_LOUD("");
 	{
 		std::unique_lock<std::mutex> lock(_lock);
 		_worker_quit = true;
@@ -67,7 +69,8 @@ vst3::effect::processor::~processor()
 }
 
 tresult PLUGIN_API vst3::effect::processor::initialize(FUnknown* context)
-try {
+{
+	D_LOG_LOUD("");
 	if (auto res = AudioEffect::initialize(context); res != kResultOk) {
 		D_LOG("(0x%08" PRIxPTR ") Initialization failed with error code 0x%" PRIx32 ".", this, static_cast<int32_t>(res));
 		return res;
@@ -87,27 +90,17 @@ try {
 
 	D_LOG("(0x%08" PRIxPTR ") Initialized.", this);
 	return kResultOk;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in initialize: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in initialize.", this);
-	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::effect::processor::canProcessSampleSize(int32 symbolicSampleSize)
-try {
+{
+	D_LOG_LOUD("");
 	return (symbolicSampleSize == kSample32) ? kResultTrue : kResultFalse;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in canProcessSampleSize: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in canProcessSampleSize.", this);
-	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::effect::processor::setBusArrangements(SpeakerArrangement* inputs, int32 numIns, SpeakerArrangement* outputs, int32 numOuts)
-try {
+{
+	D_LOG_LOUD("");
 	if (numIns < 0 || numOuts < 0) {
 		D_LOG("(0x%08" PRIxPTR ") Host called setBusArrangement with no inputs or outputs!", this);
 		return kInvalidArgument;
@@ -143,38 +136,23 @@ try {
 	}
 
 	return kResultTrue;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in setBusArrangements: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setBusArrangements.", this);
-	return kInternalError;
 }
 
 uint32 PLUGIN_API vst3::effect::processor::getLatencySamples()
-try {
-	return _delay;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in setBusArrangements: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setBusArrangements.", this);
-	return kInternalError;
+{
+	D_LOG_LOUD("");
+	return (uint32)std::min(_delay, std::numeric_limits<decltype(_delay)>::max());
 }
 
 uint32 PLUGIN_API vst3::effect::processor::getTailSamples()
-try {
-	return _delay;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in getTailSamples: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in getTailSamples.", this);
-	return kInternalError;
+{
+	D_LOG_LOUD("");
+	return (uint32)std::min(_delay, std::numeric_limits<decltype(_delay)>::max());
 }
 
 tresult PLUGIN_API vst3::effect::processor::setupProcessing(ProcessSetup& newSetup)
-try {
+{
+	D_LOG_LOUD("");
 	// Copy non-important stuff.
 	processSetup.maxSamplesPerBlock = newSetup.maxSamplesPerBlock;
 	processSetup.processMode        = newSetup.processMode;
@@ -192,31 +170,21 @@ try {
 
 	// TODO: Are we able to modify the host here?
 	return kResultOk;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in setupProcessing: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setupProcessing.", this);
-	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::effect::processor::setProcessing(TBool state)
-try {
+{
+	D_LOG_LOUD("");
 	if ((state == TBool(true)) && _dirty) {
 		reset();
 	}
 
 	return kResultOk;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in setProcessing: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setProcessing.", this);
-	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
-try {
+{
+	D_LOG_LOUD("");
 	// Exit-early if there is nothing to process.
 	if ((data.numInputs == 0) || (data.numOutputs == 0)) {
 		return kResultOk;
@@ -228,7 +196,7 @@ try {
 	}
 
 	// Exit-early if the inputs mismatch our configuration.
-	if ((data.inputs[0].numChannels != _in_unresampled.size()) || (data.outputs[0].numChannels != _out_resampled.size())) {
+	if ((data.inputs[0].numChannels != _channels) || (data.outputs[0].numChannels != _channels)) {
 		return kNotInitialized;
 	}
 
@@ -310,16 +278,11 @@ try {
 	_local_delay             = std::max<int64_t>(_local_delay - delay_adjustment, 0);
 
 	return kResultOk;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in process: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in process.", this);
-	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::effect::processor::setState(IBStream* state)
-try {
+{
+	D_LOG_LOUD("");
 	if (state == nullptr) {
 		return kResultFalse;
 	}
@@ -344,16 +307,11 @@ try {
 #endif
 
 	return kResultOk;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in setState: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in setState.", this);
-	return kInternalError;
 }
 
 tresult PLUGIN_API vst3::effect::processor::getState(IBStream* state)
-try {
+{
+	D_LOG_LOUD("");
 	if (state == nullptr) {
 		return kResultFalse;
 	}
@@ -366,16 +324,11 @@ try {
 #endif
 
 	return kResultOk;
-} catch (std::exception const& ex) {
-	D_LOG("(0x%08" PRIxPTR ") Exception in getState: %s", this, ex.what());
-	return kInternalError;
-} catch (...) {
-	D_LOG("(0x%08" PRIxPTR ") Unknown exception in getState.", this);
-	return kInternalError;
 }
 
 void vst3::effect::processor::reset()
 {
+	D_LOG_LOUD("");
 	// Early-exit if the effect isn't "dirty".
 	if (!_dirty) {
 		return;
@@ -384,77 +337,78 @@ void vst3::effect::processor::reset()
 	D_LOG("(0x%08" PRIxPTR ") Resetting...", this);
 	std::unique_lock<std::mutex> lock(_lock);
 
-	{ // Input
-		_in_unresampled.resize(_channels);
-		_in_unresampled.shrink_to_fit();
-		for (auto& ptr : _in_unresampled) {
-			ptr = std::make_shared<tonplugins::memory::float_ring_t>(processSetup.sampleRate);
-			ptr->listen([this](raw_buffer_t& ptr) {
-				if (ptr.used() > ::nvidia::afx::effect::blocksize()) {
-					std::unique_lock<std::mutex> lock(_lock);
-					_worker_signal = true;
-					_worker_cv.notify_all();
-				}
-			});
-		}
-		if (processSetup.sampleRate != ::nvidia::afx::effect::samplerate()) {
-			if (!_in_resampler) {
-				_in_resampler = std::make_shared<::voicefx::resampler>();
-			}
-			_in_resampler->channels(_channels);
-			_in_resampler->ratio(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
-			_in_resampler->clear();
-			_in_resampler->load();
+	size_t samplerate = static_cast<size_t>(ceil(processSetup.sampleRate));
+	bool   resample   = (samplerate != ::nvidia::afx::effect::samplerate());
 
-			_in_resampled.resize(_channels);
-			_in_resampled.shrink_to_fit();
-			for (auto& ptr : _in_resampled) {
-				ptr = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
-			}
-		} else {
-			_in_resampled.clear();
-			_in_resampler.reset();
+	// Allocate Buffers
+	D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and " PRIu64 " samples...", samplerate, ::nvidia::afx::effect::samplerate());
+	_in_unresampled.resize(_channels);
+	_in_unresampled.shrink_to_fit();
+	_out_resampled.resize(_channels);
+	_out_resampled.shrink_to_fit();
+	if (resample) {
+		_in_resampled.resize(_channels);
+		_in_resampled.shrink_to_fit();
+		_out_unresampled.resize(_channels);
+		_out_unresampled.shrink_to_fit();
+	} else {
+		_in_resampled.clear();
+		_out_unresampled.clear();
+	}
+	for (size_t idx = 0; idx < _channels; idx++) {
+		_in_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(samplerate);
+		_out_resampled[idx]  = std::make_shared<tonplugins::memory::float_ring_t>(samplerate);
+		if (resample) {
+			_in_resampled[idx]    = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
+			_out_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
 		}
 	}
 
-	{ // Output
-		if (processSetup.sampleRate != ::nvidia::afx::effect::samplerate()) {
-			_out_unresampled.resize(_channels);
-			_out_unresampled.shrink_to_fit();
-			for (auto& ptr : _out_unresampled) {
-				ptr = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
-			}
-			if (!_out_resampler) {
-				_out_resampler = std::make_shared<::voicefx::resampler>();
-			}
-			_out_resampler->channels(_channels);
-			_out_resampler->ratio(::nvidia::afx::effect::samplerate(), processSetup.sampleRate);
-			_out_resampler->clear();
-			_out_resampler->load();
-		} else {
-			_out_unresampled.clear();
-			_out_resampler.reset();
+	// Reset/Allocate Resamplers
+	D_LOG_LOUD("Resetting resamplers...");
+	if (resample) {
+		if (!_in_resampler) {
+			_in_resampler = std::make_shared<::voicefx::resampler>();
 		}
-		_out_resampled.resize(_channels);
-		_out_resampled.shrink_to_fit();
-		for (auto& ptr : _out_resampled) {
-			ptr = std::make_shared<tonplugins::memory::float_ring_t>(processSetup.sampleRate);
+		_in_resampler->channels(_channels);
+		_in_resampler->ratio(samplerate, ::nvidia::afx::effect::samplerate());
+		_in_resampler->clear();
+		_in_resampler->load();
+		if (!_out_resampler) {
+			_out_resampler = std::make_shared<::voicefx::resampler>();
 		}
+		_out_resampler->channels(_channels);
+		_out_resampler->ratio(::nvidia::afx::effect::samplerate(), samplerate);
+		_out_resampler->clear();
+		_out_resampler->load();
+	} else {
+		_in_resampler.reset();
+		_out_resampler.reset();
 	}
 
-	// FX
+	// Reset Effect
+	D_LOG_LOUD("Resetting effect...");
 	_fx->channels(_channels);
 	_fx->load();
+
+	// Listen to signal
+	_in_unresampled[0]->listen([this](raw_buffer_t& ptr) {
+		if (ptr.used() > ::nvidia::afx::effect::blocksize()) {
+			std::unique_lock<std::mutex> lock(_lock);
+			_worker_signal = true;
+			_worker_cv.notify_all();
+		}
+	});
 
 	// Calculate absolute effect delay
 	_delay = ::nvidia::afx::effect::delay();
 	_delay += ::nvidia::afx::effect::blocksize();
-	if (processSetup.sampleRate != ::nvidia::afx::effect::samplerate()) {
+	if (resample) {
 		_delay = std::llround(_delay / _in_resampler->ratio());
-		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
-		_delay += ::voicefx::resampler::calculate_delay(processSetup.sampleRate, ::nvidia::afx::effect::samplerate());
+		_delay += ::voicefx::resampler::calculate_delay(samplerate, ::nvidia::afx::effect::samplerate());
+		_delay += ::voicefx::resampler::calculate_delay(samplerate, ::nvidia::afx::effect::samplerate());
 	}
-	_local_delay = ::nvidia::afx::effect::blocksize();
+	_local_delay = (int64_t)::nvidia::afx::effect::blocksize();
 	D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRIu32 " samples.", this, _delay);
 
 	_dirty = false;
@@ -462,6 +416,7 @@ void vst3::effect::processor::reset()
 
 void vst3::effect::processor::set_channel_count(size_t num)
 {
+	D_LOG_LOUD("");
 	// !FIXME! Don't allocate resources that aren't needed.
 	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %" PRIuPTR "...", this, num);
 	std::unique_lock<std::mutex> lock(_lock);
@@ -471,6 +426,7 @@ void vst3::effect::processor::set_channel_count(size_t num)
 
 void vst3::effect::processor::worker()
 {
+	D_LOG_LOUD("");
 #if WIN32
 	SetThreadPriority(GetCurrentThread(), HIGH_PRIORITY_CLASS);
 	SetThreadPriorityBoost(GetCurrentThread(), false);
@@ -479,6 +435,8 @@ void vst3::effect::processor::worker()
 
 	std::unique_lock<std::mutex> lock(_lock);
 	do {
+		_worker_cv.wait(lock, [this] { return _worker_quit || _worker_signal; });
+
 		while (_worker_signal) {
 			_worker_signal = false; // Set this as early as possible.
 
@@ -524,8 +482,8 @@ void vst3::effect::processor::worker()
 				if (samples > 0) {
 					// Prepare reads/writes
 					for (size_t idx = 0; idx < _channels; idx++) {
-						inptrs[idx]  = ins[idx]->peek((ins[idx]->used() / blocksize) * blocksize);
-						outptrs[idx] = outs[idx]->poke((outs[idx]->free() / blocksize) * blocksize);
+						inptrs[idx]    = ins[idx]->peek(samples);
+						outptrs[idx]   = outs[idx]->poke(samples);
 					}
 
 					// This always processes the exact amount of data provided.
@@ -562,13 +520,12 @@ void vst3::effect::processor::worker()
 				}
 			}
 		}
-
-		_worker_cv.wait(lock, [this] { return _worker_quit || _worker_signal; });
 	} while (!_worker_quit);
 }
 
 FUnknown* vst3::effect::processor::create(void* data)
 {
+	D_LOG_LOUD("");
 	try {
 		return static_cast<IAudioProcessor*>(new processor());
 	} catch (std::exception const& ex) {

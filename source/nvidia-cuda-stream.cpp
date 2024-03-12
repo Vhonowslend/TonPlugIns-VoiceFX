@@ -30,11 +30,13 @@
 
 nvidia::cuda::stream::~stream()
 {
+	D_LOG_LOUD("");
 	_cuda->cuStreamDestroy(_stream);
 }
 
 nvidia::cuda::stream::stream(::nvidia::cuda::stream_flags flags, int32_t priority) : _cuda(::nvidia::cuda::cuda::get())
 {
+	D_LOG_LOUD("");
 	nvidia::cuda::result res;
 	if (priority == 0) {
 		res = _cuda->cuStreamCreate(&_stream, flags);
@@ -52,11 +54,13 @@ nvidia::cuda::stream::stream(::nvidia::cuda::stream_flags flags, int32_t priorit
 
 ::nvidia::cuda::stream_t nvidia::cuda::stream::get()
 {
+	D_LOG_LOUD("");
 	return _stream;
 }
 
 void nvidia::cuda::stream::synchronize()
 {
+	D_LOG_LOUD("");
 	if (auto res = _cuda->cuStreamSynchronize(_stream); res != ::nvidia::cuda::result::SUCCESS) {
 		throw ::nvidia::cuda::exception(res);
 	}

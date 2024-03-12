@@ -33,21 +33,21 @@ voicefx::windows::d3d::context::~context()
 {
 	if (_d3d11_context) {
 		reinterpret_cast<ID3D11DeviceContext*>(_d3d11_context)->Release();
-		D_LOG_DEBUG("Released ID3D11DeviceContext");
+		D_LOG_LOUD("Released ID3D11DeviceContext");
 	}
 	if (_d3d11_device) {
 		reinterpret_cast<ID3D11Device*>(_d3d11_device)->Release();
-		D_LOG_DEBUG("Released ID3D11Device");
+		D_LOG_LOUD("Released ID3D11Device");
 	}
 	if (_dxgi_adapter) {
 		reinterpret_cast<IDXGIAdapter1*>(_dxgi_adapter)->Release();
-		D_LOG_DEBUG("Released ID3D11Adapter1");
+		D_LOG_LOUD("Released ID3D11Adapter1");
 	}
 	if (_dxgi_factory) {
 		reinterpret_cast<IDXGIFactory1*>(_dxgi_factory)->Release();
-		D_LOG_DEBUG("Released IDXGIFactory1");
+		D_LOG_LOUD("Released IDXGIFactory1");
 	}
-	D_LOG_DEBUG("Destroyed");
+	D_LOG_LOUD("Destroyed");
 }
 
 voicefx::windows::d3d::context::context(::nvidia::cuda::luid_t luid) : _dxgi_library(), _dxgi_factory(nullptr), _dxgi_adapter(nullptr), _d3d11_library(), _d3d11_device(nullptr), _d3d11_context(nullptr)
@@ -60,7 +60,7 @@ voicefx::windows::d3d::context::context(::nvidia::cuda::luid_t luid) : _dxgi_lib
 	if (!lCreateDXGIFactory1) {
 		throw std::runtime_error("Failed to find CreateDXGIFactory1 in 'dxgi.dll'.");
 	}
-	D_LOG_DEBUG("Found CreateDXGIFactory1");
+	D_LOG_LOUD("Found CreateDXGIFactory1");
 
 	// Attempt to load D3D11.
 	_d3d11_library                                  = ::tonplugins::platform::library::load(std::string_view("d3d11.dll"));
@@ -68,7 +68,7 @@ voicefx::windows::d3d::context::context(::nvidia::cuda::luid_t luid) : _dxgi_lib
 	if (!lD3D11CreateDevice) {
 		throw std::runtime_error("Failed to find D3D11CreateDevice in 'd3d11.dll'.");
 	}
-	D_LOG_DEBUG("Found D3D11CreateDevice");
+	D_LOG_LOUD("Found D3D11CreateDevice");
 
 	// Try and initialize DXGI to 1.1.
 	if (auto res = lCreateDXGIFactory1(__uuidof(IDXGIFactory1), &_dxgi_factory); res != S_OK) {
@@ -76,7 +76,7 @@ voicefx::windows::d3d::context::context(::nvidia::cuda::luid_t luid) : _dxgi_lib
 		throw std::runtime_error(message_buffer);
 	}
 	IDXGIFactory1* dxgi_factory = reinterpret_cast<IDXGIFactory1*>(_dxgi_factory);
-	D_LOG_DEBUG("Acquired IDXGIFactory1");
+	D_LOG_LOUD("Acquired IDXGIFactory1");
 
 	// Find the matching adapter in the list of adapters.
 	IDXGIAdapter1* dxgi_adapter;
@@ -98,7 +98,7 @@ voicefx::windows::d3d::context::context(::nvidia::cuda::luid_t luid) : _dxgi_lib
 	if (!_dxgi_adapter) {
 		throw std::runtime_error("Failed to find matching Adapter.");
 	}
-	D_LOG_DEBUG("Acquired IDXGIAdapter1");
+	D_LOG_LOUD("Acquired IDXGIAdapter1");
 
 	// Create Device
 	std::vector<D3D_FEATURE_LEVEL> levels = {
@@ -110,5 +110,5 @@ voicefx::windows::d3d::context::context(::nvidia::cuda::luid_t luid) : _dxgi_lib
 		snprintf(message_buffer, sizeof(message_buffer), "Failed to create D3D11Device. (Code %08" PRIX32 ")\0", (int32_t)res);
 		throw std::runtime_error(message_buffer);
 	}
-	D_LOG_DEBUG("Acquired ID3D11Device and ID3D11DeviceContext");
+	D_LOG_LOUD("Acquired ID3D11Device and ID3D11DeviceContext");
 }

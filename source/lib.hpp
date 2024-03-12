@@ -59,10 +59,12 @@
 #endif
 
 #define D_LOG(MESSAGE, ...) voicefx::core->log("<%s> " MESSAGE, __FUNCTION_SIG__, __VA_ARGS__)
-#ifdef DEBUG
-#define D_LOG_DEBUG(MESSAGE, ...) D_LOG(MESSAGE, __VA_ARGS__)
+
+#define QUIET
+#ifndef QUIET
+#define D_LOG_LOUD(MESSAGE, ...) D_LOG(MESSAGE, __VA_ARGS__)
 #else
-#define D_LOG_DEBUG(MESSAGE, ...)
+#define D_LOG_LOUD(MESSAGE, ...)
 #endif
 
 namespace voicefx {

@@ -22,6 +22,7 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "resampler.hpp"
+#include "lib.hpp"
 
 #include "warning-disable.hpp"
 #include <cmath>
@@ -31,13 +32,18 @@
 
 voicefx::resampler::~resampler()
 {
+	D_LOG_LOUD("");
 	_instance.clear();
 }
 
-voicefx::resampler::resampler() : _instance(), _channels(0), _ratio(0.0), _dirty(true) {}
+voicefx::resampler::resampler() : _instance(), _channels(0), _ratio(0.0), _dirty(true)
+{
+	D_LOG_LOUD("");
+}
 
 voicefx::resampler::resampler(resampler&& r) noexcept : _instance(), _ratio(1.0), _channels(1)
 {
+	D_LOG_LOUD("");
 	std::swap(_instance, r._instance);
 	std::swap(_ratio, r._ratio);
 	std::swap(_channels, r._channels);
@@ -46,6 +52,7 @@ voicefx::resampler::resampler(resampler&& r) noexcept : _instance(), _ratio(1.0)
 
 voicefx::resampler& voicefx::resampler::operator=(voicefx::resampler&& r) noexcept
 {
+	D_LOG_LOUD("");
 	std::swap(_instance, r._instance);
 	std::swap(_ratio, r._ratio);
 	std::swap(_channels, r._channels);
@@ -55,21 +62,25 @@ voicefx::resampler& voicefx::resampler::operator=(voicefx::resampler&& r) noexce
 
 float voicefx::resampler::ratio()
 {
+	D_LOG_LOUD("");
 	return _ratio;
 }
 
 void voicefx::resampler::ratio(uint32_t in_samplerate, uint32_t out_samplerate)
 {
+	D_LOG_LOUD("");
 	_ratio = static_cast<float>(in_samplerate) / static_cast<float>(out_samplerate);
 }
 
 size_t voicefx::resampler::channels()
 {
+	D_LOG_LOUD("");
 	return _channels;
 }
 
 void voicefx::resampler::channels(size_t channels)
 {
+	D_LOG_LOUD("");
 	if (_channels > std::numeric_limits<int32_t>::max()) {
 		throw std::runtime_error("Channel limit exceeded.");
 	}
@@ -81,6 +92,7 @@ void voicefx::resampler::channels(size_t channels)
 
 void voicefx::resampler::load()
 {
+	D_LOG_LOUD("");
 	if (!_dirty) {
 		return;
 	}
@@ -105,6 +117,7 @@ void voicefx::resampler::load()
 
 void voicefx::resampler::clear()
 {
+	D_LOG_LOUD("");
 	for (auto& instance : _instance) {
 		if (instance) {
 			src_reset(reinterpret_cast<SRC_STATE*>(instance.get()));
@@ -114,6 +127,7 @@ void voicefx::resampler::clear()
 
 void voicefx::resampler::process(const float* in_buffer[], size_t in_samples, size_t& in_samples_used, float* out_buffer[], size_t out_samples, size_t& out_samples_generated)
 {
+	D_LOG_LOUD("");
 	// Ensure we have a resampler
 	if (_dirty) {
 		load();
@@ -146,6 +160,7 @@ void voicefx::resampler::process(const float* in_buffer[], size_t in_samples, si
 
 size_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_samplerate)
 {
+	D_LOG_LOUD("");
 	int  error    = 0;
 	auto instance = src_new(SRC_SINC_BEST_QUALITY, 1, &error);
 	if (error != 0) {

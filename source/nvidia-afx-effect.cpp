@@ -30,6 +30,7 @@
 
 nvidia::afx::effect::effect() : _nvafx(), _lock(), _model_path(), _model_path_str(), _fx_dirty(), _cfg_dirty(), _cfg_channels(), _cfg_enable_denoise()
 {
+	D_LOG_LOUD("");
 	_nvafx = ::nvidia::afx::afx::instance();
 
 	// Set up initial state.
@@ -45,6 +46,7 @@ nvidia::afx::effect::effect() : _nvafx(), _lock(), _model_path(), _model_path_st
 
 nvidia::afx::effect::~effect()
 {
+	D_LOG_LOUD("");
 	if (_fx.size() > 0) {
 		for (auto& fx : _fx) {
 			fx.reset();
@@ -58,12 +60,14 @@ nvidia::afx::effect::~effect()
 
 uint32_t nvidia::afx::effect::samplerate()
 {
+	D_LOG_LOUD("");
 	// FIXME: This is hardcoded, but may change in the future.
 	return 48000; // 48kHz.
 }
 
 size_t nvidia::afx::effect::blocksize()
 {
+	D_LOG_LOUD("");
 	// FIXME: At the moment, the block size is 10ms.
 	return samplerate() / 100;
 	//return 480; // 10ms at 48kHz.
@@ -71,6 +75,7 @@ size_t nvidia::afx::effect::blocksize()
 
 size_t nvidia::afx::effect::delay()
 {
+	D_LOG_LOUD("");
 	// The original documentation stated a latency of 72ms.
 	// Not quite sure where the 10ms extra rea coming from, but hey - samples align this way.
 	return (48000 * 82) / 1000;
@@ -78,11 +83,13 @@ size_t nvidia::afx::effect::delay()
 
 bool nvidia::afx::effect::denoise_enabled()
 {
+	D_LOG_LOUD("");
 	return _cfg_enable_denoise;
 }
 
 void nvidia::afx::effect::enable_denoise(bool v)
 {
+	D_LOG_LOUD("");
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
@@ -95,11 +102,13 @@ void nvidia::afx::effect::enable_denoise(bool v)
 #ifndef TONPLUGINS_DEMO
 bool nvidia::afx::effect::dereverb_enabled()
 {
+	D_LOG_LOUD("");
 	return _cfg_enable_dereverb;
 }
 
 void nvidia::afx::effect::enable_dereverb(bool v)
 {
+	D_LOG_LOUD("");
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
@@ -112,11 +121,13 @@ void nvidia::afx::effect::enable_dereverb(bool v)
 
 size_t nvidia::afx::effect::channels()
 {
+	D_LOG_LOUD("");
 	return _cfg_channels;
 }
 
 void nvidia::afx::effect::channels(size_t v)
 {
+	D_LOG_LOUD("");
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
@@ -134,6 +145,7 @@ float nvidia::afx::effect::intensity()
 
 void nvidia::afx::effect::intensity(float v)
 {
+	D_LOG_LOUD("");
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
@@ -146,6 +158,7 @@ void nvidia::afx::effect::intensity(float v)
 
 void nvidia::afx::effect::load()
 {
+	D_LOG_LOUD("");
 	char message_buffer[1024] = {0};
 
 	// Prevent outside modifications while we're working.
@@ -223,9 +236,6 @@ void nvidia::afx::effect::load()
 			if (_nvafx->cuda_context()) {
 				_nvafx->SetU32(fx.get(), NVAFX_PARAM_USER_CUDA_CONTEXT, 1);
 				_nvafx->SetU32(fx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 0);
-			} else {
-				_nvafx->SetU32(fx.get(), NVAFX_PARAM_USER_CUDA_CONTEXT, 0);
-				_nvafx->SetU32(fx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 1);
 			}
 
 			// Model Paths
@@ -250,7 +260,10 @@ void nvidia::afx::effect::load()
 	}
 
 	if (_cfg_dirty) {
-		auto cstk = _nvafx->cuda_context()->enter();
+		std::shared_ptr<::nvidia::cuda::context_stack> cstk;
+		if (auto ctx = _nvafx->cuda_context(); ctx) {
+			cstk = ctx->enter();
+		}
 
 		for (auto& fx : _fx) {
 #ifndef TONPLUGINS_DEMO
@@ -267,6 +280,9 @@ void nvidia::afx::effect::load()
 
 void nvidia::afx::effect::clear()
 {
+	D_LOG_LOUD("");
+	D_LOG_LOUD("Clearing all buffers");
+
 	// Prevent outside modifications while we're working.
 	auto lock = std::unique_lock<std::mutex>(_lock);
 
@@ -278,7 +294,8 @@ void nvidia::afx::effect::clear()
 
 void nvidia::afx::effect::process(const float** input, float** output, size_t samples)
 {
-	D_LOG_DEBUG("Processing %zu samples", samples);
+	D_LOG_LOUD("");
+	D_LOG_LOUD("Processing %zu samples", samples);
 
 	// Safe-guard against bad usage.
 	if ((samples % blocksize()) != 0) {
@@ -287,7 +304,7 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 
 	// Reload the effect
 	if (_fx_dirty || _cfg_dirty) {
-		D_LOG_DEBUG("Effect is dirty, reloading...");
+		D_LOG_LOUD("Effect is dirty, reloading...");
 		load();
 	}
 

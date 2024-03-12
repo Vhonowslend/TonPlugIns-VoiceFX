@@ -157,11 +157,9 @@ namespace nvidia::cuda {
 	struct external_memory_handle_info_v1_t {
 		external_memory_handle_type type;
 		union {
-			int32_t file;
-			struct {
-				void*       handle;
-				const void* name;
-			};
+			int32_t     file;
+			void*       handle;
+			const void* name;
 			const void* nvscibuf;
 		};
 		uint64_t size;

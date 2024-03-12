@@ -28,10 +28,9 @@
 #include <vstgui/plugin-bindings/vst3editor.h>
 #include <warning-enable.hpp>
 
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<vst3::effect::controller> " MESSAGE, __VA_ARGS__)
-
 vst3::effect::controller::controller()
 {
+	D_LOG_LOUD("");
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
 
 #ifndef TONPLUGINS_DEMO
@@ -54,6 +53,7 @@ vst3::effect::controller::~controller() {}
 
 tresult PLUGIN_API vst3::effect::controller::initialize(FUnknown* context)
 {
+	D_LOG_LOUD("");
 	if (tresult result = EditControllerEx1::initialize(context); result != kResultOk) {
 		D_LOG("(0x%08" PRIxPTR ") Initialization failed with error code 0x%" PRIx32 ".", this, static_cast<int32_t>(result));
 		return result;
@@ -65,6 +65,7 @@ tresult PLUGIN_API vst3::effect::controller::initialize(FUnknown* context)
 
 tresult PLUGIN_API vst3::effect::controller::setComponentState(IBStream* state)
 {
+	D_LOG_LOUD("");
 	if (state == nullptr) {
 		return kResultFalse;
 	}
@@ -87,16 +88,19 @@ tresult PLUGIN_API vst3::effect::controller::setComponentState(IBStream* state)
 
 tresult PLUGIN_API vst3::effect::controller::setChannelContextInfos(IAttributeList* list)
 {
+	D_LOG_LOUD("");
 	return kResultOk;
 }
 
 FUnknown* vst3::effect::controller::create(void* data)
 {
+	D_LOG_LOUD("");
 	return static_cast<IEditController*>(new controller());
 }
 
 Steinberg::IPlugView* PLUGIN_API vst3::effect::controller::createView(Steinberg::FIDString name)
 {
+	D_LOG_LOUD("");
 	if (strcmp(name, Steinberg::Vst::ViewType::kEditor) == 0) {
 		return new VSTGUI::VST3Editor(this, "view", "myEditor.uidesc");
 	}

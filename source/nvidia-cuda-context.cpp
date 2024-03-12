@@ -26,6 +26,7 @@
 
 nvidia::cuda::context::~context()
 {
+	D_LOG_LOUD("");
 	if (_is_primary) {
 		_cuda->cuDevicePrimaryCtxRelease(_dev);
 	} else {
@@ -33,10 +34,14 @@ nvidia::cuda::context::~context()
 	}
 }
 
-nvidia::cuda::context::context() : _cuda(::nvidia::cuda::cuda::get()), _dev(), _ctx(), _is_primary(false) {}
+nvidia::cuda::context::context() : _cuda(::nvidia::cuda::cuda::get()), _dev(), _ctx(), _is_primary(false)
+{
+	D_LOG_LOUD("");
+}
 
 nvidia::cuda::context::context(::nvidia::cuda::device_t device) : context()
 {
+	D_LOG_LOUD("");
 	_dev        = device;
 	_is_primary = true;
 
@@ -47,6 +52,7 @@ nvidia::cuda::context::context(::nvidia::cuda::device_t device) : context()
 
 nvidia::cuda::context::context(::nvidia::cuda::context_flags flags, ::nvidia::cuda::device_t device) : context()
 {
+	D_LOG_LOUD("");
 	_dev        = device;
 	_is_primary = false;
 
@@ -60,16 +66,19 @@ nvidia::cuda::context::context(::nvidia::cuda::context_flags flags, ::nvidia::cu
 
 ::nvidia::cuda::context_t nvidia::cuda::context::get()
 {
+	D_LOG_LOUD("");
 	return _ctx;
 }
 
 std::shared_ptr<::nvidia::cuda::context_stack> nvidia::cuda::context::enter()
 {
+	D_LOG_LOUD("");
 	return std::make_shared<::nvidia::cuda::context_stack>(shared_from_this());
 }
 
 void nvidia::cuda::context::push()
 {
+	D_LOG_LOUD("");
 	if (auto res = _cuda->cuCtxPushCurrent(_ctx); res != ::nvidia::cuda::result::SUCCESS) {
 		throw ::nvidia::cuda::exception(res);
 	}
@@ -77,12 +86,14 @@ void nvidia::cuda::context::push()
 
 void nvidia::cuda::context::pop()
 {
+	D_LOG_LOUD("");
 	::nvidia::cuda::context_t ctx;
 	_cuda->cuCtxPopCurrent(&ctx);
 }
 
 void nvidia::cuda::context::synchronize()
 {
+	D_LOG_LOUD("");
 	if (auto res = _cuda->cuCtxSynchronize(); res != ::nvidia::cuda::result::SUCCESS) {
 		throw ::nvidia::cuda::exception(res);
 	}

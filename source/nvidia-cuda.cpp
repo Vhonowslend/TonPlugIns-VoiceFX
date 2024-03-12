@@ -76,11 +76,13 @@
 
 nvidia::cuda::cuda::~cuda()
 {
+	D_LOG_LOUD("");
 	D_LOG("Unloading...");
 }
 
 nvidia::cuda::cuda::cuda() : _library()
 {
+	D_LOG_LOUD("");
 	int32_t cuda_version = 0;
 
 	D_LOG("Loading...");
@@ -143,6 +145,7 @@ nvidia::cuda::cuda::cuda() : _library()
 
 int32_t nvidia::cuda::cuda::version()
 {
+	D_LOG_LOUD("");
 	int32_t v = 0;
 	cuDriverGetVersion(&v);
 	return v;
@@ -150,6 +153,7 @@ int32_t nvidia::cuda::cuda::version()
 
 std::shared_ptr<nvidia::cuda::cuda> nvidia::cuda::cuda::get()
 {
+	D_LOG_LOUD("");
 	static std::weak_ptr<nvidia::cuda::cuda> instance;
 	static std::mutex                        lock;
 

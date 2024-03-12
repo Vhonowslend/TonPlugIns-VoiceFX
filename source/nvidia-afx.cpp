@@ -37,10 +37,9 @@
 #include "warning-enable.hpp"
 #endif
 
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<NVAFX> " MESSAGE, __VA_ARGS__)
-
 static std::filesystem::path find_nvafx_redistributable()
 {
+	D_LOG_LOUD("");
 	{ // 1. Check the global NVAFX_SDK_DIR environment variable.
 #ifdef WIN32
 		std::vector<wchar_t> buffer;
@@ -68,6 +67,7 @@ static std::filesystem::path find_nvafx_redistributable()
 
 nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library(), _cuda(), _cuda_context()
 {
+	D_LOG_LOUD("");
 #ifdef WIN32
 	_d3d.reset();
 	_dll_search_path.clear();
@@ -206,6 +206,7 @@ nvidia::afx::afx::afx() : _redist_path(find_nvafx_redistributable()), _library()
 
 nvidia::afx::afx::~afx()
 {
+	D_LOG_LOUD("");
 #ifdef WIN32
 	RemoveDllDirectory(reinterpret_cast<DLL_DIRECTORY_COOKIE>(_dll_cookie));
 #endif
@@ -213,6 +214,7 @@ nvidia::afx::afx::~afx()
 
 std::vector<int32_t> nvidia::afx::afx::enumerate_devices()
 {
+	D_LOG_LOUD("");
 	NvAFX_Handle         effect      = nullptr;
 	int32_t              num_devices = 0;
 	std::vector<int32_t> devices;
@@ -248,17 +250,17 @@ std::vector<int32_t> nvidia::afx::afx::enumerate_devices()
 		}
 		throw;
 	}
-
-	return devices;
 }
 
 std::filesystem::path nvidia::afx::afx::redistributable_path()
 {
+	D_LOG_LOUD("");
 	return _redist_path;
 }
 
 std::filesystem::path nvidia::afx::afx::model_path(NvAFX_EffectSelector effect)
 {
+	D_LOG_LOUD("");
 	std::filesystem::path path = redistributable_path();
 	path /= "models";
 	for (auto& kv : std::map<std::string, std::string>{
@@ -279,6 +281,7 @@ std::filesystem::path nvidia::afx::afx::model_path(NvAFX_EffectSelector effect)
 
 std::shared_ptr<::nvidia::afx::afx> nvidia::afx::afx::instance()
 {
+	D_LOG_LOUD("");
 	static std::mutex                        _instance_guard;
 	static std::weak_ptr<::nvidia::afx::afx> _instance;
 
@@ -297,11 +300,13 @@ std::shared_ptr<::nvidia::afx::afx> nvidia::afx::afx::instance()
 
 std::shared_ptr<nvidia::cuda::context> nvidia::afx::afx::cuda_context()
 {
+	D_LOG_LOUD("");
 	return _cuda_context;
 }
 
 void nvidia::afx::afx::windows_fix_dll_search_paths()
 {
+	D_LOG_LOUD("");
 	// Set default look-up path to be System + Application + User + DLL-Load Dir
 	SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
 
