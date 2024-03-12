@@ -256,12 +256,7 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 	// Push all data into the unresampled buffer.
 	step_copy_in((const float**)(float**)data.inputs[0].channelBuffers32, _in_unresampled, data.numSamples);
 
-	// Listen to signal
-	{
-		std::unique_lock<std::mutex> lock(_lock);
-		_worker_signal = true;
-		_worker_cv.notify_all();
-	}
+	step_copy_out(_out_resampled, (float**)data.outputs[0].channelBuffers32, data.numSamples);
 
 	return kResultOk;
 }
@@ -322,6 +317,8 @@ void vst3::effect::processor::reset()
 
 	D_LOG("(0x%08" PRIxPTR ") Resetting...", this);
 	std::unique_lock<std::mutex> lock(_lock);
+	std::unique_lock<std::mutex> ilock(_in_lock);
+	std::unique_lock<std::mutex> olock(_out_lock);
 
 	_resample = (_samplerate != ::nvidia::afx::effect::samplerate());
 
@@ -469,9 +466,18 @@ FUnknown* vst3::effect::processor::create(void* data)
 
 void vst3::effect::processor::step_copy_in(const float** ins, buffer_container_t& outs, size_t samples)
 {
-	std::unique_lock<std::mutex> lock(_in_lock);
-	for (size_t idx = 0; idx < _channels; idx++) {
-		outs[idx]->write(samples, ins[idx]);
+	{
+		std::unique_lock<std::mutex> ilock(_in_lock);
+		for (size_t idx = 0; idx < _channels; idx++) {
+			outs[idx]->write(samples, ins[idx]);
+		}
+	}
+
+	// Listen to signal
+	{
+		std::unique_lock<std::mutex> lock(_lock);
+		_worker_signal = true;
+		_worker_cv.notify_all();
 	}
 }
 
@@ -554,7 +560,7 @@ void vst3::effect::processor::step_resample_out(buffer_container_t& ins, buffer_
 	}
 }
 
-void vst3::effect::processor::step_copy_out(buffer_container_t& inputs, float** outputs, size_t samples)
+void vst3::effect::processor::step_copy_out(buffer_container_t& ins, float** outs, size_t samples)
 {
 	std::vector<float const*> inptrs  = {_channels, nullptr};
 	std::vector<float*>       outptrs = {_channels, nullptr};
@@ -569,15 +575,15 @@ void vst3::effect::processor::step_copy_out(buffer_container_t& inputs, float** 
 
 		for (size_t idx = 0; idx < _channels; idx++) {
 			if (offset > 0) {
-				memset(outputs[idx], 0, offset * sizeof(float));
+				memset(outs[idx], 0, offset * sizeof(float));
 			}
 
-			inputs[idx]->read(length, outputs[idx] + offset);
+			ins[idx]->read(length, outs[idx] + offset);
 		}
 	} else {
 		// Return a blank buffer until enough data is buffered.
 		for (size_t idx = 0; idx < _channels; idx++) {
-			memset(outputs[idx], 0, samples * sizeof(float));
+			memset(outs[idx], 0, samples * sizeof(float));
 		}
 	}
 	_local_delay = std::max<int64_t>(_local_delay - (int64_t)samples, 0);
