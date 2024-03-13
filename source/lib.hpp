@@ -58,20 +58,30 @@
 #endif
 #endif
 
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<%s> " MESSAGE, __FUNCTION_SIG__, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<0x%zx@%s> " MESSAGE, this, __FUNCTION_NAME__, __VA_ARGS__)
+#define D_LOG_STATIC(MESSAGE, ...) voicefx::core->log("<%s> " MESSAGE, __FUNCTION_NAME__, __VA_ARGS__)
 
 //#define QUIET
 #ifndef QUIET
 #define D_LOG_LOUD(MESSAGE, ...) D_LOG(MESSAGE, __VA_ARGS__)
+#define D_LOG_STATIC_LOUD(MESSAGE, ...) D_LOG_STATIC(MESSAGE, __VA_ARGS__)
 #else
 #define D_LOG_LOUD(MESSAGE, ...)
+#define D_LOG_STATIC_LOUD(MESSAGE, ...)
 #endif
 
 #define throw_log(MESSAGE, ...)                                 \
 	{                                                           \
 		char buffer[1024];                                      \
 		snprintf(buffer, sizeof(buffer), MESSAGE, __VA_ARGS__); \
-		D_LOG_LOUD("throw '%s'", buffer);                       \
+		D_LOG("throw '%s'", buffer);                            \
+		throw std::runtime_error(buffer);                       \
+	}
+#define throw_log_static(MESSAGE, ...)                          \
+	{                                                           \
+		char buffer[1024];                                      \
+		snprintf(buffer, sizeof(buffer), MESSAGE, __VA_ARGS__); \
+		D_LOG_STATIC("throw '%s'", buffer);                     \
 		throw std::runtime_error(buffer);                       \
 	}
 

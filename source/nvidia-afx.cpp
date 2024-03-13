@@ -39,7 +39,7 @@
 
 static std::filesystem::path find_nvafx_redistributable()
 {
-	D_LOG_LOUD("");
+	D_LOG_STATIC_LOUD("");
 	{ // 1. Check the global NVAFX_SDK_DIR environment variable.
 #ifdef WIN32
 		std::vector<wchar_t> buffer;
@@ -281,7 +281,7 @@ std::filesystem::path nvidia::afx::afx::model_path(NvAFX_EffectSelector effect)
 
 std::shared_ptr<::nvidia::afx::afx> nvidia::afx::afx::instance()
 {
-	D_LOG_LOUD("");
+	D_LOG_STATIC_LOUD("");
 	static std::mutex                        _instance_guard;
 	static std::weak_ptr<::nvidia::afx::afx> _instance;
 

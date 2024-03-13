@@ -94,7 +94,7 @@ tresult PLUGIN_API vst3::effect::controller::setChannelContextInfos(IAttributeLi
 
 FUnknown* vst3::effect::controller::create(void* data)
 {
-	D_LOG_LOUD("");
+	D_LOG_STATIC_LOUD("");
 	return static_cast<IEditController*>(new controller());
 }
 

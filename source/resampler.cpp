@@ -160,11 +160,11 @@ void voicefx::resampler::process(const float* in_buffer[], size_t in_samples, si
 
 size_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_samplerate)
 {
-	D_LOG_LOUD("");
+	D_LOG_STATIC_LOUD("");
 	int  error    = 0;
 	auto instance = src_new(SRC_SINC_BEST_QUALITY, 1, &error);
 	if (error != 0) {
-		throw_log("%s", src_strerror(error));
+		throw_log_static("%s", src_strerror(error));
 	}
 
 	// Calculate the ratio for the conversion.
@@ -190,7 +190,7 @@ size_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_
 	// Calculate the delay
 	for (size_t delay = 0; delay < in_samplerate; delay++) {
 		if (int error = src_process(instance, &data); error != 0) {
-			throw_log("%s", src_strerror(error));
+			throw_log_static("%s", src_strerror(error));
 		}
 
 		if (data.output_frames_gen > 0) {

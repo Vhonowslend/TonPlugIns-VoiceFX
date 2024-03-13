@@ -69,7 +69,7 @@ void voicefx::initialize()
 
 	core         = tonplugins::core::instance(std::string{voicefx::product_name});
 	_initialized = true;
-	D_LOG_LOUD("");
+	D_LOG_STATIC_LOUD("");
 }
 
 auto core = Steinberg::ModuleInitializer(

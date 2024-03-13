@@ -430,7 +430,7 @@ void vst3::effect::processor::reset()
 #endif
 
 		// Allocate Buffers
-		D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and " PRIu64 " samples...", _samplerate, ::nvidia::afx::effect::samplerate());
+		D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and %" PRIu64 " samples...", _samplerate, ::nvidia::afx::effect::samplerate());
 		_in_unresampled.resize(_channels);
 		_in_unresampled.shrink_to_fit();
 		_out_resampled.resize(_channels);
@@ -482,8 +482,9 @@ void vst3::effect::processor::reset()
 #endif
 
 		// Calculate absolute effect delay
+		_delay = 0;
 		_delay = ::nvidia::afx::effect::delay();
-		_delay += ::nvidia::afx::effect::blocksize();
+		//_delay += ::nvidia::afx::effect::blocksize();
 #ifdef RESAMPLE
 		if (_resample) {
 			_delay = std::llround(_delay / _in_resampler->ratio());
@@ -491,8 +492,8 @@ void vst3::effect::processor::reset()
 			_delay += ::voicefx::resampler::calculate_delay(::nvidia::afx::effect::samplerate(), _samplerate);
 		}
 #endif
-		_delay += ::nvidia::afx::effect::blocksize() * 2; // Threading delay. Annoying, but hey.
-		_local_delay = (int64_t)::nvidia::afx::effect::blocksize();
+		//_delay += ::nvidia::afx::effect::blocksize() * 2; // Threading delay. Annoying, but hey.
+		_local_delay = _fx->output_blocksize() + _fx->input_blocksize();
 		D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRIu32 " samples.", this, _delay);
 
 		_dirty = false;
@@ -520,7 +521,13 @@ void vst3::effect::processor::step_copy_in(const float** ins, buffer_container_t
 	try {
 		std::unique_lock<std::mutex> ilock(_in_lock);
 		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] Out at %zu samples.", idx, outs[idx]->used());
+		}
+		for (size_t idx = 0; idx < _channels; idx++) {
 			outs[idx]->write(samples, ins[idx]);
+		}
+		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] Out at %zu samples.", idx, outs[idx]->used());
 		}
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
@@ -567,6 +574,9 @@ void vst3::effect::processor::step_process(buffer_container_t& ins, buffer_conta
 		std::vector<float const*> inptrs  = {_channels, nullptr};
 		std::vector<float*>       outptrs = {_channels, nullptr};
 
+		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] In at %zu samples, Out at %zu samples.", idx, ins[idx]->used(), outs[idx]->used());
+		}
 		size_t samples = ins[0]->used();
 		if (samples > 0) {
 			// Prepare reads/writes
@@ -585,6 +595,11 @@ void vst3::effect::processor::step_process(buffer_container_t& ins, buffer_conta
 				ins[idx]->read(in_samples, nullptr);
 				outs[idx]->write(out_samples, nullptr);
 			}
+
+			D_LOG_LOUD("%zu used, %zu generated", in_samples, out_samples);
+		}
+		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] In at %zu samples, Out at %zu samples.", idx, ins[idx]->used(), outs[idx]->used());
 		}
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
@@ -631,30 +646,43 @@ void vst3::effect::processor::step_copy_out(buffer_container_t& ins, float** out
 		std::vector<float const*> inptrs  = {_channels, nullptr};
 		std::vector<float*>       outptrs = {_channels, nullptr};
 
+		// Require that the thread is done writing to the output buffers.
+		std::unique_lock lock(_out_lock);
+		size_t           avail = ins[0]->used();
+
+		D_LOG_LOUD("Local Delay at %" PRId64 " samples.", _local_delay);
+		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] In at %zu samples.", idx, ins[idx]->used());
+		}
 		if (_local_delay < samples) {
-			// Require that the thread is done writing to the output buffers.
-			std::unique_lock lock(_out_lock);
+			size_t real_avail = std::min(samples - _local_delay, avail);
 
-			// Return full or partial data.
-			size_t offset = _local_delay;
-			size_t length = samples - _local_delay;
+			if (real_avail < samples) {
+				// Return full or partial data.
+				size_t offset = samples - real_avail;
+				for (size_t idx = 0; idx < _channels; idx++) {
+					if (offset > 0) {
+						memset(outs[idx], 0, offset * sizeof(float));
+					}
 
-			for (size_t idx = 0; idx < _channels; idx++) {
-				if (offset > 0) {
-					memset(outs[idx], 0, offset * sizeof(float));
+					ins[idx]->read(real_avail, outs[idx] + offset);
 				}
-
-				ins[idx]->read(length, outs[idx] + offset);
+			} else {
+				for (size_t idx = 0; idx < _channels; idx++) {
+					ins[idx]->read(samples, outs[idx]);
+				}
 			}
+
 		} else {
-			// Return a blank buffer until enough data is buffered.
 			for (size_t idx = 0; idx < _channels; idx++) {
-				memset(outs[idx], 0, samples * sizeof(float));
+				ins[idx]->read(samples, outs[idx]);
 			}
 		}
-		_local_delay = std::max<int64_t>(_local_delay - (int64_t)samples, 0);
+		_local_delay = std::max<int64_t>(0, _local_delay - samples);
 
-		// Due to threading, the above may no longer end up true. We can end up off by quite a lot, with no recovery.
+		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] In at %zu samples.", idx, ins[idx]->used());
+		}
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
 		throw;
@@ -728,14 +756,14 @@ void vst3::effect::processor::worker()
 
 FUnknown* vst3::effect::processor::create(void* data)
 {
-	D_LOG_LOUD("");
+	D_LOG_STATIC_LOUD("");
 	try {
 		return static_cast<IAudioProcessor*>(new processor());
 	} catch (std::exception const& ex) {
-		D_LOG("Exception in create: %s", ex.what());
+		D_LOG_STATIC("Exception in create: %s", ex.what());
 		return nullptr;
 	} catch (...) {
-		D_LOG("Unknown exception in create.");
+		D_LOG_STATIC("Unknown exception in create.");
 		return nullptr;
 	}
 }

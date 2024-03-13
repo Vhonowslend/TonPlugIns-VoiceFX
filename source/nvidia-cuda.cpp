@@ -153,7 +153,6 @@ int32_t nvidia::cuda::cuda::version()
 
 std::shared_ptr<nvidia::cuda::cuda> nvidia::cuda::cuda::get()
 {
-	D_LOG_LOUD("");
 	static std::weak_ptr<nvidia::cuda::cuda> instance;
 	static std::mutex                        lock;
 
