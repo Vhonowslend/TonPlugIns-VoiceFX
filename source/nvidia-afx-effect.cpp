@@ -248,7 +248,7 @@ void nvidia::afx::effect::load()
 
 	auto lock = std::unique_lock<decltype(_lock)>(_lock);
 	if (_fx_dirty) {
-		D_LOG_LOUD("Effect is dirty and must be reloaded.");
+		D_LOG("Effect is dirty and must be reloaded.");
 
 		std::shared_ptr<::nvidia::cuda::context_stack> cstk;
 		if (auto ctx = _nvafx->cuda_context(); ctx) {
@@ -376,7 +376,6 @@ void nvidia::afx::effect::clear()
 
 void nvidia::afx::effect::process(const float** input, float** output, size_t samples)
 {
-	D_LOG_LOUD("");
 	D_LOG_LOUD("Processing %zu samples", samples);
 
 	// Safe-guard against bad usage.
@@ -390,18 +389,15 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 void nvidia::afx::effect::process(float const** inputs, size_t& input_samples, float** outputs, size_t& output_samples)
 {
 	try {
-		D_LOG_LOUD("");
+		D_LOG_LOUD("Processing %zu samples", input_samples);
 
 		// Prevent outside modifications while we're working.
 		auto lock = std::unique_lock<decltype(_lock)>(_lock);
 
 		// Reload the effect
 		if (_fx_dirty || _cfg_dirty) {
-			D_LOG_LOUD("Effect is dirty, reloading...");
 			load();
 		}
-
-		D_LOG_LOUD("%zu input samples, %zu output samples", input_samples, output_samples);
 
 		size_t in_blocksize  = input_blocksize();
 		size_t samples_total = input_samples;
@@ -419,10 +415,10 @@ void nvidia::afx::effect::process(float const** inputs, size_t& input_samples, f
 		size_t offset = 0;
 		while (samples_left >= in_blocksize) {
 			for (size_t ch = 0; ch < _fx_channels; ch++) {
-				const float* in  = inputs[ch];
-				float*       out = outputs[ch];
+				const float* in  = inputs[ch] + offset;
+				float*       out = outputs[ch] + offset;
 
-				if (auto error = _nvafx->Run(_fx[ch].get(), &inputs[ch], &outputs[ch], in_blocksize, 1); error != NVAFX_STATUS_SUCCESS) {
+				if (auto error = _nvafx->Run(_fx[ch].get(), &in, &out, in_blocksize, 1); error != NVAFX_STATUS_SUCCESS) {
 					throw_log("Failed to process audio. (Code %08" PRIX32 ").\0", error);
 				}
 			}
@@ -433,7 +429,7 @@ void nvidia::afx::effect::process(float const** inputs, size_t& input_samples, f
 		}
 		input_samples = samples_total - samples_left;
 
-		D_LOG_LOUD("%zu input samples used, %zu output samples generated", input_samples, output_samples);
+		D_LOG_LOUD("Used %zu samples to generate %zu samples", input_samples, output_samples);
 	} catch (std::exception const& ex) {
 		throw_log("%s", ex.what());
 	}
