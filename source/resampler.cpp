@@ -168,7 +168,7 @@ size_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_
 	}
 
 	// Calculate the ratio for the conversion.
-	float sr_ratio = static_cast<float>(out_samplerate) / static_cast<float>(in_samplerate);
+	float sr_ratio = static_cast<float>(in_samplerate) / static_cast<float>(out_samplerate);
 
 	// Prepare some data.
 	SRC_DATA data = {0};
@@ -180,7 +180,7 @@ size_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_
 	in_buffer[1]           = -1.;
 	data.data_in           = in_buffer;
 	data.data_out          = out_buffer;
-	data.input_frames      = static_cast<long>(1);
+	data.input_frames      = static_cast<long>(sizeof(in_buffer) / sizeof(*in_buffer));
 	data.output_frames     = static_cast<long>(sizeof(out_buffer) / sizeof(*out_buffer));
 	data.input_frames_used = 0;
 	data.output_frames_gen = data.output_frames;
@@ -189,16 +189,24 @@ size_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_
 
 	// Calculate the delay
 	for (size_t delay = 0; delay < in_samplerate; delay++) {
+		data.input_frames      = static_cast<long>(sizeof(in_buffer) / sizeof(*in_buffer));
+		data.output_frames     = static_cast<long>(sizeof(out_buffer) / sizeof(*out_buffer));
+		data.input_frames_used = 0;
+		data.output_frames_gen = data.output_frames;
+		data.end_of_input      = 0;
+		data.src_ratio         = sr_ratio;
+
 		if (int error = src_process(instance, &data); error != 0) {
 			throw_log_static("%s", src_strerror(error));
 		}
 
 		if (data.output_frames_gen > 0) {
+			D_LOG_STATIC_LOUD("%" PRId32 " %" PRId32 " %" PRId32 " %" PRId32, data.input_frames, data.output_frames, data.input_frames_used, data.output_frames_gen);
 			src_delete(instance);
-			return delay;
+			return (delay * data.input_frames) + (data.output_frames - data.output_frames_gen);
 		}
 	}
 
 	src_delete(instance);
-	return -1;
+	return in_samplerate;
 }
