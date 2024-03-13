@@ -40,6 +40,8 @@
 // - We can't tell the application that uses us how many samples per call we can process.
 // - We can't tell the application anything. Who designed this?
 
+//#define RESAMPLE
+
 namespace vst3::effect {
 	static const Steinberg::FUID processor_uid(FOURCC_CREATOR_PROCESSOR, // Creator, Type
 											   FOURCC('V', 'o', 'i', 'c'), FOURCC('e', 'F', 'X', 'N'), FOURCC('o', 'i', 's', 'e'));
@@ -49,7 +51,9 @@ namespace vst3::effect {
 
 		size_t  _channels;
 		int64_t _samplerate;
-		bool    _resample;
+#ifdef RESAMPLE
+		bool _resample;
+#endif
 
 		int64_t _delay;
 		int64_t _local_delay;
@@ -58,17 +62,21 @@ namespace vst3::effect {
 		typedef std::shared_ptr<raw_buffer_t>    buffer_t;
 		typedef std::vector<buffer_t>            buffer_container_t;
 
-		std::mutex                            _in_lock;
-		buffer_container_t                    _in_unresampled;
+		std::mutex         _in_lock;
+		buffer_container_t _in_unresampled;
+#ifdef RESAMPLE
 		std::shared_ptr<::voicefx::resampler> _in_resampler;
 		buffer_container_t                    _in_resampled;
+#endif
 
 		std::shared_ptr<::nvidia::afx::effect> _fx;
 
-		std::mutex                            _out_lock;
+		std::mutex _out_lock;
+#ifdef RESAMPLE
 		buffer_container_t                    _out_unresampled;
 		std::shared_ptr<::voicefx::resampler> _out_resampler;
-		buffer_container_t                    _out_resampled;
+#endif
+		buffer_container_t _out_resampled;
 
 		std::mutex              _lock;
 		std::thread             _worker;

@@ -36,7 +36,20 @@
 #include "warning-enable.hpp"
 #endif
 
-vst3::effect::processor::processor() : _dirty(true), _channels(0), _samplerate(0), _resample(false), _delay(0), _local_delay(0), _in_lock(), _in_unresampled(), _in_resampler(), _in_resampled(), _fx(), _out_lock(), _out_unresampled(), _out_resampler(), _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
+vst3::effect::processor::processor()
+	: _dirty(true), _channels(0), _samplerate(0),
+#ifdef RESAMPLE
+	  _resample(false),
+#endif
+	  _delay(0), _local_delay(0), _in_lock(), _in_unresampled(),
+#ifdef RESAMPLE
+	  _in_resampler(), _in_resampled(),
+#endif
+	  _fx(), _out_lock(),
+#ifdef RESAMPLE
+	  _out_unresampled(), _out_resampler(),
+#endif
+	  _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
 {
 	D_LOG_LOUD("");
 	D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
@@ -256,6 +269,47 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 	// Push all data into the unresampled buffer.
 	step_copy_in((const float**)(float**)data.inputs[0].channelBuffers32, _in_unresampled, data.numSamples);
 
+	if (false) {
+		// Listen to signal
+		{
+			std::unique_lock<std::mutex> lock(_lock);
+			_worker_signal = true;
+			_worker_cv.notify_all();
+		}
+	} else {
+		decltype(_in_unresampled)& ins  = _in_unresampled;
+		decltype(_in_unresampled)& outs = _out_resampled;
+
+#ifdef RESAMPLE
+		// Resample input if necessary.
+		if (_resample) {
+			ins  = _in_unresampled;
+			outs = _in_resampled;
+
+			step_resample_in(ins, outs);
+
+			// Swap things so the next step works.
+			ins  = outs;
+			outs = _out_unresampled;
+		} else {
+			ins  = _in_unresampled;
+			outs = _out_resampled;
+		}
+#endif
+
+		step_process(ins, outs);
+
+#ifdef RESAMPLE
+		// Resample output if necessary.
+		if (_resample) {
+			ins  = outs;
+			outs = _out_resampled;
+
+			step_resample_out(ins, outs);
+		}
+#endif
+	}
+
 	step_copy_out(_out_resampled, (float**)data.outputs[0].channelBuffers32, data.numSamples);
 
 	return kResultOk;
@@ -320,7 +374,9 @@ void vst3::effect::processor::reset()
 	std::unique_lock<std::mutex> ilock(_in_lock);
 	std::unique_lock<std::mutex> olock(_out_lock);
 
+#ifdef RESAMPLE
 	_resample = (_samplerate != ::nvidia::afx::effect::samplerate());
+#endif
 
 	// Allocate Buffers
 	D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and " PRIu64 " samples...", samplerate, ::nvidia::afx::effect::samplerate());
@@ -328,6 +384,7 @@ void vst3::effect::processor::reset()
 	_in_unresampled.shrink_to_fit();
 	_out_resampled.resize(_channels);
 	_out_resampled.shrink_to_fit();
+#ifdef RESAMPLE
 	if (_resample) {
 		_in_resampled.resize(_channels);
 		_in_resampled.shrink_to_fit();
@@ -337,15 +394,19 @@ void vst3::effect::processor::reset()
 		_in_resampled.clear();
 		_out_unresampled.clear();
 	}
+#endif
 	for (size_t idx = 0; idx < _channels; idx++) {
 		_in_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(_samplerate);
 		_out_resampled[idx]  = std::make_shared<tonplugins::memory::float_ring_t>(_samplerate);
+#ifdef RESAMPLE
 		if (_resample) {
 			_in_resampled[idx]    = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
 			_out_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
 		}
+#endif
 	}
 
+#ifdef RESAMPLE
 	// Reset/Allocate Resamplers
 	D_LOG_LOUD("Resetting resamplers...");
 	if (_resample) {
@@ -367,6 +428,7 @@ void vst3::effect::processor::reset()
 		_in_resampler.reset();
 		_out_resampler.reset();
 	}
+#endif
 
 	// Reset Effect
 	D_LOG_LOUD("Resetting effect...");
@@ -376,11 +438,13 @@ void vst3::effect::processor::reset()
 	// Calculate absolute effect delay
 	_delay = ::nvidia::afx::effect::delay();
 	_delay += ::nvidia::afx::effect::blocksize();
+#ifdef RESAMPLE
 	if (_resample) {
 		_delay = std::llround(_delay / _in_resampler->ratio());
 		_delay += ::voicefx::resampler::calculate_delay(_samplerate, ::nvidia::afx::effect::samplerate());
 		_delay += ::voicefx::resampler::calculate_delay(::nvidia::afx::effect::samplerate(), _samplerate);
 	}
+#endif
 	_delay += ::nvidia::afx::effect::blocksize() * 2; // Threading delay. Annoying, but hey.
 	_local_delay = (int64_t)::nvidia::afx::effect::blocksize();
 	D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRIu32 " samples.", this, _delay);
@@ -397,73 +461,6 @@ void vst3::effect::processor::set_channel_count(size_t num)
 	_channels = num;
 }
 
-void vst3::effect::processor::worker()
-{
-	D_LOG_LOUD("");
-#if WIN32
-	SetThreadPriority(GetCurrentThread(), HIGH_PRIORITY_CLASS);
-	SetThreadPriorityBoost(GetCurrentThread(), false);
-	SetProcessPriorityBoost(GetCurrentProcess(), false);
-#endif
-
-	std::unique_lock<std::mutex> lock(_lock);
-	do {
-		_worker_cv.wait(lock, [this] { return _worker_quit || _worker_signal; });
-
-		while (_worker_signal) {
-			_worker_signal = false; // Set this as early as possible.
-
-			decltype(_in_unresampled)& ins  = _in_unresampled;
-			decltype(_in_unresampled)& outs = _out_resampled;
-
-			// Resample input if necessary.
-			if (_resample) {
-				ins  = _in_unresampled;
-				outs = _in_resampled;
-
-				step_resample_in(ins, outs);
-
-				// Swap things so the next step works.
-				ins  = outs;
-				outs = _out_unresampled;
-			} else {
-				ins  = _in_unresampled;
-				outs = _out_resampled;
-			}
-
-			if (_resample) {
-				step_process(ins, outs);
-			} else { // Couldn't figure out how to skip this without an if/else duplication. :/
-				std::unique_lock<std::mutex> ilock(_in_lock);
-				std::unique_lock<std::mutex> ulock(_out_lock);
-				step_process(ins, outs);
-			}
-
-			// Resample output if necessary.
-			if (_resample) {
-				ins  = outs;
-				outs = _out_resampled;
-
-				step_resample_out(ins, outs);
-			}
-		}
-	} while (!_worker_quit);
-}
-
-FUnknown* vst3::effect::processor::create(void* data)
-{
-	D_LOG_LOUD("");
-	try {
-		return static_cast<IAudioProcessor*>(new processor());
-	} catch (std::exception const& ex) {
-		D_LOG("Exception in create: %s", ex.what());
-		return nullptr;
-	} catch (...) {
-		D_LOG("Unknown exception in create.");
-		return nullptr;
-	}
-}
-
 void vst3::effect::processor::step_copy_in(const float** ins, buffer_container_t& outs, size_t samples)
 {
 	{
@@ -472,17 +469,11 @@ void vst3::effect::processor::step_copy_in(const float** ins, buffer_container_t
 			outs[idx]->write(samples, ins[idx]);
 		}
 	}
-
-	// Listen to signal
-	{
-		std::unique_lock<std::mutex> lock(_lock);
-		_worker_signal = true;
-		_worker_cv.notify_all();
-	}
 }
 
 void vst3::effect::processor::step_resample_in(buffer_container_t& ins, buffer_container_t& outs)
 {
+#ifdef RESAMPLE
 	std::vector<float const*> inptrs  = {_channels, nullptr};
 	std::vector<float*>       outptrs = {_channels, nullptr};
 
@@ -493,18 +484,19 @@ void vst3::effect::processor::step_resample_in(buffer_container_t& ins, buffer_c
 			inptrs[idx]  = ins[idx]->peek(ins[idx]->used());
 			outptrs[idx] = outs[idx]->poke(outs[idx]->free());
 		}
-	}
 
-	// Resample
-	size_t samples_read    = 0;
-	size_t samples_written = 0;
-	_in_resampler->process(inptrs.data(), ins[0]->used(), samples_read, outptrs.data(), outs[0]->free(), samples_written);
+		// Resample
+		size_t samples_read    = 0;
+		size_t samples_written = 0;
+		_in_resampler->process(inptrs.data(), ins[0]->used(), samples_read, outptrs.data(), outs[0]->free(), samples_written);
 
-	// Confirm reads/writes
-	for (size_t idx = 0; idx < _channels; idx++) {
-		ins[idx]->read(samples_read, nullptr);
-		outs[idx]->write(samples_written, nullptr);
+		// Confirm reads/writes
+		for (size_t idx = 0; idx < _channels; idx++) {
+			ins[idx]->read(samples_read, nullptr);
+			outs[idx]->write(samples_written, nullptr);
+		}
 	}
+#endif
 }
 
 void vst3::effect::processor::step_process(buffer_container_t& ins, buffer_container_t& outs)
@@ -537,27 +529,30 @@ void vst3::effect::processor::step_process(buffer_container_t& ins, buffer_conta
 
 void vst3::effect::processor::step_resample_out(buffer_container_t& ins, buffer_container_t& outs)
 {
+#ifdef RESAMPLE
 	std::vector<float const*> inptrs  = {_channels, nullptr};
 	std::vector<float*>       outptrs = {_channels, nullptr};
 
-	// Prepare reads/writes
-	for (size_t idx = 0; idx < _channels; idx++) {
-		inptrs[idx]  = ins[idx]->peek(ins[idx]->used());
-		outptrs[idx] = outs[idx]->poke(outs[idx]->free());
-	}
-
-	// Resample
-	size_t samples_read    = 0;
-	size_t samples_written = 0;
-	_in_resampler->process(inptrs.data(), ins[0]->used(), samples_read, outptrs.data(), outs[0]->free(), samples_written);
-
-	{ // Confirm reads/writes
+	{
 		std::unique_lock<std::mutex> _out_lock;
+		// Prepare reads/writes
+		for (size_t idx = 0; idx < _channels; idx++) {
+			inptrs[idx]  = ins[idx]->peek(ins[idx]->used());
+			outptrs[idx] = outs[idx]->poke(outs[idx]->free());
+		}
+
+		// Resample
+		size_t samples_read    = 0;
+		size_t samples_written = 0;
+		_in_resampler->process(inptrs.data(), ins[0]->used(), samples_read, outptrs.data(), outs[0]->free(), samples_written);
+
+		// Confirm reads/writes
 		for (size_t idx = 0; idx < _channels; idx++) {
 			ins[idx]->read(samples_read, nullptr);
 			outs[idx]->write(samples_written, nullptr);
 		}
 	}
+#endif
 }
 
 void vst3::effect::processor::step_copy_out(buffer_container_t& ins, float** outs, size_t samples)
@@ -589,4 +584,78 @@ void vst3::effect::processor::step_copy_out(buffer_container_t& ins, float** out
 	_local_delay = std::max<int64_t>(_local_delay - (int64_t)samples, 0);
 
 	// Due to threading, the above may no longer end up true. We can end up off by quite a lot, with no recovery.
+}
+
+void vst3::effect::processor::worker()
+{
+	D_LOG_LOUD("");
+#if WIN32
+	SetThreadPriority(GetCurrentThread(), HIGH_PRIORITY_CLASS);
+	SetThreadPriorityBoost(GetCurrentThread(), false);
+	SetProcessPriorityBoost(GetCurrentProcess(), false);
+#endif
+
+	std::unique_lock<std::mutex> lock(_lock);
+	do {
+		_worker_cv.wait(lock, [this] { return _worker_quit || _worker_signal; });
+
+		while (_worker_signal) {
+			_worker_signal = false; // Set this as early as possible.
+
+			decltype(_in_unresampled)& ins  = _in_unresampled;
+			decltype(_in_unresampled)& outs = _out_resampled;
+
+#ifdef RESAMPLE
+			// Resample input if necessary.
+			if (_resample) {
+				ins  = _in_unresampled;
+				outs = _in_resampled;
+
+				step_resample_in(ins, outs);
+
+				// Swap things so the next step works.
+				ins  = outs;
+				outs = _out_unresampled;
+			} else {
+				ins  = _in_unresampled;
+				outs = _out_resampled;
+			}
+#endif
+
+#ifdef RESAMPLE
+			if (_resample) {
+				step_process(ins, outs);
+			} else
+#endif
+			{ // Couldn't figure out how to skip this without an if/else duplication. :/
+				std::unique_lock<std::mutex> ilock(_in_lock);
+				std::unique_lock<std::mutex> ulock(_out_lock);
+				step_process(ins, outs);
+			}
+
+#ifdef RESAMPLE
+			// Resample output if necessary.
+			if (_resample) {
+				ins  = outs;
+				outs = _out_resampled;
+
+				step_resample_out(ins, outs);
+			}
+#endif
+		}
+	} while (!_worker_quit);
+}
+
+FUnknown* vst3::effect::processor::create(void* data)
+{
+	D_LOG_LOUD("");
+	try {
+		return static_cast<IAudioProcessor*>(new processor());
+	} catch (std::exception const& ex) {
+		D_LOG("Exception in create: %s", ex.what());
+		return nullptr;
+	} catch (...) {
+		D_LOG("Unknown exception in create.");
+		return nullptr;
+	}
 }
