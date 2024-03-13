@@ -506,7 +506,6 @@ void vst3::effect::processor::reset()
 			_delay += ::voicefx::resampler::calculate_delay(::nvidia::afx::effect::samplerate(), _samplerate);
 		}
 #endif
-		//_delay += ::nvidia::afx::effect::blocksize() * 2; // Threading delay. Annoying, but hey.
 		_local_delay = _fx->output_blocksize() + _fx->input_blocksize();
 		_delay += _local_delay;
 		D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRId64 " samples.", this, _delay);

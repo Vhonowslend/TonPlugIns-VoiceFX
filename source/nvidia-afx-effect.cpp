@@ -159,17 +159,18 @@ size_t nvidia::afx::effect::delay()
 	// The new readme.txt in the model directory lists multiple window sizes, which appear to match observed delay.
 #ifndef TONPLUGINS_DEMO
 	if (_fx_dereverb) {
-		// Observed a delay of 4896 samples at 48kHz, this is:
-		// 2048 + 2048 + 800
-		return static_cast<size_t>(round(42.666666667 * input_samplerate())) * 2;
+		// Measured a delay of 4896 samples at 48kHz, which includes a 960 sample local delay. Real delay is 3936 samples.
+		// With a "framesize" of 42.'6ms, it would be (2048 + 1888) samples. Seems like it is 8.2 input_blocksize()s, or
+		// 82ms.
+		return static_cast<size_t>(82 * input_blocksize() / 10);
 	} else if (_fx_denoise) {
-		return static_cast<size_t>(round(40 * input_samplerate())) * 2;
+		return static_cast<size_t>(82 * input_blocksize() / 10);
 	} else { // This should be an illegal state, but meh.
 		return 0;
 	}
 #else
 	// Always uses denoise only.
-	return static_cast<size_t>(round(42.666666666667 * input_samplerate())) * 2;
+	return static_cast<size_t>(round(0.051 * input_samplerate())) * 2;
 #endif
 }
 
