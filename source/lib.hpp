@@ -22,7 +22,6 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
-#include "version.hpp"
 #include <core.hpp>
 
 #include "warning-disable.hpp"

@@ -40,7 +40,7 @@
 // - We can't tell the application that uses us how many samples per call we can process.
 // - We can't tell the application anything. Who designed this?
 
-//#define RESAMPLE
+#define RESAMPLE
 
 namespace vst3::effect {
 	static const Steinberg::FUID processor_uid(FOURCC_CREATOR_PROCESSOR, // Creator, Type

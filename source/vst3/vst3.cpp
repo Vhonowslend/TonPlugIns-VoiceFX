@@ -22,7 +22,6 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vst3.hpp"
-#include "version.hpp"
 #include "lib.hpp"
 #include "vst3_effect_controller.hpp"
 #include "vst3_effect_processor.hpp"
@@ -41,6 +40,6 @@ BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:support@xaymar.com")
 #define VST_NAME " (Demo)"
 #endif
 
-DEF_VST3_CLASS("VoiceFX" VST_NAME, Vst::PlugType::kFxRestoration, Vst::kDistributable, TONPLUGINS_VERSION, INLINE_UID_FROM_FUID(vst3::effect::processor_uid), vst3::effect::processor::create, INLINE_UID_FROM_FUID(vst3::effect::controller_uid), vst3::effect::controller::create);
+DEF_VST3_CLASS("VoiceFX" VST_NAME, Vst::PlugType::kFxRestoration, Vst::kDistributable, TONPLUGINS_VOICEFX_VERSION, INLINE_UID_FROM_FUID(vst3::effect::processor_uid), vst3::effect::processor::create, INLINE_UID_FROM_FUID(vst3::effect::controller_uid), vst3::effect::controller::create);
 
 END_FACTORY

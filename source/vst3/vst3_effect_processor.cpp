@@ -53,7 +53,7 @@ vst3::effect::processor::processor()
 {
 	D_LOG_LOUD("");
 	try {
-		D_LOG("(0x%08" PRIxPTR ") Initializing...", this);
+		D_LOG("Initializing...", this);
 
 		// Assign the proper controller
 		setControllerClass(vst3::effect::controller_uid);
@@ -104,7 +104,7 @@ tresult PLUGIN_API vst3::effect::processor::initialize(FUnknown* context)
 	D_LOG_LOUD("");
 	try {
 		if (auto res = AudioEffect::initialize(context); res != kResultOk) {
-			D_LOG("(0x%08" PRIxPTR ") Initialization failed with error code 0x%" PRIx32 ".", this, static_cast<int32_t>(res));
+			D_LOG("Initialization failed with error code 0x%" PRIx32 ".", static_cast<int32_t>(res));
 			return res;
 		}
 
@@ -115,7 +115,7 @@ tresult PLUGIN_API vst3::effect::processor::initialize(FUnknown* context)
 		// Reset the channel layout to the defined one.
 		set_channel_count(2);
 
-		D_LOG("(0x%08" PRIxPTR ") Initialized.", this);
+		D_LOG("Initialized.", this);
 		return kResultOk;
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
@@ -134,12 +134,12 @@ tresult PLUGIN_API vst3::effect::processor::setBusArrangements(SpeakerArrangemen
 	D_LOG_LOUD("");
 	try {
 		if (numIns < 0 || numOuts < 0) {
-			D_LOG("(0x%08" PRIxPTR ") Host called setBusArrangement with no inputs or outputs!", this);
+			D_LOG("Host called setBusArrangement with no inputs or outputs!", this);
 			return kInvalidArgument;
 		}
 
 		if (numIns > static_cast<int32>(audioInputs.size()) || numOuts > static_cast<int32>(audioOutputs.size())) {
-			D_LOG("(0x%08" PRIxPTR ") Host called setBusArrangement with more than the maximum allowed inputs or outputs!", this);
+			D_LOG("Host called setBusArrangement with more than the maximum allowed inputs or outputs!", this);
 			return kResultFalse;
 		}
 
@@ -321,35 +321,35 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 				_worker_cv.notify_all();
 			}
 		} else {
-			decltype(_in_unresampled)& ins  = _in_unresampled;
-			decltype(_in_unresampled)& outs = _out_resampled;
+			decltype(_in_unresampled)* ins  = &_in_unresampled;
+			decltype(_in_unresampled)* outs = &_out_resampled;
 
 #ifdef RESAMPLE
 			// Resample input if necessary.
 			if (_resample) {
-				ins  = _in_unresampled;
-				outs = _in_resampled;
+				ins  = &_in_unresampled;
+				outs = &_in_resampled;
 
-				step_resample_in(ins, outs);
+				step_resample_in(*ins, *outs);
 
 				// Swap things so the next step works.
 				ins  = outs;
-				outs = _out_unresampled;
+				outs = &_out_unresampled;
 			} else {
-				ins  = _in_unresampled;
-				outs = _out_resampled;
+				ins  = &_in_unresampled;
+				outs = &_out_resampled;
 			}
 #endif
 
-			step_process(ins, outs);
+			step_process(*ins, *outs);
 
 #ifdef RESAMPLE
 			// Resample output if necessary.
 			if (_resample) {
 				ins  = outs;
-				outs = _out_resampled;
+				outs = &_out_resampled;
 
-				step_resample_out(ins, outs);
+				step_resample_out(*ins, *outs);
 			}
 #endif
 		}
@@ -437,7 +437,7 @@ void vst3::effect::processor::reset()
 			return;
 		}
 
-		D_LOG("(0x%08" PRIxPTR ") Resetting...", this);
+		D_LOG("Resetting...", this);
 		std::unique_lock<std::mutex> lock(_lock);
 		std::unique_lock<std::mutex> ilock(_in_lock);
 		std::unique_lock<std::mutex> olock(_out_lock);
@@ -448,11 +448,11 @@ void vst3::effect::processor::reset()
 		_fx->load();
 
 #ifdef RESAMPLE
-		_resample = (_samplerate != ::nvidia::afx::effect::samplerate());
+		_resample = (_samplerate != _fx->input_samplerate());
 #endif
 
 		// Allocate Buffers
-		D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and %" PRIu64 " samples...", _samplerate, 48000);
+		D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and %" PRIu64 " samples...", _samplerate, _fx->input_samplerate());
 		_in_unresampled.resize(_channels);
 		_in_unresampled.shrink_to_fit();
 		_out_resampled.resize(_channels);
@@ -473,8 +473,8 @@ void vst3::effect::processor::reset()
 			_out_resampled[idx]  = std::make_shared<tonplugins::memory::float_ring_t>(_samplerate);
 #ifdef RESAMPLE
 			if (_resample) {
-				_in_resampled[idx]    = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
-				_out_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(::nvidia::afx::effect::samplerate());
+				_in_resampled[idx]    = std::make_shared<tonplugins::memory::float_ring_t>(_fx->input_samplerate());
+				_out_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(_fx->input_samplerate());
 			}
 #endif
 		}
@@ -487,14 +487,14 @@ void vst3::effect::processor::reset()
 				_in_resampler = std::make_shared<::voicefx::resampler>();
 			}
 			_in_resampler->channels(_channels);
-			_in_resampler->ratio(_samplerate, ::nvidia::afx::effect::samplerate());
+			_in_resampler->ratio(_samplerate, _fx->input_samplerate());
 			_in_resampler->clear();
 			_in_resampler->load();
 			if (!_out_resampler) {
 				_out_resampler = std::make_shared<::voicefx::resampler>();
 			}
 			_out_resampler->channels(_channels);
-			_out_resampler->ratio(::nvidia::afx::effect::samplerate(), _samplerate);
+			_out_resampler->ratio(_fx->input_samplerate(), _samplerate);
 			_out_resampler->clear();
 			_out_resampler->load();
 		} else {
@@ -513,7 +513,7 @@ void vst3::effect::processor::reset()
 
 void vst3::effect::processor::set_channel_count(size_t num)
 {
-	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %zu...", this, num);
+	D_LOG("Adjusting effect channels to %zu...", num);
 	try {
 		std::unique_lock<std::mutex> lock(_lock);
 		_dirty    = true;
@@ -758,25 +758,25 @@ FUnknown* vst3::effect::processor::create(void* data)
 
 void vst3::effect::processor::calculate_delay()
 {
-	_local_delay = _fx->input_blocksize(); /*
-	while (_local_delay < processSetup.maxSamplesPerBlock) {
-		_local_delay += _fx->input_blocksize();
-	}*/
-	D_LOG("(0x%08" PRIxPTR ") Estimated processing latency is %" PRId64 " samples.", this, _local_delay);
+	_local_delay = _fx->input_blocksize();
+	D_LOG("Estimated processing latency is %" PRId64 " samples.", _local_delay);
 
 	// Calculate absolute effect delay
 	_delay = _fx->delay();
+	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
+	_delay += _local_delay;
+	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 #ifdef RESAMPLE
 	if (_resample) {
+		_delay += ::voicefx::resampler::calculate_delay(_samplerate, _fx->input_samplerate());
+		D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
+		_delay += ::voicefx::resampler::calculate_delay(_fx->input_samplerate(), _samplerate);
+		D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 		_delay = std::llround(_delay / _in_resampler->ratio());
-		_delay += ::voicefx::resampler::calculate_delay(_samplerate, 48000);
-		_delay += ::voicefx::resampler::calculate_delay(48000, _samplerate);
+		D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 	}
 #endif
-	//_delay += (processSetup.maxSamplesPerBlock / _fx->input_blocksize()) * _fx->input_blocksize();
-	_delay += _local_delay;
-
-	D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRId64 " samples.", this, _delay);
+	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 }
 
 void vst3::effect::processor::calculate_local_delay() {}

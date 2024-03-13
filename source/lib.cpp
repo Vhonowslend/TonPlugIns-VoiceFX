@@ -22,7 +22,6 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "lib.hpp"
-#include "version.hpp"
 #include <core.hpp>
 
 #include "warning-disable.hpp"
@@ -77,7 +76,7 @@ auto core = Steinberg::ModuleInitializer(
 		try {
 			// Initialize VoiceFX library.
 			voicefx::initialize();
-
+			D_LOG_STATIC("Loaded v%s.", TONPLUGINS_VOICEFX_VERSION);
 		} catch (std::exception const& ex) {
 			voicefx::core->log("Exception: %s", ex.what());
 			throw;
