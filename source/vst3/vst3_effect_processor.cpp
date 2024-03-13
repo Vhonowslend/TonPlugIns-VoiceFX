@@ -73,6 +73,9 @@ vst3::effect::processor::processor()
 			std::unique_lock<std::mutex> lock(_lock);
 			_fx = std::make_shared<::nvidia::afx::effect>();
 		}
+
+		calculate_local_delay();
+		calculate_delay();
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
 		throw;
@@ -203,6 +206,9 @@ tresult PLUGIN_API vst3::effect::processor::setupProcessing(ProcessSetup& newSet
 		}
 		std::unique_lock<std::mutex> lock(_lock);
 		_samplerate = static_cast<int64_t>(round(processSetup.sampleRate));
+
+		calculate_local_delay();
+		calculate_delay();
 
 		// TODO: Are we able to modify the host here?
 		return kResultOk;
@@ -496,19 +502,7 @@ void vst3::effect::processor::reset()
 			_out_resampler.reset();
 		}
 #endif
-
-		// Calculate absolute effect delay
-		_delay = _fx->delay();
-#ifdef RESAMPLE
-		if (_resample) {
-			_delay = std::llround(_delay / _in_resampler->ratio());
-			_delay += ::voicefx::resampler::calculate_delay(_samplerate, ::nvidia::afx::effect::samplerate());
-			_delay += ::voicefx::resampler::calculate_delay(::nvidia::afx::effect::samplerate(), _samplerate);
-		}
-#endif
-		_local_delay = _fx->output_blocksize() + _fx->input_blocksize();
-		_delay += _local_delay;
-		D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRId64 " samples.", this, _delay);
+		calculate_delay();
 
 		_dirty = false;
 	} catch (std::exception const& ex) {
@@ -761,3 +755,28 @@ FUnknown* vst3::effect::processor::create(void* data)
 		return nullptr;
 	}
 }
+
+void vst3::effect::processor::calculate_delay()
+{
+	_local_delay = _fx->input_blocksize(); /*
+	while (_local_delay < processSetup.maxSamplesPerBlock) {
+		_local_delay += _fx->input_blocksize();
+	}*/
+	D_LOG("(0x%08" PRIxPTR ") Estimated processing latency is %" PRId64 " samples.", this, _local_delay);
+
+	// Calculate absolute effect delay
+	_delay = _fx->delay();
+#ifdef RESAMPLE
+	if (_resample) {
+		_delay = std::llround(_delay / _in_resampler->ratio());
+		_delay += ::voicefx::resampler::calculate_delay(_samplerate, 48000);
+		_delay += ::voicefx::resampler::calculate_delay(48000, _samplerate);
+	}
+#endif
+	//_delay += (processSetup.maxSamplesPerBlock / _fx->input_blocksize()) * _fx->input_blocksize();
+	_delay += _local_delay;
+
+	D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRId64 " samples.", this, _delay);
+}
+
+void vst3::effect::processor::calculate_local_delay() {}

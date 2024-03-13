@@ -106,6 +106,8 @@ namespace vst3::effect {
 		private:
 		void reset();
 		void set_channel_count(size_t num);
+		void calculate_local_delay();
+		void calculate_delay();
 
 		void step_copy_in(const float** ins, buffer_container_t& outs, size_t samples);
 		void step_resample_in(buffer_container_t& ins, buffer_container_t& outs);

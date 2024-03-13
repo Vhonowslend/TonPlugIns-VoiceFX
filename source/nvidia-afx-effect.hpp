@@ -75,7 +75,7 @@ namespace nvidia::afx {
 		uint32_t input_channels();
 		uint32_t output_channels();
 
-		size_t delay();
+		static size_t delay();
 
 		public /* Wrapper Information */:
 		uint8_t channels();

@@ -157,21 +157,10 @@ size_t nvidia::afx::effect::delay()
 {
 	// The initial documentation for the denoise effect stated a latency of 72ms, which in reality ended up being 82ms.
 	// The new readme.txt in the model directory lists multiple window sizes, which appear to match observed delay.
-#ifndef TONPLUGINS_DEMO
-	if (_fx_dereverb) {
-		// Measured a delay of 4896 samples at 48kHz, which includes a 960 sample local delay. Real delay is 3936 samples.
-		// With a "framesize" of 42.'6ms, it would be (2048 + 1888) samples. Seems like it is 8.2 input_blocksize()s, or
-		// 82ms.
-		return static_cast<size_t>(82 * input_blocksize() / 10);
-	} else if (_fx_denoise) {
-		return static_cast<size_t>(82 * input_blocksize() / 10);
-	} else { // This should be an illegal state, but meh.
-		return 0;
-	}
-#else
-	// Always uses denoise only.
-	return static_cast<size_t>(round(0.051 * input_samplerate())) * 2;
-#endif
+
+	// Measured a delay of 4896 samples at 48kHz, which includes a 960 sample local delay. Real delay is 3936 samples.
+	// With a "framesize" of 42.'6ms, it would be (2048 + 1888) samples. Seems like it is 82ms.
+	return static_cast<size_t>(82 * 480 / 10);
 }
 
 uint8_t nvidia::afx::effect::channels()
