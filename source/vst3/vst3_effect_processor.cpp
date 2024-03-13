@@ -446,7 +446,7 @@ void vst3::effect::processor::reset()
 #endif
 
 		// Allocate Buffers
-		D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and %" PRIu64 " samples...", _samplerate, ::nvidia::afx::effect::samplerate());
+		D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and %" PRIu64 " samples...", _samplerate, 48000);
 		_in_unresampled.resize(_channels);
 		_in_unresampled.shrink_to_fit();
 		_out_resampled.resize(_channels);
@@ -498,9 +498,7 @@ void vst3::effect::processor::reset()
 #endif
 
 		// Calculate absolute effect delay
-		_delay = 0;
-		_delay = ::nvidia::afx::effect::delay();
-		//_delay += ::nvidia::afx::effect::blocksize();
+		_delay = _fx->delay();
 #ifdef RESAMPLE
 		if (_resample) {
 			_delay = std::llround(_delay / _in_resampler->ratio());
@@ -510,7 +508,8 @@ void vst3::effect::processor::reset()
 #endif
 		//_delay += ::nvidia::afx::effect::blocksize() * 2; // Threading delay. Annoying, but hey.
 		_local_delay = _fx->output_blocksize() + _fx->input_blocksize();
-		D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRIu32 " samples.", this, _delay);
+		_delay += _local_delay;
+		D_LOG("(0x%08" PRIxPTR ") Estimated latency is %" PRId64 " samples.", this, _delay);
 
 		_dirty = false;
 	} catch (std::exception const& ex) {
@@ -521,7 +520,7 @@ void vst3::effect::processor::reset()
 
 void vst3::effect::processor::set_channel_count(size_t num)
 {
-	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %" PRIuPTR "...", this, num);
+	D_LOG("(0x%08" PRIxPTR ") Adjusting effect channels to %zu...", this, num);
 	try {
 		std::unique_lock<std::mutex> lock(_lock);
 		_dirty    = true;

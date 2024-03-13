@@ -58,8 +58,8 @@
 #endif
 #endif
 
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<0x%zx@%s> " MESSAGE, this, __FUNCTION_NAME__, __VA_ARGS__)
-#define D_LOG_STATIC(MESSAGE, ...) voicefx::core->log("<%s> " MESSAGE, __FUNCTION_NAME__, __VA_ARGS__)
+#define D_LOG(MESSAGE, ...) voicefx::core->log("<0x%zx@%s> " MESSAGE, this, __FUNCTION_SIG__, __VA_ARGS__)
+#define D_LOG_STATIC(MESSAGE, ...) voicefx::core->log("<%s> " MESSAGE, __FUNCTION_SIG__, __VA_ARGS__)
 
 //#define QUIET
 #ifndef QUIET

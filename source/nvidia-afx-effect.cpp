@@ -117,40 +117,60 @@ void nvidia::afx::effect::set(NvAFX_ParameterSelector key, const char* value)
 	}
 }
 
-size_t nvidia::afx::effect::input_samplerate()
+uint32_t nvidia::afx::effect::input_samplerate()
 {
 	std::unique_lock<decltype(_lock)> lock(_lock);
-	return size_t(get<uint32_t>(NVAFX_PARAM_INPUT_SAMPLE_RATE));
+	return get<uint32_t>(NVAFX_PARAM_INPUT_SAMPLE_RATE);
 }
 
-size_t nvidia::afx::effect::output_samplerate()
+uint32_t nvidia::afx::effect::output_samplerate()
 {
 	std::unique_lock<decltype(_lock)> lock(_lock);
-	return size_t(get<uint32_t>(NVAFX_PARAM_OUTPUT_SAMPLE_RATE));
+	return get<uint32_t>(NVAFX_PARAM_OUTPUT_SAMPLE_RATE);
 }
 
-size_t nvidia::afx::effect::input_blocksize()
+uint32_t nvidia::afx::effect::input_blocksize()
 {
 	std::unique_lock<decltype(_lock)> lock(_lock);
-	return size_t(get<uint32_t>(NVAFX_PARAM_NUM_INPUT_SAMPLES_PER_FRAME));
+	return get<uint32_t>(NVAFX_PARAM_NUM_INPUT_SAMPLES_PER_FRAME);
 }
 
-size_t nvidia::afx::effect::output_blocksize()
+uint32_t nvidia::afx::effect::output_blocksize()
 {
 	std::unique_lock<decltype(_lock)> lock(_lock);
-	return size_t(get<uint32_t>(NVAFX_PARAM_NUM_OUTPUT_SAMPLES_PER_FRAME));
+	return get<uint32_t>(NVAFX_PARAM_NUM_OUTPUT_SAMPLES_PER_FRAME);
 }
 
-size_t nvidia::afx::effect::input_channels()
+uint32_t nvidia::afx::effect::input_channels()
 {
 	std::unique_lock<decltype(_lock)> lock(_lock);
-	return size_t(get<uint32_t>(NVAFX_PARAM_NUM_INPUT_CHANNELS));
+	return get<uint32_t>(NVAFX_PARAM_NUM_INPUT_CHANNELS);
 }
 
-size_t nvidia::afx::effect::output_channels()
+uint32_t nvidia::afx::effect::output_channels()
 {
 	std::unique_lock<decltype(_lock)> lock(_lock);
-	return size_t(get<uint32_t>(NVAFX_PARAM_NUM_OUTPUT_CHANNELS));
+	return get<uint32_t>(NVAFX_PARAM_NUM_OUTPUT_CHANNELS);
+}
+
+size_t nvidia::afx::effect::delay()
+{
+	// The initial documentation for the denoise effect stated a latency of 72ms, which in reality ended up being 82ms.
+	// The new readme.txt in the model directory lists multiple window sizes, which appear to match observed delay.
+#ifndef TONPLUGINS_DEMO
+	if (_fx_dereverb) {
+		// Observed a delay of 4896 samples at 48kHz, this is:
+		// 2048 + 2048 + 800
+		return static_cast<size_t>(round(42.666666667 * input_samplerate())) * 2;
+	} else if (_fx_denoise) {
+		return static_cast<size_t>(round(40 * input_samplerate())) * 2;
+	} else { // This should be an illegal state, but meh.
+		return 0;
+	}
+#else
+	// Always uses denoise only.
+	return static_cast<size_t>(round(42.666666666667 * input_samplerate())) * 2;
+#endif
 }
 
 uint8_t nvidia::afx::effect::channels()
@@ -318,17 +338,17 @@ void nvidia::afx::effect::load()
 
 		// Sample Rate
 		try {
-			set<uint32_t>(NVAFX_PARAM_INPUT_SAMPLE_RATE, (uint32_t)samplerate());
-			set<uint32_t>(NVAFX_PARAM_OUTPUT_SAMPLE_RATE, (uint32_t)samplerate());
+			set<uint32_t>(NVAFX_PARAM_INPUT_SAMPLE_RATE, 48000);
+			set<uint32_t>(NVAFX_PARAM_OUTPUT_SAMPLE_RATE, 48000);
 		} catch (std::exception& ex) {
 			D_LOG("Falling back to simple sample rate due error: %s", ex.what());
 			try {
-				set(NVAFX_PARAM_SAMPLE_RATE, (uint32_t)samplerate());
+				set<uint32_t>(NVAFX_PARAM_SAMPLE_RATE, 48000);
 			} catch (std::exception& ex) {
 				throw_log("Failed to set sample rate entirely: %s", ex.what());
 			}
 		}
-		D_LOG("Sample Rate is now %" PRIu32 ".", samplerate());
+		D_LOG("Sample Rate is now %" PRIu32 ".", 48000);
 
 		// Initialize the effect
 		for (size_t channel = 0; channel < _fx_channels; channel++) {
@@ -379,8 +399,8 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 	D_LOG_LOUD("Processing %zu samples", samples);
 
 	// Safe-guard against bad usage.
-	if ((samples % blocksize()) != 0) {
-		throw_log("Sample data must be provided as a multiple of %zu.", blocksize());
+	if ((samples % input_blocksize()) != 0) {
+		throw_log("Sample data must be provided as a multiple of %" PRIu32 ".", input_blocksize());
 	}
 
 	process(input, samples, output, samples);
@@ -433,25 +453,4 @@ void nvidia::afx::effect::process(float const** inputs, size_t& input_samples, f
 	} catch (std::exception const& ex) {
 		throw_log("%s", ex.what());
 	}
-}
-
-uint32_t nvidia::afx::effect::samplerate()
-{
-	// FIXME: This is hardcoded, but may change in the future.
-	return 48000; // 48kHz.
-}
-
-size_t nvidia::afx::effect::blocksize()
-{
-	// FIXME: At the moment, the block size is 10ms.
-	return samplerate() / 100;
-	//return 480; // 10ms at 48kHz.
-}
-
-size_t nvidia::afx::effect::delay()
-{
-	// The original documentation stated a latency of 72ms.
-	// Not quite sure where the 10ms extra rea coming from, but hey - samples align this way.
-	// readme.txt in model directory says something about 42.66ms.
-	return (48000 * 82) / 1000;
 }

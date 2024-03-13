@@ -66,14 +66,16 @@ namespace nvidia::afx {
 		void set(NvAFX_ParameterSelector key, T value);
 
 		public /* Effect Information */:
-		size_t input_samplerate();
-		size_t output_samplerate();
+		uint32_t input_samplerate();
+		uint32_t output_samplerate();
 
-		size_t input_blocksize();
-		size_t output_blocksize();
+		uint32_t input_blocksize();
+		uint32_t output_blocksize();
 
-		size_t input_channels();
-		size_t output_channels();
+		uint32_t input_channels();
+		uint32_t output_channels();
+
+		size_t delay();
 
 		public /* Wrapper Information */:
 		uint8_t channels();
@@ -102,12 +104,5 @@ namespace nvidia::afx {
 		void process(const float** input, float** output, size_t samples);
 
 		void process(float const** inputs, size_t& input_samples, float** outputs, size_t& output_samples);
-
-		public:
-		static uint32_t samplerate();
-
-		static size_t blocksize();
-
-		static size_t delay();
 	};
 } // namespace nvidia::afx

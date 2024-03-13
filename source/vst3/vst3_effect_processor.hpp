@@ -65,18 +65,18 @@ namespace vst3::effect {
 		std::mutex         _in_lock;
 		buffer_container_t _in_unresampled;
 #ifdef RESAMPLE
-		std::shared_ptr<::voicefx::resampler> _in_resampler;
 		buffer_container_t                    _in_resampled;
+		std::shared_ptr<::voicefx::resampler> _in_resampler;
 #endif
 
 		std::shared_ptr<::nvidia::afx::effect> _fx;
 
-		std::mutex _out_lock;
+		std::mutex         _out_lock;
+		buffer_container_t _out_resampled;
 #ifdef RESAMPLE
 		buffer_container_t                    _out_unresampled;
 		std::shared_ptr<::voicefx::resampler> _out_resampler;
 #endif
-		buffer_container_t _out_resampled;
 
 		std::mutex              _lock;
 		std::thread             _worker;
