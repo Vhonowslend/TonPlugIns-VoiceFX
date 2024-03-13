@@ -47,15 +47,8 @@ nvidia::afx::effect::effect() : _nvafx(), _lock(), _model_path(), _model_path_st
 nvidia::afx::effect::~effect()
 {
 	D_LOG_LOUD("");
-	if (_fx.size() > 0) {
-		for (auto& fx : _fx) {
-			fx.reset();
-		}
-		_fx.clear();
-	}
-	if (_nvafx) {
-		_nvafx.reset();
-	}
+	_fx.reset();
+	_nvafx.reset();
 }
 
 uint32_t nvidia::afx::effect::samplerate()
@@ -78,46 +71,9 @@ size_t nvidia::afx::effect::delay()
 	D_LOG_LOUD("");
 	// The original documentation stated a latency of 72ms.
 	// Not quite sure where the 10ms extra rea coming from, but hey - samples align this way.
+	// readme.txt in model directory says something about 42.66ms.
 	return (48000 * 82) / 1000;
 }
-
-bool nvidia::afx::effect::denoise_enabled()
-{
-	D_LOG_LOUD("");
-	return _cfg_enable_denoise;
-}
-
-void nvidia::afx::effect::enable_denoise(bool v)
-{
-	D_LOG_LOUD("");
-	// Prevent outside modifications while we're working.
-	auto lock = std::unique_lock<std::mutex>(_lock);
-
-	if (v != _cfg_enable_denoise) {
-		_cfg_enable_denoise = v;
-		_fx_dirty           = true;
-	}
-}
-
-#ifndef TONPLUGINS_DEMO
-bool nvidia::afx::effect::dereverb_enabled()
-{
-	D_LOG_LOUD("");
-	return _cfg_enable_dereverb;
-}
-
-void nvidia::afx::effect::enable_dereverb(bool v)
-{
-	D_LOG_LOUD("");
-	// Prevent outside modifications while we're working.
-	auto lock = std::unique_lock<std::mutex>(_lock);
-
-	if (v != _cfg_enable_dereverb) {
-		_cfg_enable_dereverb = v;
-		_fx_dirty            = true;
-	}
-}
-#endif
 
 size_t nvidia::afx::effect::channels()
 {
@@ -138,6 +94,42 @@ void nvidia::afx::effect::channels(size_t v)
 }
 
 #ifndef TONPLUGINS_DEMO
+bool nvidia::afx::effect::denoise_enabled()
+{
+	D_LOG_LOUD("");
+	return _cfg_enable_denoise;
+}
+
+void nvidia::afx::effect::enable_denoise(bool v)
+{
+	D_LOG_LOUD("");
+	// Prevent outside modifications while we're working.
+	auto lock = std::unique_lock<std::mutex>(_lock);
+
+	if (v != _cfg_enable_denoise) {
+		_cfg_enable_denoise = v;
+		_fx_dirty           = true;
+	}
+}
+
+bool nvidia::afx::effect::dereverb_enabled()
+{
+	D_LOG_LOUD("");
+	return _cfg_enable_dereverb;
+}
+
+void nvidia::afx::effect::enable_dereverb(bool v)
+{
+	D_LOG_LOUD("");
+	// Prevent outside modifications while we're working.
+	auto lock = std::unique_lock<std::mutex>(_lock);
+
+	if (v != _cfg_enable_dereverb) {
+		_cfg_enable_dereverb = v;
+		_fx_dirty            = true;
+	}
+}
+
 float nvidia::afx::effect::intensity()
 {
 	return _cfg_intensity;
@@ -188,70 +180,59 @@ void nvidia::afx::effect::load()
 		}
 #endif
 
-		// Unload all previous effects.
-		_fx.resize(_cfg_channels);
-		for (auto fx : _fx) {
-			fx.reset();
-		}
-
 		{ // Figure out where exactly models are located.
 			_model_path     = std::filesystem::absolute(_nvafx->redistributable_path()) / "models" / effect_model;
 			_model_path_str = _model_path.generic_string();
 		}
 
-		// Create and initialize effects.
-		for (size_t idx = 0; idx < _fx.size(); idx++) {
-			auto& fx = _fx.at(idx);
+		{ // Reload effect.
+			_fx.reset();
 
 			// Create the chosen effect.
 			NvAFX_Handle pfx = nullptr;
 			if (auto error = _nvafx->CreateEffect(effect, &pfx); error != NVAFX_STATUS_SUCCESS) {
-				snprintf(message_buffer, sizeof(message_buffer), "{%02zu} Failed to create effect. (Code %08" PRIX32 ")\0", idx, error);
+				snprintf(message_buffer, sizeof(message_buffer), "Failed to create effect. (Code %08" PRIX32 ")\0", error);
 				throw std::runtime_error(message_buffer);
 			}
-			fx = std::shared_ptr<void>(pfx, [](NvAFX_Handle v) { ::nvidia::afx::afx::instance()->DestroyEffect(v); });
+			_fx = std::shared_ptr<void>(pfx, [](NvAFX_Handle v) { ::nvidia::afx::afx::instance()->DestroyEffect(v); });
 
 			// Sample Rate
 			try {
-				if (auto error = _nvafx->SetU32(fx.get(), NVAFX_PARAM_INPUT_SAMPLE_RATE, static_cast<unsigned int>(samplerate())); error != NVAFX_STATUS_SUCCESS) {
-					snprintf(message_buffer, sizeof(message_buffer), "{%02zu} Failed to set input sample rate to %" PRIu32 ". (Code %08" PRIX32 ")\0", idx, samplerate(), error);
+				if (auto error = _nvafx->SetU32(_fx.get(), NVAFX_PARAM_INPUT_SAMPLE_RATE, static_cast<unsigned int>(samplerate())); error != NVAFX_STATUS_SUCCESS) {
+					snprintf(message_buffer, sizeof(message_buffer), "Failed to set input sample rate to %" PRIu32 ". (Code %08" PRIX32 ")\0", samplerate(), error);
 					throw std::runtime_error(message_buffer);
 				}
-				D_LOG("{%02zu} Input Sample Rate is now %" PRIu32 ".", idx, samplerate());
-				if (auto error = _nvafx->SetU32(fx.get(), NVAFX_PARAM_OUTPUT_SAMPLE_RATE, static_cast<unsigned int>(samplerate())); error != NVAFX_STATUS_SUCCESS) {
-					snprintf(message_buffer, sizeof(message_buffer), "{%02zu} Failed to set output sample rate to %" PRIu32 ". (Code %08" PRIX32 ")\0", idx, samplerate(), error);
+				D_LOG("Input Sample Rate is now %" PRIu32 ".", samplerate());
+
+				if (auto error = _nvafx->SetU32(_fx.get(), NVAFX_PARAM_OUTPUT_SAMPLE_RATE, static_cast<unsigned int>(samplerate())); error != NVAFX_STATUS_SUCCESS) {
+					snprintf(message_buffer, sizeof(message_buffer), "Failed to set output sample rate to %" PRIu32 ". (Code %08" PRIX32 ")\0", samplerate(), error);
 					throw std::runtime_error(message_buffer);
 				}
-				D_LOG("{%02zu} Output Sample Rate is now %" PRIu32 ".", idx, samplerate());
+				D_LOG("Output Sample Rate is now %" PRIu32 ".", samplerate());
 			} catch (std::exception& ex) {
-				D_LOG("{%02zu} Falling back to simple sample rate due error: %s", idx, ex.what());
-				if (auto error = _nvafx->SetU32(fx.get(), NVAFX_PARAM_SAMPLE_RATE, static_cast<unsigned int>(samplerate())); error != NVAFX_STATUS_SUCCESS) {
-					snprintf(message_buffer, sizeof(message_buffer), "{%02zu} Failed to set sample rate to %" PRIu32 ". (Code %08" PRIX32 ").\0", idx, samplerate(), error);
+				D_LOG("Falling back to simple sample rate due error: %s", ex.what());
+				if (auto error = _nvafx->SetU32(_fx.get(), NVAFX_PARAM_SAMPLE_RATE, static_cast<unsigned int>(samplerate())); error != NVAFX_STATUS_SUCCESS) {
+					snprintf(message_buffer, sizeof(message_buffer), "Failed to set sample rate to %" PRIu32 ". (Code %08" PRIX32 ").\0", samplerate(), error);
 					throw std::runtime_error(message_buffer);
 				}
-				D_LOG("{%02zu} Sample Rate is now %" PRIu32 ".", idx, samplerate());
+				D_LOG("Sample Rate is now %" PRIu32 ".", samplerate());
 			}
 
 			// Automatically let the effect pick the correct GPU.
 			if (_nvafx->cuda_context()) {
-				_nvafx->SetU32(fx.get(), NVAFX_PARAM_USER_CUDA_CONTEXT, 1);
-				_nvafx->SetU32(fx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 0);
+				_nvafx->SetU32(_fx.get(), NVAFX_PARAM_USER_CUDA_CONTEXT, 1);
+				_nvafx->SetU32(_fx.get(), NVAFX_PARAM_USE_DEFAULT_GPU, 0);
 			}
 
 			// Model Paths
-			if (auto error = _nvafx->SetString(fx.get(), NVAFX_PARAM_MODEL_PATH, _model_path_str.c_str()); error != NVAFX_STATUS_SUCCESS) {
-				snprintf(message_buffer, sizeof(message_buffer), "{%02zu} Failed to configure effect paths. (Code %08" PRIX32 ")\0", idx, error);
+			if (auto error = _nvafx->SetString(_fx.get(), NVAFX_PARAM_MODEL_PATH, _model_path_str.c_str()); error != NVAFX_STATUS_SUCCESS) {
+				snprintf(message_buffer, sizeof(message_buffer), "Failed to configure effect paths. (Code %08" PRIX32 ")\0", error);
 				throw std::runtime_error(message_buffer);
 			}
-			D_LOG("{%02zu} Effect Path is now: '%s'.", idx, _model_path_str.c_str());
-		}
+			D_LOG("Effect Path is now: '%s'.", _model_path_str.c_str());
 
-		// Load effects.
-		for (size_t idx = 0; idx < _fx.size(); idx++) {
-			auto& fx = _fx.at(idx);
-
-			if (auto error = _nvafx->Load(fx.get()); error != NVAFX_STATUS_SUCCESS) {
-				snprintf(message_buffer, sizeof(message_buffer), "{%02zu} Failed to initialize effect.(Code %08" PRIX32 ").\0", idx, error);
+			if (auto error = _nvafx->Load(_fx.get()); error != NVAFX_STATUS_SUCCESS) {
+				snprintf(message_buffer, sizeof(message_buffer), "Failed to initialize effect.(Code %08" PRIX32 ").\0", error);
 				throw std::runtime_error(message_buffer);
 			}
 		}
@@ -265,14 +246,12 @@ void nvidia::afx::effect::load()
 			cstk = ctx->enter();
 		}
 
-		for (auto& fx : _fx) {
 #ifndef TONPLUGINS_DEMO
-			if (auto error = _nvafx->SetFloat(fx.get(), NVAFX_PARAM_INTENSITY_RATIO, _cfg_intensity); error != NVAFX_STATUS_SUCCESS) {
-				snprintf(message_buffer, sizeof(message_buffer), "Failed to configure intensity. (Code %08" PRIX32 ").\0", error);
-				throw std::runtime_error(message_buffer);
-			}
-#endif
+		if (auto error = _nvafx->SetFloat(_fx.get(), NVAFX_PARAM_INTENSITY_RATIO, _cfg_intensity); error != NVAFX_STATUS_SUCCESS) {
+			snprintf(message_buffer, sizeof(message_buffer), "Failed to configure intensity. (Code %08" PRIX32 ").\0", error);
+			throw std::runtime_error(message_buffer);
 		}
+#endif
 
 		_cfg_dirty = false;
 	}
@@ -302,6 +281,13 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 		throw std::runtime_error("Sample data must be provided as a multiple of 'blocksize()'.");
 	}
 
+	process(input, output, samples, samples);
+}
+
+void nvidia::afx::effect::process(float const** inputs, float** outputs, size_t samples, size_t& samples_used_and_generated)
+{
+	D_LOG_LOUD("");
+
 	// Reload the effect
 	if (_fx_dirty || _cfg_dirty) {
 		D_LOG_LOUD("Effect is dirty, reloading...");
@@ -316,20 +302,15 @@ void nvidia::afx::effect::process(const float** input, float** output, size_t sa
 		cstk = ctx->enter();
 	}
 
-	// Process all data passed in.
-	const float* input_ptr;
-	float*       output_ptr;
-	for (size_t idx = 0; idx < _cfg_channels; idx++) {
-		auto& fx = _fx[idx];
-		for (size_t offset = 0; offset < samples; offset += blocksize()) {
-			input_ptr  = input[idx] + offset;
-			output_ptr = output[idx] + offset;
-
-			if (auto error = _nvafx->Run(fx.get(), &input_ptr, &output_ptr, static_cast<unsigned int>(blocksize()), 1); error != NVAFX_STATUS_SUCCESS) {
-				char buffer[1024];
-				snprintf(buffer, sizeof(buffer), "{%02zu} Failed to process audio. (Code %08" PRIX32 ").\0", idx, error);
-				throw std::runtime_error(buffer);
-			}
+	size_t remaining_samples = samples;
+	while (remaining_samples >= blocksize()) {
+		if (auto error = _nvafx->Run(_fx.get(), inputs, outputs, static_cast<unsigned int>(blocksize()), _cfg_channels); error != NVAFX_STATUS_SUCCESS) {
+			char buffer[1024];
+			snprintf(buffer, sizeof(buffer), "Failed to process audio. (Code %08" PRIX32 ").\0", error);
+			throw std::runtime_error(buffer);
 		}
+		remaining_samples -= blocksize();
 	}
+
+	samples_used_and_generated = samples - remaining_samples;
 }

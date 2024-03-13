@@ -39,13 +39,13 @@ namespace nvidia::afx {
 		std::filesystem::path _model_path;
 		std::string           _model_path_str;
 
-		std::vector<std::shared_ptr<void>> _fx;
-		std::atomic_bool                   _fx_dirty;
+		std::shared_ptr<void> _fx;
+		std::atomic_bool      _fx_dirty;
 
-		std::atomic_bool    _cfg_dirty;
-		std::atomic<size_t> _cfg_channels;
-		std::atomic_bool    _cfg_enable_denoise;
+		std::atomic_bool   _cfg_dirty;
+		std::atomic_size_t _cfg_channels;
 #ifndef TONPLUGINS_DEMO
+		std::atomic_bool   _cfg_enable_denoise;
 		std::atomic_bool   _cfg_enable_dereverb;
 		std::atomic<float> _cfg_intensity;
 #endif
@@ -62,16 +62,16 @@ namespace nvidia::afx {
 		static size_t delay();
 
 		public:
+		size_t channels();
+		void   channels(size_t v);
+
+#ifndef TONPLUGINS_DEMO
 		bool denoise_enabled();
 		void enable_denoise(bool v);
 
-#ifndef TONPLUGINS_DEMO
 		bool dereverb_enabled();
 		void enable_dereverb(bool v);
 #endif
-
-		size_t channels();
-		void   channels(size_t v);
 
 #ifndef TONPLUGINS_DEMO
 		float intensity();
@@ -83,5 +83,7 @@ namespace nvidia::afx {
 		void clear();
 
 		void process(const float** input, float** output, size_t samples);
+
+		void process(float const** inputs, float** outputs, size_t samples, size_t& samples_used_and_generated);
 	};
 } // namespace nvidia::afx
