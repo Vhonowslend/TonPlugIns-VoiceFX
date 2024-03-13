@@ -300,7 +300,6 @@ std::shared_ptr<::nvidia::afx::afx> nvidia::afx::afx::instance()
 
 std::shared_ptr<nvidia::cuda::context> nvidia::afx::afx::cuda_context()
 {
-	D_LOG_LOUD("");
 	return _cuda_context;
 }
 

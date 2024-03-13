@@ -82,7 +82,7 @@ void voicefx::resampler::channels(size_t channels)
 {
 	D_LOG_LOUD("");
 	if (_channels > std::numeric_limits<int32_t>::max()) {
-		throw std::runtime_error("Channel limit exceeded.");
+		throw_log("Channel limit exceeded.");
 	}
 	if (_channels != channels) {
 		_channels = channels;
@@ -107,7 +107,7 @@ void voicefx::resampler::load()
 			int error = 0;
 			instance  = std::shared_ptr<void>(reinterpret_cast<void*>(src_new(SRC_SINC_BEST_QUALITY, static_cast<int>(_channels), &error)), [](void* v) { src_delete(reinterpret_cast<SRC_STATE*>(v)); });
 			if (error != 0) {
-				throw std::runtime_error(src_strerror(error));
+				throw_log("%s", src_strerror(error));
 			}
 		}
 	}
@@ -150,7 +150,7 @@ void voicefx::resampler::process(const float* in_buffer[], size_t in_samples, si
 		data.output_frames_gen = 0;
 
 		if (int error = src_process(reinterpret_cast<SRC_STATE*>(instance.get()), &data); error != 0) {
-			throw std::runtime_error(src_strerror(error));
+			throw_log("%s", src_strerror(error));
 		}
 
 		in_samples_used       = data.input_frames_used;
@@ -164,7 +164,7 @@ size_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_
 	int  error    = 0;
 	auto instance = src_new(SRC_SINC_BEST_QUALITY, 1, &error);
 	if (error != 0) {
-		throw std::runtime_error(src_strerror(error));
+		throw_log("%s", src_strerror(error));
 	}
 
 	// Calculate the ratio for the conversion.
@@ -190,7 +190,7 @@ size_t voicefx::resampler::calculate_delay(uint32_t in_samplerate, uint32_t out_
 	// Calculate the delay
 	for (size_t delay = 0; delay < in_samplerate; delay++) {
 		if (int error = src_process(instance, &data); error != 0) {
-			throw std::runtime_error(src_strerror(error));
+			throw_log("%s", src_strerror(error));
 		}
 
 		if (data.output_frames_gen > 0) {
