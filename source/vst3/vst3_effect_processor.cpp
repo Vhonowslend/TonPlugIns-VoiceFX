@@ -229,7 +229,7 @@ tresult PLUGIN_API vst3::effect::processor::setProcessing(TBool state)
 
 tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 {
-	D_LOG_LOUD("");
+	D_LOG_LOUD("Processing %ld samples", data.numSamples);
 	try {
 		// Exit-early if there is nothing to process.
 		if ((data.numInputs == 0) || (data.numOutputs == 0)) {
@@ -296,8 +296,16 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 		//
 		// Either 2 or 4 threads. 2 seems sane for now, so let's go with that.
 
+		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), data.numSamples, _local_delay);
+		}
+
 		// Push all data into the unresampled buffer.
 		step_copy_in((const float**)(float**)data.inputs[0].channelBuffers32, _in_unresampled, data.numSamples);
+
+		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), data.numSamples, _local_delay);
+		}
 
 		if (false) {
 			// Listen to signal
@@ -340,7 +348,15 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 #endif
 		}
 
+		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), data.numSamples, _local_delay);
+		}
+
 		step_copy_out(_out_resampled, (float**)data.outputs[0].channelBuffers32, data.numSamples);
+
+		for (size_t idx = 0; idx < _channels; idx++) {
+			D_LOG_LOUD("[%zu] %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), data.numSamples, _local_delay);
+		}
 
 		return kResultOk;
 	} catch (std::exception const& ex) {
@@ -521,13 +537,7 @@ void vst3::effect::processor::step_copy_in(const float** ins, buffer_container_t
 	try {
 		std::unique_lock<std::mutex> ilock(_in_lock);
 		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] Out at %zu samples.", idx, outs[idx]->used());
-		}
-		for (size_t idx = 0; idx < _channels; idx++) {
 			outs[idx]->write(samples, ins[idx]);
-		}
-		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] Out at %zu samples.", idx, outs[idx]->used());
 		}
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
@@ -574,9 +584,6 @@ void vst3::effect::processor::step_process(buffer_container_t& ins, buffer_conta
 		std::vector<float const*> inptrs  = {_channels, nullptr};
 		std::vector<float*>       outptrs = {_channels, nullptr};
 
-		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] In at %zu samples, Out at %zu samples.", idx, ins[idx]->used(), outs[idx]->used());
-		}
 		size_t samples = ins[0]->used();
 		if (samples > 0) {
 			// Prepare reads/writes
@@ -595,11 +602,6 @@ void vst3::effect::processor::step_process(buffer_container_t& ins, buffer_conta
 				ins[idx]->read(in_samples, nullptr);
 				outs[idx]->write(out_samples, nullptr);
 			}
-
-			D_LOG_LOUD("%zu used, %zu generated", in_samples, out_samples);
-		}
-		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] In at %zu samples, Out at %zu samples.", idx, ins[idx]->used(), outs[idx]->used());
 		}
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
@@ -651,9 +653,6 @@ void vst3::effect::processor::step_copy_out(buffer_container_t& ins, float** out
 		size_t           avail = ins[0]->used();
 
 		D_LOG_LOUD("Local Delay at %" PRId64 " samples.", _local_delay);
-		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] In at %zu samples.", idx, ins[idx]->used());
-		}
 		if (_local_delay < samples) {
 			size_t real_avail = std::min(samples - _local_delay, avail);
 
@@ -680,9 +679,6 @@ void vst3::effect::processor::step_copy_out(buffer_container_t& ins, float** out
 		}
 		_local_delay = std::max<int64_t>(0, _local_delay - samples);
 
-		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] In at %zu samples.", idx, ins[idx]->used());
-		}
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
 		throw;
