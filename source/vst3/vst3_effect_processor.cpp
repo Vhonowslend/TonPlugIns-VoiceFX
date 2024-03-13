@@ -36,20 +36,7 @@
 #include "warning-enable.hpp"
 #endif
 
-vst3::effect::processor::processor()
-	: _dirty(true), _channels(0), _samplerate(0),
-#ifdef RESAMPLE
-	  _resample(false),
-#endif
-	  _delay(0), _local_delay(0), _in_lock(), _in_unresampled(),
-#ifdef RESAMPLE
-	  _in_resampler(), _in_resampled(),
-#endif
-	  _fx(), _out_lock(),
-#ifdef RESAMPLE
-	  _out_unresampled(), _out_resampler(),
-#endif
-	  _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
+vst3::effect::processor::processor() : _dirty(true), _channels(0), _samplerate(0), _resample(false), _delay(0), _local_delay(0), _in_lock(), _in_unresampled(), _in_resampler(), _in_resampled(), _fx(), _out_lock(), _out_unresampled(), _out_resampler(), _out_resampled(), _lock(), _worker(), _worker_cv(), _worker_quit(false), _worker_signal(false)
 {
 	D_LOG_LOUD("");
 	try {
@@ -303,14 +290,14 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 		// Either 2 or 4 threads. 2 seems sane for now, so let's go with that.
 
 		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), data.numSamples, _local_delay);
+			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
 		}
 
 		// Push all data into the unresampled buffer.
 		step_copy_in((const float**)(float**)data.inputs[0].channelBuffers32, _in_unresampled, data.numSamples);
 
 		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), data.numSamples, _local_delay);
+			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
 		}
 
 		if (false) {
@@ -324,13 +311,16 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 			decltype(_in_unresampled)* ins  = &_in_unresampled;
 			decltype(_in_unresampled)* outs = &_out_resampled;
 
-#ifdef RESAMPLE
 			// Resample input if necessary.
 			if (_resample) {
 				ins  = &_in_unresampled;
 				outs = &_in_resampled;
 
 				step_resample_in(*ins, *outs);
+
+				for (size_t idx = 0; idx < _channels; idx++) {
+					D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
+				}
 
 				// Swap things so the next step works.
 				ins  = outs;
@@ -339,29 +329,30 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 				ins  = &_in_unresampled;
 				outs = &_out_resampled;
 			}
-#endif
 
 			step_process(*ins, *outs);
 
-#ifdef RESAMPLE
 			// Resample output if necessary.
 			if (_resample) {
 				ins  = outs;
 				outs = &_out_resampled;
 
+				for (size_t idx = 0; idx < _channels; idx++) {
+					D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
+				}
+
 				step_resample_out(*ins, *outs);
 			}
-#endif
 		}
 
 		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), data.numSamples, _local_delay);
+			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
 		}
 
 		step_copy_out(_out_resampled, (float**)data.outputs[0].channelBuffers32, data.numSamples);
 
 		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), data.numSamples, _local_delay);
+			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
 		}
 
 		return kResultOk;
@@ -447,17 +438,14 @@ void vst3::effect::processor::reset()
 		_fx->channels(_channels);
 		_fx->load();
 
-#ifdef RESAMPLE
 		_resample = (_samplerate != _fx->input_samplerate());
-#endif
 
 		// Allocate Buffers
-		D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and %" PRIu64 " samples...", _samplerate, _fx->input_samplerate());
+		D_LOG_LOUD("Reallocating Buffers to fit %" PRIu64 " and %" PRIu32 " samples...", _samplerate, _fx->input_samplerate());
 		_in_unresampled.resize(_channels);
 		_in_unresampled.shrink_to_fit();
 		_out_resampled.resize(_channels);
 		_out_resampled.shrink_to_fit();
-#ifdef RESAMPLE
 		if (_resample) {
 			_in_resampled.resize(_channels);
 			_in_resampled.shrink_to_fit();
@@ -467,19 +455,15 @@ void vst3::effect::processor::reset()
 			_in_resampled.clear();
 			_out_unresampled.clear();
 		}
-#endif
 		for (size_t idx = 0; idx < _channels; idx++) {
 			_in_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(_samplerate);
 			_out_resampled[idx]  = std::make_shared<tonplugins::memory::float_ring_t>(_samplerate);
-#ifdef RESAMPLE
 			if (_resample) {
 				_in_resampled[idx]    = std::make_shared<tonplugins::memory::float_ring_t>(_fx->input_samplerate());
 				_out_unresampled[idx] = std::make_shared<tonplugins::memory::float_ring_t>(_fx->input_samplerate());
 			}
-#endif
 		}
 
-#ifdef RESAMPLE
 		// Reset/Allocate Resamplers
 		D_LOG_LOUD("Resetting resamplers...");
 		if (_resample) {
@@ -501,7 +485,6 @@ void vst3::effect::processor::reset()
 			_in_resampler.reset();
 			_out_resampler.reset();
 		}
-#endif
 		calculate_delay();
 
 		_dirty = false;
@@ -526,6 +509,7 @@ void vst3::effect::processor::set_channel_count(size_t num)
 
 void vst3::effect::processor::step_copy_in(const float** ins, buffer_container_t& outs, size_t samples)
 {
+	D_LOG_LOUD("");
 	try {
 		std::unique_lock<std::mutex> ilock(_in_lock);
 		for (size_t idx = 0; idx < _channels; idx++) {
@@ -539,8 +523,8 @@ void vst3::effect::processor::step_copy_in(const float** ins, buffer_container_t
 
 void vst3::effect::processor::step_resample_in(buffer_container_t& ins, buffer_container_t& outs)
 {
+	D_LOG_LOUD("");
 	try {
-#ifdef RESAMPLE
 		std::vector<float const*> inptrs  = {_channels, nullptr};
 		std::vector<float*>       outptrs = {_channels, nullptr};
 
@@ -563,7 +547,6 @@ void vst3::effect::processor::step_resample_in(buffer_container_t& ins, buffer_c
 				outs[idx]->write(samples_written, nullptr);
 			}
 		}
-#endif
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
 		throw;
@@ -572,6 +555,7 @@ void vst3::effect::processor::step_resample_in(buffer_container_t& ins, buffer_c
 
 void vst3::effect::processor::step_process(buffer_container_t& ins, buffer_container_t& outs)
 {
+	D_LOG_LOUD("");
 	try {
 		std::vector<float const*> inptrs  = {_channels, nullptr};
 		std::vector<float*>       outptrs = {_channels, nullptr};
@@ -603,8 +587,8 @@ void vst3::effect::processor::step_process(buffer_container_t& ins, buffer_conta
 
 void vst3::effect::processor::step_resample_out(buffer_container_t& ins, buffer_container_t& outs)
 {
+	D_LOG_LOUD("");
 	try {
-#ifdef RESAMPLE
 		std::vector<float const*> inptrs  = {_channels, nullptr};
 		std::vector<float*>       outptrs = {_channels, nullptr};
 
@@ -627,7 +611,6 @@ void vst3::effect::processor::step_resample_out(buffer_container_t& ins, buffer_
 				outs[idx]->write(samples_written, nullptr);
 			}
 		}
-#endif
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
 		throw;
@@ -636,6 +619,7 @@ void vst3::effect::processor::step_resample_out(buffer_container_t& ins, buffer_
 
 void vst3::effect::processor::step_copy_out(buffer_container_t& ins, float** outs, size_t samples)
 {
+	D_LOG_LOUD("");
 	try {
 		std::vector<float const*> inptrs  = {_channels, nullptr};
 		std::vector<float*>       outptrs = {_channels, nullptr};
@@ -697,7 +681,6 @@ void vst3::effect::processor::worker()
 				decltype(_in_unresampled)& ins  = _in_unresampled;
 				decltype(_in_unresampled)& outs = _out_resampled;
 
-#ifdef RESAMPLE
 				// Resample input if necessary.
 				if (_resample) {
 					ins  = _in_unresampled;
@@ -712,20 +695,15 @@ void vst3::effect::processor::worker()
 					ins  = _in_unresampled;
 					outs = _out_resampled;
 				}
-#endif
 
-#ifdef RESAMPLE
 				if (_resample) {
 					step_process(ins, outs);
-				} else
-#endif
-				{ // Couldn't figure out how to skip this without an if/else duplication. :/
+				} else { // Couldn't figure out how to skip this without an if/else duplication. :/
 					std::unique_lock<std::mutex> ilock(_in_lock);
 					std::unique_lock<std::mutex> ulock(_out_lock);
 					step_process(ins, outs);
 				}
 
-#ifdef RESAMPLE
 				// Resample output if necessary.
 				if (_resample) {
 					ins  = outs;
@@ -733,7 +711,6 @@ void vst3::effect::processor::worker()
 
 					step_resample_out(ins, outs);
 				}
-#endif
 			}
 		} while (!_worker_quit);
 	} catch (std::exception const& ex) {
@@ -766,7 +743,6 @@ void vst3::effect::processor::calculate_delay()
 	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 	_delay += _local_delay;
 	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
-#ifdef RESAMPLE
 	if (_resample) {
 		_delay += ::voicefx::resampler::calculate_delay(_samplerate, _fx->input_samplerate());
 		D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
@@ -775,7 +751,7 @@ void vst3::effect::processor::calculate_delay()
 		_delay = std::llround(_delay / _in_resampler->ratio());
 		D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 	}
-#endif
+	_delay = 0;
 	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 }
 

@@ -30,8 +30,6 @@
 #include <public.sdk/source/main/pluginfactory.h>
 #include "warning-enable.hpp"
 
-#define D_LOG(MESSAGE, ...) voicefx::core->log("<VST3> " MESSAGE, __VA_ARGS__)
-
 BEGIN_FACTORY_DEF("Xaymar", "https://xaymar.com/", "mailto:support@xaymar.com")
 
 #ifndef TONPLUGINS_DEMO

@@ -170,7 +170,7 @@ uint8_t nvidia::afx::effect::channels()
 
 void nvidia::afx::effect::channels(uint8_t v)
 {
-	D_LOG_LOUD("Adjusting channels to %zu.", v);
+	D_LOG_LOUD("Adjusting channels to %" PRIu8 ".", v);
 	if (v == 0) {
 		throw_log("Can't set channel count to 0, illegal operation.");
 	}
