@@ -9,6 +9,11 @@ project(VoiceFX
 	HOMEPAGE_URL "https://tonplugins.xaymar.com/"
 )
 list(APPEND CMAKE_MESSAGE_INDENT "[${PROJECT_NAME}] ")
+if(ENABLE_FULL_VERSION)
+	set(PROJECT_TITLE "VoiceFX")
+else()
+	set(PROJECT_TITLE "VoiceFX (Demo)")
+endif()
 define_plugin(
 	NAME ${PROJECT_NAME}
 	VST3_UUID "0B94A94D-0C53-4682-9230-587B568F25BF"
