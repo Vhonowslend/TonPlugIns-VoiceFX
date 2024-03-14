@@ -4,10 +4,12 @@
 # Bootstrap
 ################################################################################
 cmake_minimum_required(VERSION 3.26)
-list(APPEND CMAKE_MESSAGE_INDENT "[VoiceFX] ")
-
 project(VoiceFX)
-define_plugin(VoiceFX)
+list(APPEND CMAKE_MESSAGE_INDENT "[${PROJECT_NAME}] ")
+define_plugin(
+	NAME ${PROJECT_NAME}
+	VST2
+)
 
 # Search Paths
 list(APPEND CMAKE_MODULE_PATH
