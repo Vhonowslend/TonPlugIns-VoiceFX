@@ -60,9 +60,6 @@ vst3::effect::processor::processor() : _dirty(true), _channels(0), _samplerate(0
 			std::unique_lock<std::mutex> lock(_lock);
 			_fx = std::make_shared<::nvidia::afx::effect>();
 		}
-
-		calculate_local_delay();
-		calculate_delay();
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
 		throw;
@@ -177,6 +174,7 @@ tresult PLUGIN_API vst3::effect::processor::setupProcessing(ProcessSetup& newSet
 {
 	D_LOG_LOUD("");
 	try {
+		std::unique_lock<std::mutex> lock(_lock);
 		// Copy non-important stuff.
 		processSetup.maxSamplesPerBlock = newSetup.maxSamplesPerBlock;
 		processSetup.processMode        = newSetup.processMode;
@@ -187,14 +185,12 @@ tresult PLUGIN_API vst3::effect::processor::setupProcessing(ProcessSetup& newSet
 		processSetup.symbolicSampleSize = newSetup.symbolicSampleSize;
 
 		// Check if we need to reset things due to configuration changes.
+		_samplerate = static_cast<int64_t>(round(newSetup.sampleRate));
 		if (processSetup.sampleRate != newSetup.sampleRate) {
 			processSetup.sampleRate = newSetup.sampleRate;
 			_dirty                  = true;
 		}
-		std::unique_lock<std::mutex> lock(_lock);
-		_samplerate = static_cast<int64_t>(round(processSetup.sampleRate));
 
-		calculate_local_delay();
 		calculate_delay();
 
 		// TODO: Are we able to modify the host here?
@@ -290,14 +286,14 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 		// Either 2 or 4 threads. 2 seems sane for now, so let's go with that.
 
 		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
+			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, _out_resampled[idx]->used(), data.numSamples, _local_delay);
 		}
 
 		// Push all data into the unresampled buffer.
 		step_copy_in((const float**)(float**)data.inputs[0].channelBuffers32, _in_unresampled, data.numSamples);
 
 		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
+			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, _out_resampled[idx]->used(), data.numSamples, _local_delay);
 		}
 
 		if (false) {
@@ -319,7 +315,7 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 				step_resample_in(*ins, *outs);
 
 				for (size_t idx = 0; idx < _channels; idx++) {
-					D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
+					D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, _out_resampled[idx]->used(), data.numSamples, _local_delay);
 				}
 
 				// Swap things so the next step works.
@@ -338,7 +334,7 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 				outs = &_out_resampled;
 
 				for (size_t idx = 0; idx < _channels; idx++) {
-					D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
+					D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, _out_resampled[idx]->used(), data.numSamples, _local_delay);
 				}
 
 				step_resample_out(*ins, *outs);
@@ -346,13 +342,13 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 		}
 
 		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
+			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, _out_resampled[idx]->used(), data.numSamples, _local_delay);
 		}
 
 		step_copy_out(_out_resampled, (float**)data.outputs[0].channelBuffers32, data.numSamples);
 
 		for (size_t idx = 0; idx < _channels; idx++) {
-			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _out_resampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, data.numSamples, _local_delay);
+			D_LOG_LOUD("[%zu] %8zu %8zu %8zu %8zu %8ld %lld", idx, _in_unresampled[idx]->used(), _in_resampled.size() > 0 ? _in_resampled[idx]->used() : 0, _out_unresampled.size() > 0 ? _out_unresampled[idx]->used() : 0, _out_resampled[idx]->used(), data.numSamples, _local_delay);
 		}
 
 		return kResultOk;
@@ -465,8 +461,8 @@ void vst3::effect::processor::reset()
 		}
 
 		// Reset/Allocate Resamplers
-		D_LOG_LOUD("Resetting resamplers...");
 		if (_resample) {
+			D_LOG_LOUD("Resetting resamplers...");
 			if (!_in_resampler) {
 				_in_resampler = std::make_shared<::voicefx::resampler>();
 			}
@@ -485,8 +481,8 @@ void vst3::effect::processor::reset()
 			_in_resampler.reset();
 			_out_resampler.reset();
 		}
-		calculate_delay();
 
+		calculate_delay();
 		_dirty = false;
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
@@ -650,7 +646,7 @@ void vst3::effect::processor::step_copy_out(buffer_container_t& ins, float** out
 
 		} else {
 			for (size_t idx = 0; idx < _channels; idx++) {
-				ins[idx]->read(samples, outs[idx]);
+				memset(outs[idx], 0, samples * sizeof(float));
 			}
 		}
 		_local_delay = std::max<int64_t>(0, _local_delay - samples);
@@ -735,7 +731,19 @@ FUnknown* vst3::effect::processor::create(void* data)
 
 void vst3::effect::processor::calculate_delay()
 {
+	size_t in_delay  = 0;
+	size_t out_delay = 0;
+	if (_resample) {
+		in_delay  = ::voicefx::resampler::calculate_delay(_samplerate, _fx->input_samplerate());
+		out_delay = ::voicefx::resampler::calculate_delay(_fx->input_samplerate(), _samplerate);
+		D_LOG_LOUD("In/Out delay %zu %zu", in_delay, out_delay);
+	}
+
 	_local_delay = _fx->input_blocksize();
+	if (_resample) {
+		_local_delay += in_delay + out_delay;
+		_local_delay *= 2;
+	}
 	D_LOG("Estimated processing latency is %" PRId64 " samples.", _local_delay);
 
 	// Calculate absolute effect delay
@@ -744,14 +752,9 @@ void vst3::effect::processor::calculate_delay()
 	_delay += _local_delay;
 	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 	if (_resample) {
-		_delay += ::voicefx::resampler::calculate_delay(_samplerate, _fx->input_samplerate());
-		D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
-		_delay += ::voicefx::resampler::calculate_delay(_fx->input_samplerate(), _samplerate);
-		D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
-		_delay = std::llround(_delay / _in_resampler->ratio());
+		_delay += in_delay + out_delay;
 		D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 	}
-	_delay = 0;
 	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 }
 
