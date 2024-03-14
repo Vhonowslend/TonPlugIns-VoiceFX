@@ -4,11 +4,16 @@
 # Bootstrap
 ################################################################################
 cmake_minimum_required(VERSION 3.26)
-project(VoiceFX)
+project(VoiceFX
+	DESCRIPTION "Clean up noise and echo with VoiceFX in post! (Part of TonPlugIns by Xaymar)"
+	HOMEPAGE_URL "https://tonplugins.xaymar.com/"
+)
 list(APPEND CMAKE_MESSAGE_INDENT "[${PROJECT_NAME}] ")
 define_plugin(
 	NAME ${PROJECT_NAME}
+	VST3_UUID "0B94A94D-0C53-4682-9230-587B568F25BF"
 	VST2
+	VST2_UUID "EC944BED-893B-4DA6-84AC-8C4A919D3791"
 )
 
 # Search Paths
