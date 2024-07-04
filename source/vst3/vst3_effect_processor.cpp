@@ -235,6 +235,11 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 			return kNotInitialized;
 		}
 
+		// If the host is ignoring our return codes, do nothing.
+		if (_dirty) {
+			return kNotInitialized;
+		}
+
 		// Exit-early if host application ignores our delay request.
 		if ((_local_delay == _delay) && (data.numSamples < _delay)) {
 			D_LOG(
