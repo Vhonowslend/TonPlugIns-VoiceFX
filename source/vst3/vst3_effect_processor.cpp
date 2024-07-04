@@ -103,7 +103,7 @@ tresult PLUGIN_API vst3::effect::processor::initialize(FUnknown* context)
 		return kResultOk;
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
-		throw;
+		return kInternalError;
 	}
 }
 
@@ -154,7 +154,7 @@ tresult PLUGIN_API vst3::effect::processor::setBusArrangements(SpeakerArrangemen
 		return kResultTrue;
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
-		throw;
+		return kInternalError;
 	}
 }
 
@@ -197,7 +197,7 @@ tresult PLUGIN_API vst3::effect::processor::setupProcessing(ProcessSetup& newSet
 		return kResultOk;
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
-		throw;
+		return kInternalError;
 	}
 }
 
@@ -212,7 +212,7 @@ tresult PLUGIN_API vst3::effect::processor::setProcessing(TBool state)
 		return kResultOk;
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
-		throw;
+		return kInternalError;
 	}
 }
 
@@ -354,7 +354,7 @@ tresult PLUGIN_API vst3::effect::processor::process(ProcessData& data)
 		return kResultOk;
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
-		throw;
+		return kInternalError;
 	}
 }
 
@@ -388,7 +388,7 @@ tresult PLUGIN_API vst3::effect::processor::setState(IBStream* state)
 		return kResultOk;
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
-		throw;
+		return kInternalError;
 	}
 }
 
@@ -410,7 +410,7 @@ tresult PLUGIN_API vst3::effect::processor::getState(IBStream* state)
 		return kResultOk;
 	} catch (std::exception const& ex) {
 		D_LOG("EXCEPTION: %s", ex.what());
-		throw;
+		return kInternalError;
 	}
 }
 
@@ -744,18 +744,15 @@ void vst3::effect::processor::calculate_delay()
 		_local_delay += in_delay + out_delay;
 		_local_delay *= 2;
 	}
-	D_LOG("Estimated processing latency is %" PRId64 " samples.", _local_delay);
+	D_LOG("Processing latency appears to be %" PRId64 " samples.", _local_delay);
 
 	// Calculate absolute effect delay
 	_delay = _fx->delay();
-	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 	_delay += _local_delay;
-	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 	if (_resample) {
 		_delay += in_delay + out_delay;
-		D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
 	}
-	D_LOG("Estimated latency is %" PRId64 " samples.", _delay);
+	D_LOG("Latency is estimated to be %" PRId64 " samples.", _delay);
 }
 
 void vst3::effect::processor::calculate_local_delay() {}
